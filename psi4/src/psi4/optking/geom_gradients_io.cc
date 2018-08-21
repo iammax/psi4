@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -45,8 +46,8 @@
  #include "psi4/libmints/molecule.h"
  #include "psi4/libmints/matrix.h"
  #include "psi4/libmints/wavefunction.h"
- #include "psi4/libparallel/parallel.h"
  #include "psi4/libmints/writer_file_prefix.h"
+ #include "psi4/libpsi4util/process.h"
 #elif defined(OPTKING_PACKAGE_QCHEM)
  #include <qchem.h> // typedefs INTEGER
  #include "EFP.h"
@@ -57,10 +58,8 @@ namespace opt {
 
 class BROKEN_SYMMETRY_EXCEPT;
 
-using namespace std;
-
 bool is_integer(const char *check) {
-  for (ULI i=0; i<strlen(check); ++i) {
+  for (size_t i=0; i<strlen(check); ++i) {
     if (!isdigit(check[i]))
       return false;
   }
@@ -119,7 +118,7 @@ void MOLECULE::read_geom_grad(void) {
       double **grad = fragments[f]->g_grad_pointer();
 
       for (int i=0; i<fragments[f]->g_natom(); ++i) {
-          Z[i] = mol->Z(atom);
+          Z[i] = mol->true_atomic_number(atom);
 
           geom[i][0] = geometry(atom, 0);
           geom[i][1] = geometry(atom, 1);
@@ -224,7 +223,7 @@ void MOLECULE::read_geom_grad(void) {
   INTEGER *QZ, QNATOMS;
   bool Qnoghosts = true;
 
-  ::get_carts(NULL, &QX, &QZ, &QNATOMS, Qnoghosts);
+  ::get_carts(nullptr, &QX, &QZ, &QNATOMS, Qnoghosts);
 
   int QNATOMS_real = g_natom();
   if (QNATOMS_real != (QNATOMS-FBatom))
@@ -288,7 +287,7 @@ void MOLECULE::read_geom_grad(void) {
 #endif
 
   // update interfragment reference points if they exist
-  for (ULI i=0; i<interfragments.size(); ++i)
+  for (size_t i=0; i<interfragments.size(); ++i)
     interfragments[i]->update_reference_points();
 
   return;
@@ -371,7 +370,7 @@ double ** OPT_DATA::read_cartesian_H(void) const {
   if_Hcart.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   try {
     std::string hess_fname = psi::get_writer_file_prefix(psi::Process::environment.legacy_molecule()->name()) + ".hess";
-    if_Hcart.open(hess_fname.c_str(), ios_base::in);
+    if_Hcart.open(hess_fname.c_str(), std::ios_base::in);
     int n;
     if_Hcart >> n; // read natom
     if_Hcart >> n; // read natom*6 (?)

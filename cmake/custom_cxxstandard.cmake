@@ -6,8 +6,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
     endif()
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
-        message(FATAL_ERROR "ICPC version must be at least 2016!")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "17.0.0")
+        message(FATAL_ERROR "ICPC version must be at least 2017.0.0 to work with pybind11 2.1!")  # v1.2
+        #message(FATAL_ERROR "ICPC version must be at least 2016.0.2 to work with pybind11 2.0.0!")  # v1.1
     endif()
 
     set(_testfl ${CMAKE_BINARY_DIR}/test_gcc_version.cc)
@@ -26,25 +27,17 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Intel)
     try_run(GCCV_COMPILES
             GCCV_RUNS
             ${CMAKE_BINARY_DIR} ${_testfl}
-            RUN_OUTPUT_VARIABLE GCC_VERSION)
-    message(STATUS "Found base compiler version ${GCC_VERSION}")
+            RUN_OUTPUT_VARIABLE CPLR_VERSION)
+    message(STATUS "Found base compiler version ${CPLR_VERSION}")
     file(REMOVE ${_testfl})
 
     if (APPLE)
-        if (${GCC_VERSION} VERSION_LESS 6.1)
-            message(FATAL_ERROR "${BoldYellow}Intel ICPC makes use of CLANG (detected: ${GCC_VERSION}; required for C++11: 6.1) so this build won't work without CLANG intervention: http://psicode.org/psi4manual/master/build_planning.html\n${ColourReset}")
+        if ("${CPLR_VERSION}" VERSION_LESS 3.6)
+            message(FATAL_ERROR "${BoldYellow}Intel ICPC makes use of CLANG (detected: ${CPLR_VERSION}; required for C++11: Clang 3.6 or AppleClang 6.1) so this build won't work without CLANG intervention.\n${ColourReset}")
         endif()
     else ()
-        if (${GCC_VERSION} VERSION_LESS 4.9)
-            message(FATAL_ERROR "${BoldYellow}Intel ICPC makes use of GCC (detected: ${GCC_VERSION}; required for C++11: 4.9) so this build won't work without GCC intervention: http://psicode.org/psi4manual/master/build_planning.html#faq-modgcc\n${ColourReset}")
-        endif()
-    endif()
-
-    if("${CMAKE_VERSION}" VERSION_LESS "3.6")
-        # add flag by hand if CMake does not support ICPC
-        if("${psi4_CXX_STANDARD}" MATCHES "11|14")
-            #add_compile_options(-std=c++${CMAKE_CXX_STANDARD})
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${psi4_CXX_STANDARD}")
+        if ("${CPLR_VERSION}" VERSION_LESS 4.9)
+            message(FATAL_ERROR "${BoldYellow}Intel ICPC makes use of GCC (detected: ${CPLR_VERSION}; required for C++11: 4.9) so this build won't work without GCC intervention: http://psicode.org/psi4manual/master/build_planning.html#faq-modgcc\n${ColourReset}")
         endif()
     endif()
 
@@ -61,6 +54,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES Clang)
     endif()
 
 else()
-    message(WARNING "Please add a check in CheckCompilerVersion.cmake for ${CMAKE_CXX_COMPILER_ID}.")
+    message(WARNING "Please add a check in custom_cxxstandard.cmake for ${CMAKE_CXX_COMPILER_ID}.")
 endif()
 

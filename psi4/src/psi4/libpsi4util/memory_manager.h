@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -102,7 +103,7 @@ void MemoryManager::allocate(const char *type, T*& matrix, size_t size, const ch
   AllocationEntry newEntry;
 
   if(size<=0){
-    matrix = NULL;
+    matrix = nullptr;
   }else{
     matrix    = new T[size];
     for(size_t i=0;i<size;i++)
@@ -121,7 +122,7 @@ void MemoryManager::allocate(const char *type, T*& matrix, size_t size, const ch
 template <typename T>
 void MemoryManager::release_one(T*& matrix, const char *fileName, size_t lineNumber)
 {
-  if(matrix == NULL)
+  if(matrix == nullptr)
     return;
 
   size_t size = AllocationTable[static_cast<void*>(matrix)].argumentList[0];
@@ -129,7 +130,7 @@ void MemoryManager::release_one(T*& matrix, const char *fileName, size_t lineNum
   UnregisterMemory(static_cast<void*>(matrix), size*sizeof(T),fileName,lineNumber);
 
   delete[] matrix;
-  matrix = NULL;
+  matrix = nullptr;
 }
 
 template <typename T>
@@ -139,7 +140,7 @@ void MemoryManager::allocate(const char *type, T**& matrix, size_t size1, size_t
   size_t size = size1*size2;
 
   if(size<=0){
-    matrix = NULL;
+    matrix = nullptr;
     return;
   }else{
     matrix    = new T*[size1];
@@ -163,7 +164,7 @@ void MemoryManager::allocate(const char *type, T**& matrix, size_t size1, size_t
 template <typename T>
 void MemoryManager::release_two(T**& matrix, const char *fileName, size_t lineNumber)
 {
-  if(matrix == NULL)
+  if(matrix == nullptr)
     return;
 
   size_t size = AllocationTable[static_cast<void*>(matrix)].argumentList[0] * AllocationTable[static_cast<void*>(matrix)].argumentList[1];
@@ -172,7 +173,7 @@ void MemoryManager::release_two(T**& matrix, const char *fileName, size_t lineNu
 
   delete[] matrix[0];
   delete[] matrix;
-  matrix = NULL;
+  matrix = nullptr;
 }
 
 template <typename T>
@@ -181,7 +182,7 @@ void MemoryManager::allocate(const char *type, T***& matrix,size_t size1,size_t 
   AllocationEntry newEntry;
   size_t size = size1*size2*size3;
   if(size<=0){
-    matrix = NULL;
+    matrix = nullptr;
     return;
   }else{
     matrix    = new T**[size1];
@@ -208,7 +209,7 @@ void MemoryManager::allocate(const char *type, T***& matrix,size_t size1,size_t 
 template <typename T>
 void MemoryManager::release_three(T***& matrix, const char *fileName, size_t lineNumber)
 {
-  if(matrix == NULL)
+  if(matrix == nullptr)
     return;
 
   size_t size1 = AllocationTable[static_cast<void*>(matrix)].argumentList[0];
@@ -221,7 +222,7 @@ void MemoryManager::release_three(T***& matrix, const char *fileName, size_t lin
   for(size_t i=0;i<size1;i++)
     delete[] matrix[i];
   delete[] matrix;
-  matrix = NULL;
+  matrix = nullptr;
 }
 
 #define allocate1(type, variable, size) \

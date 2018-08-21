@@ -3,23 +3,24 @@
  *  
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -40,7 +41,7 @@
 #include "Params.h"
 #define EXTERN
 #include "globals.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 namespace psi { namespace cctriples {
 
     void T3_grad_RHF(void)
@@ -178,7 +179,7 @@ namespace psi { namespace cctriples {
 		}
 	      }
 	    }
-      //boost::shared_ptr<OutFile> printer(new OutFile("ijk.dat",TRUNCATE));
+      //auto printer = std::make_shared<PsiOutStream>("ijk.dat",std::ostream::trunc);
       //ffile(&ijkfile,"ijk.dat", 0);
       //printer->Printf( "Number of IJK combinations: %d\n", nijk);
       //printer->Printf( "\nCurrent IJK Combination: ");*/
@@ -948,7 +949,7 @@ namespace psi { namespace cctriples {
               }
             }
 
-      boost::shared_ptr<OutFile> printer1(new OutFile("abc.dat",TRUNCATE));
+      auto printer1 = std::make_shared<PsiOutStream>("abc.dat",std::ostream::trunc);
       //ffile(&abcfile,"abc.dat", 0);
       printer1->Printf( "Number of ABC combinations: %d\n", nabc);
       printer1->Printf( "\nCurrent ABC Combination: ");*/
@@ -1030,7 +1031,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gk];
                     nlinks = virtpi[Gd];
 
-                    if(nrows && ncols && nlinks && W0[Gij] != NULL)
+                    if(nrows && ncols && nlinks && W0[Gij] != nullptr)
                       C_DGEMM('t', 't', nrows, ncols, nlinks, 1.0,
                               &(T2i.matrix[Gad][ad][0]), nrows,
                               &(F3ints.matrix[Gcb][cb][kd]), nlinks, 0.0,
@@ -1052,7 +1053,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gk];
                     nlinks = occpi[Gl];
 
-                    if(nrows && ncols && nlinks && W0[Gij] != NULL){
+                    if(nrows && ncols && nlinks && W0[Gij] != nullptr){
 
             	  E2ints.matrix[Gal] = global_dpd_->dpd_block_matrix(occpi[Gl], E2ints.params->coltot[Gal]);
                   global_dpd_->buf4_mat_irrep_rd_block(&E2ints, Gal, E2ints.row_offset[Gal][A], occpi[Gl]);   
@@ -1087,7 +1088,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gj];
                     nlinks = virtpi[Gd];
 
-                    if(nrows && ncols && nlinks && W1[Gik] != NULL)
+                    if(nrows && ncols && nlinks && W1[Gik] != nullptr)
                       C_DGEMM('t', 't', nrows, ncols, nlinks, 1.0,
                               &(T2i.matrix[Gad][ad][0]), nrows,
                               &(F3ints.matrix[Gbc][bc][jd]), nlinks, 1.0,
@@ -1110,7 +1111,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gj];
                     nlinks = occpi[Gl];
 
- 			if(nrows && ncols && nlinks && W1[Gik] != NULL){
+ 			if(nrows && ncols && nlinks && W1[Gik] != nullptr){
 
                     E2ints.matrix[Gal] = global_dpd_->dpd_block_matrix(occpi[Gl], E2ints.params->coltot[Gal]);
                     global_dpd_->buf4_mat_irrep_rd_block(&E2ints, Gal, E2ints.row_offset[Gal][A], occpi[Gl]);
@@ -1145,7 +1146,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gj];
                     nlinks = virtpi[Gd];
 
-                    if(nrows && ncols && nlinks && W0[Gki] != NULL)
+                    if(nrows && ncols && nlinks && W0[Gki] != nullptr)
                       C_DGEMM('t', 't', nrows, ncols, nlinks, 1.0,
                               &(T2i.matrix[Gcd][cd][0]), nrows,
                               &(F3ints.matrix[Gba][ba][jd]), nlinks, 1.0,
@@ -1168,7 +1169,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gj];
                     nlinks = occpi[Gl];
 
-                    if(nrows && ncols && nlinks && W0[Gki] != NULL){
+                    if(nrows && ncols && nlinks && W0[Gki] != nullptr){
 
                     E2ints.matrix[Gcl] = global_dpd_->dpd_block_matrix(occpi[Gl], E2ints.params->coltot[Gcl]);
                     global_dpd_->buf4_mat_irrep_rd_block(&E2ints, Gcl, E2ints.row_offset[Gcl][C], occpi[Gl]);
@@ -1206,7 +1207,7 @@ namespace psi { namespace cctriples {
                      nlinks = virtpi[Gd];
  
  
-                     if(nrows && ncols && nlinks && W1[Gkj] != NULL)
+                     if(nrows && ncols && nlinks && W1[Gkj] != nullptr)
                        C_DGEMM('t', 't', nrows, ncols, nlinks, 1.0,
                                &(T2i.matrix[Gcd][cd][0]), nrows,
                                &(F3ints.matrix[Gab][ab][id]), nlinks, 1.0, 
@@ -1228,7 +1229,7 @@ namespace psi { namespace cctriples {
                      ncols = occpi[Gi];
                      nlinks = occpi[Gl];
  
-                     if(nrows && ncols && nlinks && W1[Gkj] != NULL){
+                     if(nrows && ncols && nlinks && W1[Gkj] != nullptr){
 
                      E2ints.matrix[Gcl] = global_dpd_->dpd_block_matrix(occpi[Gl], E2ints.params->coltot[Gcl]);
                      global_dpd_->buf4_mat_irrep_rd_block(&E2ints, Gcl, E2ints.row_offset[Gcl][C], occpi[Gl]);
@@ -1266,7 +1267,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gi];
                     nlinks = virtpi[Gd];
 
-                    if(nrows && ncols && nlinks && W0[Gjk] != NULL)
+                    if(nrows && ncols && nlinks && W0[Gjk] != nullptr)
                       C_DGEMM('t', 't', nrows, ncols, nlinks, 1.0,
                               &(T2i.matrix[Gbd][bd][0]), nrows,
                               &(F3ints.matrix[Gac][ac][id]), nlinks, 1.0,
@@ -1290,7 +1291,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gi];
                     nlinks = occpi[Gl];
 
-                    if(nrows && ncols && nlinks && W0[Gjk] != NULL){
+                    if(nrows && ncols && nlinks && W0[Gjk] != nullptr){
 
                     E2ints.matrix[Gbl] = global_dpd_->dpd_block_matrix(occpi[Gl], E2ints.params->coltot[Gbl]);
                     global_dpd_->buf4_mat_irrep_rd_block(&E2ints, Gbl, E2ints.row_offset[Gbl][B], occpi[Gl]);
@@ -1327,7 +1328,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gk];
                     nlinks = virtpi[Gd];
 
-                    if(nrows && ncols && nlinks && W1[Gji] != NULL)
+                    if(nrows && ncols && nlinks && W1[Gji] != nullptr)
                       C_DGEMM('t', 't', nrows, ncols, nlinks, 1.0,
                               &(T2i.matrix[Gbd][bd][0]), nrows,
                               &(F3ints.matrix[Gca][ca][kd]), nlinks, 1.0,
@@ -1350,7 +1351,7 @@ namespace psi { namespace cctriples {
                     ncols = occpi[Gk];
                     nlinks = occpi[Gl];
 
-                    if(nrows && ncols && nlinks && W1[Gji] != NULL){
+                    if(nrows && ncols && nlinks && W1[Gji] != nullptr){
 
                     E2ints.matrix[Gbl] = global_dpd_->dpd_block_matrix(occpi[Gl], E2ints.params->coltot[Gbl]);
                     global_dpd_->buf4_mat_irrep_rd_block(&E2ints, Gbl, E2ints.row_offset[Gbl][B], occpi[Gl]);

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -32,8 +33,6 @@
 #include "psi4/libmints/molecule.h"
 #include "psi4/libmints/pointgrp.h"
 
-using namespace std;
-
 
 namespace psi{ namespace occwave{
 
@@ -42,12 +41,12 @@ void OCCWave::semi_canonic()
         // tell other functions that orbitals are already semi canonical.
         orbs_already_sc = 1;
 
-	SharedMatrix UooA = std::shared_ptr<Matrix>(new Matrix(nirrep_, occpiA, occpiA));
-	SharedMatrix UvvA = std::shared_ptr<Matrix>(new Matrix(nirrep_, virtpiA, virtpiA));
-	SharedMatrix FockooA = std::shared_ptr<Matrix>(new Matrix(nirrep_, occpiA, occpiA));
-	SharedMatrix FockvvA = std::shared_ptr<Matrix>(new Matrix(nirrep_, virtpiA, virtpiA));
-	SharedVector eigooA = std::shared_ptr<Vector>(new Vector(nirrep_, occpiA));
-	SharedVector eigvvA = std::shared_ptr<Vector>(new Vector(nirrep_, virtpiA));
+	auto UooA = std::make_shared<Matrix>(nirrep_, occpiA, occpiA);
+	auto UvvA = std::make_shared<Matrix>(nirrep_, virtpiA, virtpiA);
+	auto FockooA = std::make_shared<Matrix>(nirrep_, occpiA, occpiA);
+	auto FockvvA = std::make_shared<Matrix>(nirrep_, virtpiA, virtpiA);
+	auto eigooA = std::make_shared<Vector>(nirrep_, occpiA);
+	auto eigvvA = std::make_shared<Vector>(nirrep_, virtpiA);
 
 	UooA->zero();
 	UvvA->zero();
@@ -102,7 +101,7 @@ void OCCWave::semi_canonic()
 
 	  Molecule& mol = *reference_wavefunction_->molecule().get();
 	  CharacterTable ct = mol.point_group()->char_table();
-          string pgroup = mol.point_group()->symbol();
+          std::string pgroup = mol.point_group()->symbol();
 
 	  // print occ orb energy
 	  outfile->Printf( "\t  Alpha occupied orbitals\n");
@@ -158,7 +157,7 @@ void OCCWave::semi_canonic()
 	}
 
         // Get new MOs
-        Ca_new = std::shared_ptr<Matrix>(new Matrix("New alpha MO coefficients", nirrep_, nsopi_, nmopi_));
+        Ca_new = std::make_shared<Matrix>("New alpha MO coefficients", nirrep_, nsopi_, nmopi_);
 	Ca_new->zero();
 	Ca_new->gemm(false, false, 1.0, Ca_, UorbA, 0.0);
 	Ca_->zero();
@@ -179,12 +178,12 @@ void OCCWave::semi_canonic()
 
      // UHF REFERENCE
      if (reference_ == "UNRESTRICTED") {
-	SharedMatrix UooB = std::shared_ptr<Matrix>(new Matrix(nirrep_, occpiB, occpiB));
-	SharedMatrix UvvB = std::shared_ptr<Matrix>(new Matrix(nirrep_, virtpiB, virtpiB));
-	SharedMatrix FockooB = std::shared_ptr<Matrix>(new Matrix(nirrep_, occpiB, occpiB));
-	SharedMatrix FockvvB = std::shared_ptr<Matrix>(new Matrix(nirrep_, virtpiB, virtpiB));
-	SharedVector eigooB = std::shared_ptr<Vector>(new Vector(nirrep_, occpiB));
-	SharedVector eigvvB = std::shared_ptr<Vector>(new Vector(nirrep_, virtpiB));
+	auto UooB = std::make_shared<Matrix>(nirrep_, occpiB, occpiB);
+	auto UvvB = std::make_shared<Matrix>(nirrep_, virtpiB, virtpiB);
+	auto FockooB = std::make_shared<Matrix>(nirrep_, occpiB, occpiB);
+	auto FockvvB = std::make_shared<Matrix>(nirrep_, virtpiB, virtpiB);
+	auto eigooB = std::make_shared<Vector>(nirrep_, occpiB);
+	auto eigvvB = std::make_shared<Vector>(nirrep_, virtpiB);
 
 	UooB->zero();
 	UvvB->zero();
@@ -240,7 +239,7 @@ void OCCWave::semi_canonic()
 
 	  Molecule& mol = *reference_wavefunction_->molecule().get();
 	  CharacterTable ct = mol.point_group()->char_table();
-          string pgroup = mol.point_group()->symbol();
+          std::string pgroup = mol.point_group()->symbol();
 
 	  // print occ orb energy
 	  outfile->Printf( "\t  Beta occupied orbitals\n");
@@ -294,7 +293,7 @@ void OCCWave::semi_canonic()
 	}
 
         // Get new MOs
-	Cb_new = std::shared_ptr<Matrix>(new Matrix("New beta MO coefficients", nirrep_, nsopi_, nmopi_));
+	Cb_new = std::make_shared<Matrix>("New beta MO coefficients", nirrep_, nsopi_, nmopi_);
 	Cb_new->zero();
 	Cb_new->gemm(false, false, 1.0, Cb_, UorbB, 0.0);
 	Cb_->zero();

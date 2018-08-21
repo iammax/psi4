@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,24 +34,26 @@
 **  CCENERGY: Program to calculate coupled cluster energies.
 */
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cmath>
-#include <sys/types.h>
-#include <unistd.h>
+#include "Params.h"
+#include "MOInfo.h"
+#include "Local.h"
+#include "ccwave.h"
+
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/libdpd/dpd.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/libpsio/psio.h"
 #include "psi4/libpsio/psio.hpp"
-#include <sys/types.h>
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/psifiles.h"
-#include "Params.h"
-#include "MOInfo.h"
-#include "Local.h"
-#include "ccwave.h"
+#include "psi4/libpsi4util/process.h"
+#include "psi4/liboptions/liboptions.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 
 namespace psi { namespace ccenergy {
 
@@ -125,7 +128,7 @@ double CCEnergyWavefunction::compute_energy()
         spaces.push_back(moinfo_.bvir_sym);
         delete[] dpd_list[0];
         dpd_list[0] = new DPD(0, moinfo_.nirreps, params_.memory, 0, cachefiles,
-                              cachelist, NULL, 4, spaces);
+                              cachelist, nullptr, 4, spaces);
         dpd_set_default(0);
 
         if( params_.df ){
@@ -140,7 +143,7 @@ double CCEnergyWavefunction::compute_energy()
             aospaces.push_back(moinfo_.bocc_sym);
             aospaces.push_back(moinfo_.sopi);
             aospaces.push_back(moinfo_.sosym);
-            dpd_init(1, moinfo_.nirreps, params_.memory, 0, cachefiles, cachelist, NULL, 4, aospaces);
+            dpd_init(1, moinfo_.nirreps, params_.memory, 0, cachefiles, cachelist, nullptr, 4, aospaces);
             dpd_set_default(0);
         }
 
@@ -165,7 +168,7 @@ double CCEnergyWavefunction::compute_energy()
             aospaces.push_back(moinfo_.occ_sym);
             aospaces.push_back(moinfo_.sopi);
             aospaces.push_back(moinfo_.sosym);
-            dpd_init(1, moinfo_.nirreps, params_.memory, 0, cachefiles, cachelist, NULL, 2, aospaces);
+            dpd_init(1, moinfo_.nirreps, params_.memory, 0, cachefiles, cachelist, nullptr, 2, aospaces);
             dpd_set_default(0);
         }
 
@@ -207,7 +210,7 @@ double CCEnergyWavefunction::compute_energy()
     outfile->Printf( "  ----     ---------------------    ---------   ----------  ----------  ----------   --------\n");
     moinfo_.ecc = energy();
     pair_energies(&emp2_aa, &emp2_ab);
-    double last_energy;
+    double last_energy = 0;
 
     moinfo_.t1diag = diagnostic();
     moinfo_.d1diag = d1diag();
@@ -340,6 +343,13 @@ double CCEnergyWavefunction::compute_energy()
         update();
         checkpoint();
     }  // end loop over iterations
+
+    // DGAS Edit
+    Process::environment.globals["CC T1 DIAGNOSTIC"] = moinfo_.t1diag;
+    Process::environment.globals["CC D1 DIAGNOSTIC"] = moinfo_.d1diag;
+    Process::environment.globals["CC NEW D1 DIAGNOSTIC"] = moinfo_.new_d1diag;
+    Process::environment.globals["CC D2 DIAGNOSTIC"] = moinfo_.d2diag;
+
     outfile->Printf( "\n");
     if(!done) {
         outfile->Printf( "     ** Wave function not converged to %2.1e ** \n",
@@ -465,6 +475,8 @@ double CCEnergyWavefunction::compute_energy()
         print_pair_energies(emp2_aa, emp2_ab, ecc_aa, ecc_ab);
     }
 
+    if(params_.wfn == "CC2" && params_.dertype ==1) t1_ijab();
+
     if( (params_.wfn == "CC3" || params_.wfn == "EOM_CC3" )
             && (params_.dertype == 1 || params_.dertype == 3) && params_.ref == 0) {
         params_.ref = 1;
@@ -499,6 +511,7 @@ double CCEnergyWavefunction::compute_energy()
 #endif
 
     energy_ = moinfo_.ecc + moinfo_.eref;
+    name_  = "CCSD";
     Process::environment.globals["CURRENT ENERGY"] = moinfo_.ecc+moinfo_.eref;
     Process::environment.globals["CURRENT CORRELATION ENERGY"] = moinfo_.ecc;
     //Process::environment.globals["CC TOTAL ENERGY"] = moinfo.ecc+moinfo.eref;

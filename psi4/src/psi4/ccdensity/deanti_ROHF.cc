@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,6 +34,7 @@
 #include "psi4/libiwl/iwl.h"
 #include "psi4/libdpd/dpd.h"
 #include "psi4/psifiles.h"
+
 #include "MOInfo.h"
 #include "Params.h"
 #include "Frozen.h"
@@ -77,7 +79,7 @@ void deanti_ROHF(struct RHO_Params rho_params)
   double one_energy = 0.0, two_energy = 0.0, total_two_energy = 0.0;
   dpdbuf4 A, B, C, DInts, E, FInts;
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     outfile->Printf( "\n\tEnergies re-computed from Mulliken density:\n");
     outfile->Printf(   "\t-------------------------------------------\n");
 
@@ -130,7 +132,6 @@ void deanti_ROHF(struct RHO_Params rho_params)
     global_dpd_->file2_close(&D);
 
     outfile->Printf( "\tOne-electron energy        = %20.15f\n", one_energy);
-
   }
 
   /* G(Ij,Kl) <-- 1/2 G(IJ,KL) + 1/2 G(ij,kl) + 1/2 G(Ij,Kl) + 1/2 G(iJ,kL) */
@@ -150,7 +151,7 @@ void deanti_ROHF(struct RHO_Params rho_params)
   global_dpd_->buf4_close(&G2);
   global_dpd_->buf4_scm(&G1, 0.5);
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     global_dpd_->buf4_init(&A, PSIF_CC_AINTS, 0, 0, 0, 0, 0, 0, "A <ij|kl>");
     two_energy = global_dpd_->buf4_dot(&A, &G1);
     global_dpd_->buf4_close(&A);
@@ -172,7 +173,7 @@ void deanti_ROHF(struct RHO_Params rho_params)
   global_dpd_->buf4_axpy(&G2, &G1, 1.0);
   global_dpd_->buf4_close(&G2);
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     global_dpd_->buf4_init(&E, PSIF_CC_EINTS, 0, 0, 10, 0, 10, 0, "E <ij|ka>");
     two_energy = global_dpd_->buf4_dot(&E, &G1);
     global_dpd_->buf4_close(&E);
@@ -231,7 +232,7 @@ void deanti_ROHF(struct RHO_Params rho_params)
   global_dpd_->buf4_axpy(&G2, &G1, 1.0);
   global_dpd_->buf4_close(&G2);
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     global_dpd_->buf4_init(&DInts, PSIF_CC_DINTS, 0, 0, 5, 0, 5, 0, "D <ij|ab>");
     two_energy = global_dpd_->buf4_dot(&DInts, &G1);
     global_dpd_->buf4_close(&DInts);
@@ -253,7 +254,7 @@ void deanti_ROHF(struct RHO_Params rho_params)
   global_dpd_->buf4_axpy(&G2, &G1, 1.0);
   global_dpd_->buf4_close(&G2);
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     global_dpd_->buf4_init(&C, PSIF_CC_CINTS, 0, 10, 10, 10, 10, 0, "C <ia|jb>");
     two_energy = global_dpd_->buf4_dot(&C, &G1);
     global_dpd_->buf4_close(&C);
@@ -275,7 +276,7 @@ void deanti_ROHF(struct RHO_Params rho_params)
   global_dpd_->buf4_axpy(&G2, &G1, 1.0);
   global_dpd_->buf4_close(&G2);
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     global_dpd_->buf4_init(&FInts, PSIF_CC_FINTS, 0, 10, 5, 10, 5, 0, "F <ia|bc>");
     global_dpd_->buf4_sort(&FInts, PSIF_CC_TMP0, qprs, 11, 5, "F(CI,BA)");
     global_dpd_->buf4_close(&FInts);
@@ -308,7 +309,7 @@ void deanti_ROHF(struct RHO_Params rho_params)
   global_dpd_->buf4_close(&G2);
   global_dpd_->buf4_scm(&G1, 0.5);
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     global_dpd_->buf4_init(&B, PSIF_CC_BINTS, 0, 5, 5, 5, 5, 0, "B <ab|cd>");
     two_energy = global_dpd_->buf4_dot(&B, &G1);
     global_dpd_->buf4_close(&B);
@@ -318,15 +319,15 @@ void deanti_ROHF(struct RHO_Params rho_params)
 
   global_dpd_->buf4_close(&G1);
 
-  if(!params.aobasis) {
+  if(!params.aobasis && params.debug_) {
     outfile->Printf( "\tTotal two-electron energy  = %20.15f\n", total_two_energy);
     if (params.ground) {
-      outfile->Printf( "\tCCSD correlation energy    = %20.15f\n",
+       outfile->Printf( "\tCCSD correlation energy    = %20.15f\n",
 	      one_energy + total_two_energy);
-      outfile->Printf( "\tTotal CCSD energy          = %20.15f\n",
+       outfile->Printf( "\tTotal CCSD energy          = %20.15f\n",
 	      one_energy + total_two_energy + moinfo.eref);
-    }
-    else {
+  }
+   else {
       outfile->Printf( "\tTotal EOM CCSD correlation energy        = %20.15f\n",
           one_energy + total_two_energy);
       outfile->Printf( "\tCCSD correlation + EOM excitation energy = %20.15f\n",

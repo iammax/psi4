@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -34,6 +35,7 @@ if pymod.startswith(os.path.sep + os.path.sep):
     pymod = pymod[1:]
 pymod_dir_step = os.path.sep.join(['..'] * pymod.count(os.path.sep))
 data_dir = os.path.sep.join([psi4_module_loc, pymod_dir_step, '@CMAKE_INSTALL_DATADIR@', 'psi4'])
+executable = os.path.abspath(os.path.sep.join([psi4_module_loc, pymod_dir_step, '@CMAKE_INSTALL_BINDIR@', 'psi4']))
 
 # from . import config
 # data_dir = config.psidatadir
@@ -47,7 +49,6 @@ data_dir = os.path.abspath(data_dir)
 if not os.path.isdir(data_dir):
     raise KeyError("Unable to read the Psi4 Python folder - check the PSIDATADIR environmental variable"
                     "      Current value of PSIDATADIR is %s" % data_dir)
-os.environ["PSIDATADIR"] = data_dir
 
 # Init core
 try:
@@ -58,18 +59,30 @@ except ImportError as err:
     else:
         raise ImportError("{0}".format(err))
 
-from psi4.core import set_output_file, set_variable
+from psi4.core import set_output_file, get_variable, set_variable, get_num_threads, set_num_threads
 core.initialize()
-core.efp_init()
+
+if "PSI_SCRATCH" in os.environ.keys():
+    envvar_scratch = os.environ["PSI_SCRATCH"]
+    if not os.path.isdir(envvar_scratch):
+        raise Exception("Passed in scratch is not a directory (%s)." % envvar_scratch)
+    core.IOManager.shared_object().set_default_path(envvar_scratch)
+
+core.set_datadir(data_dir)
+del psi4_module_loc, pymod, pymod_dir_step, data_dir
 
 # Cleanup core at exit
 import atexit
 atexit.register(core.set_legacy_molecule, None)
+atexit.register(core.clean_options)
 atexit.register(core.clean)
 atexit.register(core.finalize)
 
 # Make official plugins accessible in input
 from .driver import endorsed_plugins
+
+# Manage threads. Must be after endorsed plugins, honestly.
+core.set_num_threads(1, quiet=True)
 
 # Load driver and outfile paraphernalia
 from .driver import *
@@ -77,5 +90,13 @@ from .header import print_header
 from .metadata import __version__, version_formatter
 
 # A few extraneous functions
-from .extras import get_input_directory
+from .extras import get_input_directory, addons, test
 
+# Python portions of compiled-in Add-Ons
+# * Note that this is a "battening down the hatches" for the many
+#   rather than letting PYTHONPATH rule for the few.
+import sys
+if "@ENABLE_PCMSolver@".upper() in ["1", "ON", "YES", "TRUE", "Y"]:
+    sys.path.insert(1, "@PCMSolver_PYMOD@")
+if "@ENABLE_libefp@".upper() in ["1", "ON", "YES", "TRUE", "Y"]:
+    sys.path.insert(1, "@pylibefp_PYMOD@")

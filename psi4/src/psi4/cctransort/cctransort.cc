@@ -3,42 +3,42 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
 #include "psi4/psi4-dec.h"
-#include "psi4/libparallel/parallel.h"
 #include "psi4/liboptions/liboptions.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/molecule.h"
 #include "psi4/libmints/wavefunction.h"
-#include "psi4/libmints/view.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/libiwl/iwl.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libdpd/dpd.h"
-
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 
 using std::vector;
 namespace psi{ namespace cctransort {
@@ -109,13 +109,23 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
 
   int nirreps = ref->nirrep();
   int nmo = ref->nmo();
-  char **labels = ref->molecule()->irrep_labels();
-  double enuc = ref->molecule()->nuclear_repulsion_energy();
+  std::vector<std::string> labels = ref->molecule()->irrep_labels();
+  double enuc = ref->molecule()->nuclear_repulsion_energy(ref->get_dipole_field_strength());
   double escf;
-  if(ref->reference_wavefunction())
+  if(ref->reference_wavefunction()) {
       escf = ref->reference_wavefunction()->reference_energy();
-  else
+  } else {
       escf = ref->reference_energy();
+  }
+  double epcm = 0.0;
+#ifdef USING_PCMSolver
+  if(options.get_bool("PCM")) {
+    epcm = ref->reference_wavefunction()
+               ? ref->reference_wavefunction()->get_variable(
+                     "PCM POLARIZATION ENERGY")
+               : ref->get_variable("PCM POLARIZATION ENERGY");
+  }
+#endif
 
   Dimension nmopi = ref->nmopi();
   Dimension nsopi = ref->nsopi();
@@ -337,7 +347,7 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
             "\t-----\t-----\t------\t------\t------\t------\t------\n");
   for(int i=0; i < nirreps; i++) {
     outfile->Printf("\t %s\t   %d\t    %d\t    %d\t    %d\t    %d\t    %d\n",
-                    labels[i],nmopi[i],frzcpi[i],clsdpi[i],openpi[i],uoccpi[i],frzvpi[i]);
+                    labels[i].c_str(),nmopi[i],frzcpi[i],clsdpi[i],openpi[i],uoccpi[i],frzvpi[i]);
   }
 
   // Transformation
@@ -349,16 +359,16 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
 
   IntegralTransform *ints;
   if(options.get_str("REFERENCE") == "RHF")
-    ints = new IntegralTransform(ref, transspaces, IntegralTransform::Restricted, IntegralTransform::DPDOnly);
+    ints = new IntegralTransform(ref, transspaces, IntegralTransform::TransformationType::Restricted, IntegralTransform::OutputType::DPDOnly);
   else if(options.get_str("REFERENCE") == "ROHF") {
     if(semicanonical)
       // Importantly the transform is handled python-side so we technically have unrestricted orbitals at this point
-      ints = new IntegralTransform(ref, transspaces, IntegralTransform::Unrestricted, IntegralTransform::DPDOnly);
+      ints = new IntegralTransform(ref, transspaces, IntegralTransform::TransformationType::Unrestricted, IntegralTransform::OutputType::DPDOnly);
     else
-      ints = new IntegralTransform(ref, transspaces, IntegralTransform::Restricted, IntegralTransform::DPDOnly);
+      ints = new IntegralTransform(ref, transspaces, IntegralTransform::TransformationType::Restricted, IntegralTransform::OutputType::DPDOnly);
   }
   else if(options.get_str("REFERENCE") == "UHF")
-    ints = new IntegralTransform(ref, transspaces, IntegralTransform::Unrestricted, IntegralTransform::DPDOnly);
+    ints = new IntegralTransform(ref, transspaces, IntegralTransform::TransformationType::Unrestricted, IntegralTransform::OutputType::DPDOnly);
   else
     throw PSIEXCEPTION("Invalid choice of reference wave function.");
 
@@ -389,27 +399,27 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
   */
 
   outfile->Printf("\t(OO|OO)...\n");
-  ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::occ, MOSpace::occ, IntegralTransform::MakeAndKeep);
+  ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::occ, MOSpace::occ, IntegralTransform::HalfTrans::MakeAndKeep);
   outfile->Printf("\t(OO|OV)...\n");
-  ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::occ, MOSpace::vir, IntegralTransform::ReadAndKeep);
+  ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::occ, MOSpace::vir, IntegralTransform::HalfTrans::ReadAndKeep);
   outfile->Printf("\t(OO|VV)...\n");
-  ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::vir, MOSpace::vir, IntegralTransform::ReadAndNuke);
+  ints->transform_tei(MOSpace::occ, MOSpace::occ, MOSpace::vir, MOSpace::vir, IntegralTransform::HalfTrans::ReadAndNuke);
 
   outfile->Printf("\t(OV|OO)...\n");
-  ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::occ, MOSpace::occ, IntegralTransform::MakeAndKeep);
+  ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::occ, MOSpace::occ, IntegralTransform::HalfTrans::MakeAndKeep);
   outfile->Printf("\t(OV|OV)...\n");
-  ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::occ, MOSpace::vir, IntegralTransform::ReadAndKeep);
+  ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::occ, MOSpace::vir, IntegralTransform::HalfTrans::ReadAndKeep);
   outfile->Printf("\t(OV|VV)...\n");
-  ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::vir, MOSpace::vir, IntegralTransform::ReadAndNuke);
+  ints->transform_tei(MOSpace::occ, MOSpace::vir, MOSpace::vir, MOSpace::vir, IntegralTransform::HalfTrans::ReadAndNuke);
 
   if(options.get_bool("DELETE_TEI")) ints->set_keep_dpd_so_ints(false);
 
   outfile->Printf("\t(VV|OO)...\n");
-  ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::occ, MOSpace::occ, IntegralTransform::MakeAndKeep);
+  ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::occ, MOSpace::occ, IntegralTransform::HalfTrans::MakeAndKeep);
   outfile->Printf("\t(VV|OV)...\n");
-  ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::occ, MOSpace::vir, IntegralTransform::ReadAndKeep);
+  ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::occ, MOSpace::vir, IntegralTransform::HalfTrans::ReadAndKeep);
   outfile->Printf("\t(VV|VV)...\n");
-  ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::vir, MOSpace::vir, IntegralTransform::ReadAndNuke);
+  ints->transform_tei(MOSpace::vir, MOSpace::vir, MOSpace::vir, MOSpace::vir, IntegralTransform::HalfTrans::ReadAndNuke);
 
   double efzc;
   psio->open(PSIF_CC_INFO, PSIO_OPEN_OLD);
@@ -421,13 +431,13 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
   psio->close(PSIF_CC_INFO, 1);
   outfile->Printf(  "\tFrozen core energy     =  %20.14f\n", efzc);
 
-  if(nfzc && (fabs(efzc) < 1e-7)) {
+  if(nfzc && (std::fabs(efzc) < 1e-7)) {
     outfile->Printf( "\tCCSORT Error: Orbitals are frozen in input,\n");
     outfile->Printf( "\tbut frozen core energy is small!\n");
     outfile->Printf( "\tCalculation will be aborted...\n");
     exit(PSI_RETURN_FAILURE);
   }
-  else if(!nfzc && fabs(efzc)) {
+  else if(!nfzc && std::fabs(efzc)) {
     outfile->Printf( "\tCCSORT Warning: No orbitals are frozen,\n");
     outfile->Printf( "\tbut the frozen-core energy in wfn is non-zero.\n");
     outfile->Printf( "\tCalculation will continue with zero efzc...\n");
@@ -452,8 +462,8 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
     spaces.push_back(bocc);
     spaces.push_back(bvir);
 
-    if(dpd_list[0]) throw PSIEXCEPTION("Attempting to initilize new DPD instance before the old one was freed.");
-    dpd_list[0] = new DPD(0, nirreps, Process::environment.get_memory(), 0, cachefiles, cachelist, NULL, 4, spaces);
+    if(dpd_list[0]) throw PSIEXCEPTION("Attempting to initialize new DPD instance before the old one was freed.");
+    dpd_list[0] = new DPD(0, nirreps, Process::environment.get_memory(), 0, cachefiles, cachelist, nullptr, 4, spaces);
     dpd_default = 0;
     global_dpd_ = dpd_list[0];
   }
@@ -465,8 +475,8 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
     spaces.push_back(occ);
     spaces.push_back(vir);
 
-    if(dpd_list[0]) throw PSIEXCEPTION("Attempting to initilize new DPD instance before the old one was freed.");
-    dpd_list[0] = new DPD(0, nirreps, Process::environment.get_memory(), 0, cachefiles, cachelist, NULL, 2, spaces);
+    if(dpd_list[0]) throw PSIEXCEPTION("Attempting to initialize new DPD instance before the old one was freed.");
+    dpd_list[0] = new DPD(0, nirreps, Process::environment.get_memory(), 0, cachefiles, cachelist, nullptr, 2, spaces);
     dpd_default = 0;
     global_dpd_ = dpd_list[0];
   }
@@ -656,7 +666,7 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
 
   outfile->Printf("\tNuclear Rep. energy          =  %20.14f\n", enuc);
   outfile->Printf("\tSCF energy                   =  %20.14f\n", escf);
-  double eref = scf_check(reference, openpi) + enuc + efzc;
+  double eref = scf_check(reference, openpi) + enuc + efzc + epcm;
   outfile->Printf("\tReference energy             =  %20.14f\n", eref);
   psio->write_entry(PSIF_CC_INFO, "Reference Energy", (char *) &(eref), sizeof(double));
 
@@ -664,8 +674,9 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
   Dimension zero(nirreps);
   psio_address next;
   if(reference == 2) {
-    View VCa_vir(ref->Ca(), nsopi, avirpi, zero, aoccpi+frzcpi);
-    Ca_vir = VCa_vir();
+    Slice row_slice(zero,nsopi);
+    Slice avir_col_slice(aoccpi + frzcpi,aoccpi + frzcpi + avirpi);
+    SharedMatrix Ca_vir = ref->Ca()->get_block(row_slice,avir_col_slice);
     Ca_vir->set_name("Alpha virtual orbitals");
 
     next = PSIO_ZERO;
@@ -674,8 +685,8 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
         psio->write(PSIF_CC_INFO, "UHF Active Alpha Virtual Orbs", (char *) Ca_vir->pointer(h)[0],
                     nsopi[h]*avirpi[h]*sizeof(double), next, &next);
 
-    View VCb_vir(ref->Cb(), nsopi, bvirpi, zero, boccpi+frzcpi);
-    Cb_vir = VCb_vir();
+    Slice bvir_col_slice(boccpi + frzcpi,boccpi + frzcpi + bvirpi);
+    SharedMatrix Cb_vir = ref->Cb()->get_block(row_slice,bvir_col_slice);
     Cb_vir->set_name("Beta virtual orbitals");
 
     next = PSIO_ZERO;
@@ -685,8 +696,9 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
                     nsopi[h]*bvirpi[h]*sizeof(double), next, &next);
   }
   else {
-    View VCa_occ(ref->Ca(), nsopi, occpi, zero, frzcpi);
-    Ca_occ = VCa_occ();
+    Slice row_slice(zero,nsopi);
+    Slice aocc_col_slice(frzcpi,occpi + frzcpi);
+    SharedMatrix Ca_occ = ref->Ca()->get_block(row_slice,aocc_col_slice);
     Ca_occ->set_name("Occupied orbitals");
 
     next = PSIO_ZERO;
@@ -695,11 +707,11 @@ PsiReturnType cctransort(SharedWavefunction ref, Options& options)
         psio->write(PSIF_CC_INFO, "RHF/ROHF Active Occupied Orbitals", (char *) Ca_occ->pointer(h)[0],
                     nsopi[h]*occpi[h]*sizeof(double), next, &next);
 
-    View Vavir(ref->Ca(), nsopi, uoccpi, zero, frzcpi+clsdpi+openpi);
-    View Vasoc(ref->Ca(), nsopi, openpi, zero, frzcpi+clsdpi);
     std::vector<SharedMatrix> virandsoc;
-    virandsoc.push_back(Vavir());
-    virandsoc.push_back(Vasoc());
+    Slice avir_col_slice(frzcpi + clsdpi + openpi,frzcpi + clsdpi + openpi + uoccpi);
+    Slice asoc_col_slice(frzcpi + clsdpi,frzcpi + clsdpi + openpi);
+    virandsoc.push_back(ref->Ca()->get_block(row_slice,avir_col_slice));
+    virandsoc.push_back(ref->Ca()->get_block(row_slice,asoc_col_slice));
     Ca_vir = Matrix::horzcat(virandsoc);
     Ca_vir->set_name("Virtual orbitals");
 

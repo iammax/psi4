@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -43,12 +44,10 @@ namespace psi{
     extern MOInfo *moinfo;
     extern MemoryManager *memory_manager;
 
-using namespace std;
-
 void CCBLAS::add_index(const char* cstr)
 {
   // Make sure that the element that we are adding is not present
-  string str(cstr);
+  std::string str(cstr);
   to_lower(str);
   if(indices.find(str)==indices.end()){
     indices.insert(make_pair(str,new CCIndex(str)));
@@ -57,15 +56,15 @@ void CCBLAS::add_index(const char* cstr)
 
 void CCBLAS::add_Matrix(const char* cstr)
 {
-  string str(cstr);
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::string str(cstr);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(size_t n = 0; n < names.size(); ++n)
     add_Matrix_ref(names[n]);
 }
 
-void CCBLAS::add_Matrix(string str)
+void CCBLAS::add_Matrix(std::string str)
 {
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(size_t n = 0; n < names.size(); ++n)
     add_Matrix_ref(names[n]);
 }
@@ -79,7 +78,7 @@ void CCBLAS::add_Matrix_ref(std::string& str)
     // Default: assume the [] indexing
     index_pointer[0]=get_index("[]");
     index_pointer[1]=get_index("[]");
-    vector<string> index_string_vec = split_indices(str);
+    std::vector<std::string> index_string_vec = split_indices(str);
     for(size_t i = 0; i < index_string_vec.size(); ++i)
       index_pointer[i]=get_index(index_string_vec[i]);
     matrices.insert(make_pair(str,new CCMatrix(str,index_pointer[0],index_pointer[1])));
@@ -88,7 +87,7 @@ void CCBLAS::add_Matrix_ref(std::string& str)
 
 CCIndex* CCBLAS::get_index(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   to_lower(str);
   // Make sure that the element that we are retrieving is present
   IndexMap::iterator iter = indices.find(str);
@@ -96,10 +95,10 @@ CCIndex* CCBLAS::get_index(const char* cstr)
     return(indices[str]);
   }
   throw PSIEXCEPTION("\nCCBLAS::get_index() couldn't find index " + str);
-  return(NULL);
+  return(nullptr);
 }
 
-CCIndex* CCBLAS::get_index(string& str)
+CCIndex* CCBLAS::get_index(std::string& str)
 {
   to_lower(str);
   // Make sure that the element that we are retrieving is present
@@ -108,7 +107,7 @@ CCIndex* CCBLAS::get_index(string& str)
     return(indices[str]);
   }
   throw PSIEXCEPTION("\nCCBLAS::get_index() couldn't find index " + str);
-  return(NULL);
+  return(nullptr);
 }
 
 CCMatTmp CCBLAS::get_MatTmp(std::string str, int reference, DiskOpt disk_option)
@@ -151,28 +150,28 @@ CCMatIrTmp CCBLAS::get_MatIrTmp(CCMatrix* Matrix, int irrep, DiskOpt disk_option
 
 CCMatrix* CCBLAS::get_Matrix(const char* cstr, int reference)
 {
-  string str(cstr);
+  std::string str(cstr);
   append_reference(str,reference);
   return(get_Matrix(str));
 }
 
 CCMatrix* CCBLAS::get_Matrix(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   return(get_Matrix(str));
 }
 
-CCMatrix* CCBLAS::get_Matrix(string& str)
+CCMatrix* CCBLAS::get_Matrix(std::string& str)
 {
   // Make sure that the element that we are retrieving is present
   MatrixMap::iterator iter = matrices.find(str);
   if(iter!=matrices.end())
     return(matrices[str]);
   throw PSIEXCEPTION("\nCCBLAS::get_matrix() couldn't find matrix " + str);
-  return(NULL);
+  return(nullptr);
 }
 
-CCMatrix* CCBLAS::get_Matrix(string& str, string& expression)
+CCMatrix* CCBLAS::get_Matrix(std::string& str, std::string& expression)
 {
   // Make sure that the element that we are retrieving is present
   MatrixMap::iterator iter = matrices.find(str);
@@ -180,18 +179,18 @@ CCMatrix* CCBLAS::get_Matrix(string& str, string& expression)
     return(matrices[str]);
   }
   throw PSIEXCEPTION("\n\nCCBLAS::parse() couldn't find the matrix " + str + " in the CCMatrix list\n\nwhile parsing the string:\n\t " + expression + "\n\n");
-  return NULL;
+  return nullptr;
 }
 
 void CCBLAS::set_scalar(const char* cstr,int reference,double value)
 {
-  string str(cstr);
+  std::string str(cstr);
   set_scalar(str,reference,value);
 }
 
-void CCBLAS::set_scalar(string& str,int reference,double value)
+void CCBLAS::set_scalar(std::string& str,int reference,double value)
 {
-  string matrix_str = add_reference(str,reference);
+  std::string matrix_str = add_reference(str,reference);
   // Make sure that the element that we are retrieving is present
   MatrixMap::iterator iter = matrices.find(matrix_str);
   if(iter!=matrices.end()){
@@ -204,13 +203,13 @@ void CCBLAS::set_scalar(string& str,int reference,double value)
 
 double CCBLAS::get_scalar(const char* cstr,int reference)
 {
-  string str(cstr);
+  std::string str(cstr);
   return(get_scalar(str,reference));
 }
 
-double CCBLAS::get_scalar(string& str,int reference)
+double CCBLAS::get_scalar(std::string& str,int reference)
 {
-  string matrix_str(str);
+  std::string matrix_str(str);
   append_reference(matrix_str,reference);
   // Make sure that the element that we are retrieving is present
   MatrixMap::iterator iter = matrices.find(matrix_str);
@@ -222,7 +221,7 @@ double CCBLAS::get_scalar(string& str,int reference)
   return (0.0);
 }
 
-double CCBLAS::get_scalar(string str)
+double CCBLAS::get_scalar(std::string str)
 {
   // Make sure that the element that we are retrieving is present
   MatrixMap::iterator iter = matrices.find(str);

@@ -2,9 +2,6 @@
 #! evaluated at the nuclear coordinates
 
 
-
-memory 250 mb
- 
 molecule bz {
     C          0.710500000000    0.000000000000   -1.230622098778
     C          1.421000000000    0.000000000000    0.000000000000
@@ -24,8 +21,8 @@ set {
     basis cc-pVDZ
     SCF_TYPE DF
     REFERENCE RHF
-    e_convergence 9
-    d_convergence 9
+    e_convergence 11
+    d_convergence 11
 }
 
 

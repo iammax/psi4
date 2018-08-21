@@ -5,23 +5,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -138,7 +139,7 @@ sub do_tests
     if ($jobtype eq "energy" || 
         $jobtype eq "gradient" || 
         $jobtype eq "hessian" || 
-        $jobtype eq "property") {
+        $jobtype eq "properties") {
       
       $fail |= compare_nuc();
       $fail |= compare_scf_energy();  # We always have SCF energies?
@@ -176,7 +177,7 @@ sub do_tests
           if ($wfn eq "SCF+D")  { $fail |= compare_scf_d_energy(); last SWITCH2; }
       }
 
-     if ($jobtype eq "property") {
+     if ($jobtype eq "properties") {
        if ($wfn eq "CCSD" || $wfn eq "ccsd" || 
            $wfn eq "CC2" || $wfn eq "cc2") {
           $fail |= compare_cclambda_overlap($wfn);
@@ -3198,8 +3199,8 @@ sub get_calctype_string
       @data = split(/\'/, $line);
       $wfn = $data[1];
     }
-    elsif ($line =~ m/property\s*\(/) {
-      $jobtype = "property";
+    elsif ($line =~ m/properties\s*\(/) {
+      $jobtype = "properties";
       @data = split(/\'/, $line);
       $wfn = $data[1];
     }

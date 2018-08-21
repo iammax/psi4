@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -30,9 +31,7 @@ a QM calculation.
 
 """
 from __future__ import absolute_import
-import re
-import os
-import math
+
 from psi4.driver import *
 
 
@@ -70,7 +69,7 @@ class Diffuse(object):
 
         basis = core.get_option("BASIS")
         ribasis = core.get_option("DF_BASIS_SCF")
-        scftype = core.get_option("SCF_TYPE")
+        scftype = core.get_global_option("SCF_TYPE")
 
         core.print_out("    => Diffuse SCF (Determines Da) <=\n\n")
 
@@ -145,7 +144,7 @@ class QMMM(object):
         position (*x*, *y*, *z*) Angstroms.
 
         """
-        self.charges.append([Q, x / p4const.psi_bohr2angstroms, y / p4const.psi_bohr2angstroms, z / p4const.psi_bohr2angstroms])
+        self.charges.append([Q, x / constants.bohr2angstroms, y / constants.bohr2angstroms, z / constants.bohr2angstroms])
 
     def __str__(self):
 

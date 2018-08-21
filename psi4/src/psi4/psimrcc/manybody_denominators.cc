@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -52,8 +53,6 @@ namespace psi{
     namespace psimrcc{
     extern MOInfo *moinfo;
 
-using namespace std;
-
 /**
  * Generates the MP denominators
  * \f[ \Delta_{ij...}^{ab...}(\mu) = f_{ii}(\mu) + f_{jj}(\mu) + ... - f_{aa}(\mu) - f_{bb}(\mu) - ... \f]
@@ -70,9 +69,9 @@ void CCManyBody::generate_denominators()
   MatrixMap& matrix_map = blas->get_MatrixMap();
   MatrixMap::iterator end_iter = matrix_map.end();
   for(MatrixMap::iterator iter=matrix_map.begin();iter!=end_iter;++iter){
-    string str = iter->first;
+    std::string str = iter->first;
 
-    if(str.find("d1")!=string::npos){
+    if(str.find("d1")!=std::string::npos){
 
       // Load the temporary matrix
       CCMatTmp MatTmp  = blas->get_MatTmp(str,( keep_denominators_in_core ? none : dump));
@@ -81,8 +80,8 @@ void CCManyBody::generate_denominators()
       // Get the reference number
       int reference = MatTmp->get_reference();
 
-      vector<string> spl_str = split_indices(str);
-      string ind;
+      std::vector<std::string> spl_str = split_indices(str);
+      std::string ind;
       for(size_t i = 0; i < spl_str.size(); ++i){
         ind += spl_str[i];
       }
@@ -115,7 +114,7 @@ void CCManyBody::generate_denominators()
       CCMatTmp f_ff_Matrix = blas->get_MatTmp("fock[ff]",reference,( keep_denominators_in_core ? none : dump));
       CCMatTmp f_FF_Matrix = blas->get_MatTmp("fock[FF]",reference,( keep_denominators_in_core ? none : dump));
 
-      vector<CCMatrix*> f_Matrix;
+      std::vector<CCMatrix*> f_Matrix;
       int k = 0;
       for(size_t l = 0; l < ind.size(); ++l){
         switch(ind[l]){
@@ -176,7 +175,7 @@ void CCManyBody::generate_denominators()
       delete[] ia;
     } // End "if d1"
 
-    if(str.find("d2")!=string::npos){
+    if(str.find("d2")!=std::string::npos){
       // Load the temporary matrix
       CCMatTmp MatTmp  = blas->get_MatTmp(str,( keep_denominators_in_core ? none : dump));
       double*** matrix = MatTmp->get_matrix();
@@ -184,8 +183,8 @@ void CCManyBody::generate_denominators()
       // Get the reference number
       int reference = MatTmp->get_reference();
 
-      vector<string> spl_str = split_indices(str);
-      string ind;
+      std::vector<std::string> spl_str = split_indices(str);
+      std::string ind;
       for(size_t i = 0; i < spl_str.size(); ++i){
         ind += spl_str[i];
       }
@@ -218,7 +217,7 @@ void CCManyBody::generate_denominators()
       CCMatTmp f_ff_Matrix = blas->get_MatTmp("fock[ff]",reference,( keep_denominators_in_core ? none : dump));
       CCMatTmp f_FF_Matrix = blas->get_MatTmp("fock[FF]",reference,( keep_denominators_in_core ? none : dump));
 
-      vector<CCMatrix*> f_Matrix;
+      std::vector<CCMatrix*> f_Matrix;
       int k = 0;
       for(size_t l = 0; l < ind.size(); ++l){
         switch(ind[l]){

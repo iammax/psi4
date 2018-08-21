@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,8 +31,7 @@
 #include "defines.h"
 #include "occwave.h"
 
-
-using namespace std;
+#include <cmath>
 
 
 namespace psi{ namespace occwave{
@@ -58,7 +58,7 @@ if (reference_ == "RESTRICTED") {
     global_dpd_->buf4_close(&K);
 
 
-    // initalize Tnew and Told
+    // initialize Tnew and Told
     global_dpd_->buf4_init(&Tnew, PSIF_OCC_DPD, 0, ID("[O,O]"), ID("[V,V]"),
                   ID("[O,O]"), ID("[V,V]"), 0, "T2_1new <OO|VV>");
     global_dpd_->buf4_init(&T, PSIF_OCC_DPD, 0, ID("[O,O]"), ID("[V,V]"),
@@ -117,7 +117,7 @@ if (reference_ == "RESTRICTED") {
     rms_t2 = 0.0;
     rms_t2 = global_dpd_->buf4_dot_self(&R);
     global_dpd_->buf4_close(&R);
-    rms_t2 = sqrt(rms_t2 / nElements);
+    rms_t2 = std::sqrt(rms_t2 / nElements);
 
     // Reset
     global_dpd_->buf4_copy(&Tnew, PSIF_OCC_DPD, "T2_1 <OO|VV>");
@@ -234,7 +234,7 @@ else if (reference_ == "UNRESTRICTED") {
     global_dpd_->buf4_close(&K);
 
 
-    // initalize Tnew and Told
+    // initialize Tnew and Told
     global_dpd_->buf4_init(&Tnew, PSIF_OCC_DPD, 0, ID("[O,O]"), ID("[V,V]"),
                   ID("[O,O]"), ID("[V,V]"), 0, "T2_1new <OO|VV>");
     global_dpd_->buf4_init(&T, PSIF_OCC_DPD, 0, ID("[O,O]"), ID("[V,V]"),
@@ -271,7 +271,7 @@ else if (reference_ == "UNRESTRICTED") {
     global_dpd_->buf4_close(&K);
 
 
-    // initalize Tnew and Told
+    // initialize Tnew and Told
     global_dpd_->buf4_init(&Tnew, PSIF_OCC_DPD, 0, ID("[o,o]"), ID("[v,v]"),
                   ID("[o,o]"), ID("[v,v]"), 0, "T2_1new <oo|vv>");
     global_dpd_->buf4_init(&T, PSIF_OCC_DPD, 0, ID("[o,o]"), ID("[v,v]"),
@@ -308,7 +308,7 @@ else if (reference_ == "UNRESTRICTED") {
     global_dpd_->buf4_close(&K);
 
 
-    // initalize Tnew and Told
+    // initialize Tnew and Told
     global_dpd_->buf4_init(&Tnew, PSIF_OCC_DPD, 0, ID("[O,o]"), ID("[V,v]"),
                   ID("[O,o]"), ID("[V,v]"), 0, "T2_1new <Oo|Vv>");
     global_dpd_->buf4_init(&T, PSIF_OCC_DPD, 0, ID("[O,o]"), ID("[V,v]"),
@@ -358,7 +358,7 @@ else if (reference_ == "UNRESTRICTED") {
     rms_t2AA = 0.0;
     rms_t2AA = global_dpd_->buf4_dot_self(&R);
     global_dpd_->buf4_close(&R);
-    rms_t2AA = sqrt(rms_t2AA) / nElements;
+    rms_t2AA = std::sqrt(rms_t2AA) / nElements;
 
     // Reset
     global_dpd_->buf4_copy(&Tnew, PSIF_OCC_DPD, "T2_1 <OO|VV>");
@@ -382,7 +382,7 @@ else if (reference_ == "UNRESTRICTED") {
     rms_t2BB = 0.0;
     rms_t2BB = global_dpd_->buf4_dot_self(&R);
     global_dpd_->buf4_close(&R);
-    rms_t2BB = sqrt(rms_t2BB) / nElements;
+    rms_t2BB = std::sqrt(rms_t2BB) / nElements;
 
     // Reset
     global_dpd_->buf4_copy(&Tnew, PSIF_OCC_DPD, "T2_1 <oo|vv>");
@@ -406,7 +406,7 @@ else if (reference_ == "UNRESTRICTED") {
     rms_t2AB = 0.0;
     rms_t2AB = global_dpd_->buf4_dot_self(&R);
     global_dpd_->buf4_close(&R);
-    rms_t2AB = sqrt(rms_t2AA) / nElements;
+    rms_t2AB = std::sqrt(rms_t2AA) / nElements;
 
     // Reset
     global_dpd_->buf4_copy(&Tnew, PSIF_OCC_DPD, "T2_1 <Oo|Vv>");

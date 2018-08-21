@@ -6,6 +6,10 @@ if(${ENABLE_erd})
         message(STATUS "${Cyan}Found erd${ColourReset}: ${_loc} (found version ${erd_VERSION})")
         add_library(erd_external INTERFACE)  # dummy
     else()
+        if(${CMAKE_INSIST_FIND_PACKAGE_erd})
+            message(FATAL_ERROR "Suitable erd could not be externally located as user insists")
+        endif()
+
         include(ExternalProject)
         message(STATUS "Suitable erd could not be located, ${Magenta}Building erd${ColourReset} instead.")
         ExternalProject_Add(erd_external
@@ -25,8 +29,8 @@ if(${ENABLE_erd})
                        -DENABLE_GENERIC=${ENABLE_GENERIC}
                        -DLIBC_INTERJECT=${LIBC_INTERJECT}
             CMAKE_CACHE_ARGS -DCMAKE_Fortran_FLAGS:STRING=${CMAKE_Fortran_FLAGS}
-            INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
-            DESTDIR=${CMAKE_BINARY_DIR}/stage)
+                             -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
+            INSTALL_COMMAND DESTDIR=${CMAKE_BINARY_DIR}/stage ${CMAKE_MAKE_PROGRAM} install)
 
         set(erd_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/erd CACHE PATH "path to internally built erdConfig.cmake" FORCE)
     endif()

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -35,14 +36,12 @@
 
 #include "index.h"
 #include "matrix.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 namespace psi{
 
     namespace psimrcc{
     extern MOInfo *moinfo;
     extern MemoryManager* memory_manager;
-
-using namespace std;
 
 double CCMatrix::fraction_of_memory_for_buffer = 0.05;
 
@@ -52,13 +51,13 @@ fock(false),integral(false),chemist_notation(false),antisymmetric(false),out_of_
 {
   nirreps = moinfo->get_nirreps();
 
-  if(str.find("(")!=string::npos || str.find("<")!=string::npos)
+  if(str.find("(")!=std::string::npos || str.find("<")!=std::string::npos)
     integral = true;
-  if(str.find("(")!=string::npos)
+  if(str.find("(")!=std::string::npos)
     chemist_notation = true;
-  if(label.find(":")!=string::npos)
+  if(label.find(":")!=std::string::npos)
     antisymmetric = true;
-  if(str.find("fock")!=string::npos)
+  if(str.find("fock")!=std::string::npos)
     fock = true;
 
   // Copy the pairpi arrays from the CCIndex object
@@ -70,7 +69,7 @@ fock(false),integral(false),chemist_notation(false),antisymmetric(false),out_of_
   allocate1(size_t,block_sizepi,nirreps);
 
   for(int h=0;h<nirreps;h++){
-    matrix[h]=NULL;
+    matrix[h]=nullptr;
     left_pairpi[h]=left->get_pairpi(h);
     right_pairpi[h]=right->get_pairpi(h);
     block_sizepi[h]=left_pairpi[h]*right_pairpi[h];
@@ -83,9 +82,9 @@ fock(false),integral(false),chemist_notation(false),antisymmetric(false),out_of_
   index_label = compute_index_label();
 
   // Parse the curly braces to get the reference
-  string::size_type left_curly  = str.find("{");
-  string::size_type right_curly = str.find("}");
-  if(left_curly!=string::npos && right_curly!=string::npos) // TODO add check on the size of the string
+  std::string::size_type left_curly  = str.find("{");
+  std::string::size_type right_curly = str.find("}");
+  if(left_curly!=std::string::npos && right_curly!=std::string::npos) // TODO add check on the size of the string
     reference  = to_integer(str.substr(left_curly + 1, right_curly - left_curly - 1));
 }
 
@@ -113,7 +112,7 @@ void CCMatrix::print()
   outfile->Printf("\n\n\t\t\t\t\t%s Matrix\n",label.c_str());
   for(int i=0;i<nirreps;i++){
     if(left->get_pairpi(i) * right->get_pairpi(i)){
-      outfile->Printf("\nBlock %d (%s,%s)",i,moinfo->get_irr_labs(i),moinfo->get_irr_labs(i));
+      outfile->Printf("\nBlock %d (%s,%s)",i,moinfo->get_irr_labs(i).c_str(),moinfo->get_irr_labs(i).c_str());
       print_dpdmatrix(i,"outfile");
     }
   }
@@ -269,13 +268,13 @@ void CCMatrix::element_by_element_addition(double factor,CCMatrix* B_Matrix,int 
   }
 }
 
-void CCMatrix::tensor_product(string& reindexing,double factor,CCMatrix* B_Matrix,CCMatrix* C_Matrix)
+void CCMatrix::tensor_product(std::string& reindexing,double factor,CCMatrix* B_Matrix,CCMatrix* C_Matrix)
 {
   short* reindexing_array = new short[4];
 
   intpairvec pairs;
   for(int i=0;i<reindexing.size();i++)
-    pairs.push_back(make_pair(to_integer(reindexing.substr(i, 1)),i));
+    pairs.push_back(std::make_pair(to_integer(reindexing.substr(i, 1)),i));
   sort(pairs.begin(),pairs.end());
   for(int i = 0; i< reindexing.size(); i++)
     reindexing_array[i]=pairs[i].second;
@@ -330,12 +329,12 @@ double CCMatrix::dot_product(CCMatrix* B_Matrix, CCMatrix* C_Matrix, int h)
   return(value);
 }
 
-void CCMatrix::print_dpdmatrix(int irrep, std::string OutFileRMR)
+void CCMatrix::print_dpdmatrix(int irrep, std::string out_fname)
 {
   int ii,jj,kk,nn,ll;
   int i,j;
-  std::shared_ptr<psi::PsiOutStream> printer(OutFileRMR=="outfile"? psi::outfile:
-     std::shared_ptr<psi::OutFile>(new psi::OutFile(OutFileRMR,psi::APPEND)));
+  std::shared_ptr<psi::PsiOutStream> printer(out_fname=="outfile"? psi::outfile:
+     std::make_shared<psi::PsiOutStream>(out_fname,std::ostream::app));
   double** mat=matrix[irrep];
   int left_offset  = left->get_first(irrep);
   int right_offset = right->get_first(irrep);
@@ -373,7 +372,7 @@ L200:
     printer->Printf(")  ");
 
     for (j=ii-1; j < nn; j++) {
-      if(fabs(mat[i][j]) < 100.0)
+      if(std::fabs(mat[i][j]) < 100.0)
         printer->Printf("%12.7f",mat[i][j]);
       else
         printer->Printf("    infinity");
@@ -401,9 +400,9 @@ double CCMatrix::get_scalar()
   return(matrix[0][0][0]);
 }
 
-string CCMatrix::compute_index_label()
+std::string CCMatrix::compute_index_label()
 {
-  string label;
+  std::string label;
   int left_indices = left->get_label().size();
   if(left_indices>2)
     label += left->get_label().substr(1,left_indices-2);

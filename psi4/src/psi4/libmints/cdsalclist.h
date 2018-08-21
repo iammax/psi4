@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -37,11 +38,10 @@
  PRAGMA_WARNING_POP
 #include "psi4/libmints/typedefs.h"
 #include "psi4/libpsi4util/exception.h"
+#include "typedefs.h"
 
 namespace psi {
 
-class Molecule;
-class Matrix;
 class MatrixFactory;
 
 class CdSalc {
@@ -123,8 +123,7 @@ public:
 
 class CdSalcList
 {
-    std::shared_ptr<Molecule> molecule_;
-    std::shared_ptr<MatrixFactory> factory_;
+    SharedMolecule molecule_;
 
     char needed_irreps_;
     bool project_out_translations_;
@@ -154,21 +153,19 @@ public:
      *  \param project_out_translations Project out translational SALCs
      *  \param project_out_rotations Project out rotational SALCs
      */
-    CdSalcList(std::shared_ptr<Molecule> mol,
-               std::shared_ptr<MatrixFactory> fact,
+    CdSalcList(SharedMolecule mol,
                int needed_irreps=0xFF,
                bool project_out_translations=true,
                bool project_out_rotations=true);
-    virtual ~CdSalcList();
+    ~CdSalcList();
 
-    /*! Returns the number of combintations. It may not be 3n-5 or 3n-6.
-     *  The value returned depends on needed_irreps and the project_out*
-     *  settings.
+    /*! Returns the number of SALCs. It may not be 3n-5 or 3n-6. The value
+     *  returned depends on needed_irreps and the project_out* settings.
      */
     size_t ncd() const { return salcs_.size(); }
 
-    std::vector<SharedMatrix > create_matrices(const std::string& basename);
-    std::string name_of_component(int component);
+    std::vector<SharedMatrix > create_matrices(const std::string &basename, const MatrixFactory &factory) const;
+    std::string salc_name(int index) const;
 
     char needed_irreps() const { return needed_irreps_; }
     int nirrep(void) const { return nirrep_; }
@@ -180,8 +177,8 @@ public:
 
     const CdSalcWRTAtom& atom_salc(int i) const { return atom_salcs_[i]; }
 
-    SharedMatrix matrix();
-    SharedMatrix matrix_irrep(int h); // return only salcs of a given irrep
+    SharedMatrix matrix() const;
+    SharedMatrix matrix_irrep(int h) const; // return only salcs of a given irrep
     //SharedMatrix matrix_projected_out() const;
 
     void print() const;

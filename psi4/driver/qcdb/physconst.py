@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -47,6 +48,7 @@ psi_c_au                     = 137.035999679        # Speed of light in atomic u
 psi_hartree2ev               = 27.21138             # Hartree to eV conversion factor
 psi_hartree2wavenumbers      = 219474.6             # Hartree to cm$^{-1}$ conversion factor
 psi_hartree2kcalmol          = 627.5095             # Hartree to kcal mol$^{-1}$ conversion factor
+psi_hartree2kJmol            = 2625.500             # Hartree to kilojoule mol$^{-1}$ conversion factor
 psi_hartree2MHz              = 6.579684E9           # Hartree to MHz conversion factor
 psi_kcalmol2wavenumbers      = 349.7551             # kcal mol$^{-1}$ to cm$^{-1}$ conversion factor
 psi_e0                       = 8.854187817E-12      # Vacuum permittivity (Fm$^{-1}$)

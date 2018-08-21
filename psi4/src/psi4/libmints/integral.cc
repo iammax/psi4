@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -43,10 +44,17 @@
 #include "psi4/libmints/3coverlap.h"
 #include "psi4/libmints/overlap.h"
 #include "psi4/psi4-dec.h"
+#include "psi4/libpsi4util/process.h"
 #include "psi4/liboptions/liboptions.h"
 #include "psi4/libmints/potentialint.h"
+#include "psi4/libmints/ecpint.h"
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/erd_eri.h"
+
+#ifdef USING_simint
+#include "psi4/libmints/siminteri.h"
+#endif
+
 #include <libint/libint.h>
 
 ;
@@ -57,12 +65,8 @@ IntegralFactory::IntegralFactory(std::shared_ptr<BasisSet> bs1,
                                  std::shared_ptr<BasisSet> bs3,
                                  std::shared_ptr<BasisSet> bs4)
 {
-    set_basis(bs1, bs2, bs3, bs4);
-}
 
-IntegralFactory::IntegralFactory(std::shared_ptr<BasisSet> bs1, std::shared_ptr<BasisSet> bs2)
-{
-    set_basis(bs1, bs2, bs1, bs2);
+    set_basis(bs1, bs2, bs3, bs4);
 }
 
 IntegralFactory::IntegralFactory(std::shared_ptr<BasisSet> bs1)
@@ -143,6 +147,17 @@ OneBodySOInt* IntegralFactory::so_potential(int deriv)
 {
     std::shared_ptr<OneBodyAOInt> ao_int(ao_potential(deriv));
     return new PotentialSOInt(ao_int, this);
+}
+
+OneBodyAOInt* IntegralFactory::ao_ecp(int deriv)
+{
+    return new ECPInt(spherical_transforms_, bs1_, bs2_, deriv);
+}
+
+OneBodySOInt* IntegralFactory::so_ecp(int deriv)
+{
+	std::shared_ptr<OneBodyAOInt> ao_int(ao_ecp(deriv));
+	return new ECPSOInt(ao_int, this);
 }
 
 OneBodyAOInt* IntegralFactory::ao_rel_potential(int deriv)
@@ -254,22 +269,30 @@ OneBodySOInt* IntegralFactory::so_traceless_quadrupole()
     return new OneBodySOInt(ao_int, this);
 }
 
-OneBodyAOInt* IntegralFactory::electric_field()
+OneBodyAOInt* IntegralFactory::electric_field(int deriv)
 {
-    return new ElectricFieldInt(spherical_transforms_, bs1_, bs2_);
+    return new ElectricFieldInt(spherical_transforms_, bs1_, bs2_, deriv);
 }
 
 TwoBodyAOInt* IntegralFactory::erd_eri(int deriv, bool use_shell_pairs)
 {
+#ifdef USING_simint
+    if(deriv == 0 && Process::environment.options.get_str("INTEGRAL_PACKAGE") == "SIMINT")
+        return new SimintERI(this, deriv, use_shell_pairs);
+#endif
 #ifdef USING_erd
     if(deriv == 0 && Process::environment.options.get_str("INTEGRAL_PACKAGE") == "ERD")
         return new ERDERI(this, deriv, use_shell_pairs);
 #endif
-    return new ERI(this, deriv, use_shell_pairs);
+    return eri(deriv, use_shell_pairs);
 }
 
 TwoBodyAOInt* IntegralFactory::eri(int deriv, bool use_shell_pairs)
 {
+#ifdef USING_simint
+    if(deriv == 0 && Process::environment.options.get_str("INTEGRAL_PACKAGE") == "SIMINT")
+        return new SimintERI(this, deriv, use_shell_pairs);
+#endif
 #ifdef USING_erd
     if(deriv == 0 && Process::environment.options.get_str("INTEGRAL_PACKAGE") == "ERD")
         return new ERDERI(this, deriv, use_shell_pairs);

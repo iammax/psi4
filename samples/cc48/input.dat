@@ -1,7 +1,5 @@
 #! reproduces dipole moments in J.F. Stanton's "biorthogonal" JCP paper
 
-memory 250 mb
-
 molecule h2o {
   0 1
   H
@@ -101,4 +99,4 @@ D 2 1.00
 ****
 }
 
-property('eom-ccsd', properties=['dipole'])
+properties('eom-ccsd', properties=['dipole'])

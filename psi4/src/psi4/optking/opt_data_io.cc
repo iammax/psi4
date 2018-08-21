@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -39,7 +40,6 @@
 // PSI unit number for opt_data binary file
 #if defined (OPTKING_PACKAGE_PSI)
  #define PSI_OPTDATA_FILE_NUM 1
- #include "psi4/libparallel/parallel.h"
  #include "psi4/libpsio/psio.h"
  #include "psi4/libpsio/psio.hpp"
  using namespace psi;
@@ -71,7 +71,6 @@ bool opt_io_is_present(void) {
 
 #elif defined(OPTKING_PACKAGE_QCHEM)
   using opt_io::opt_data_stream;
-  using namespace std;
 
   opt_data_stream.open(QCHEM_OPTDATA_FILENAME, fstream::in | fstream::binary);
   if (opt_data_stream.is_open()) {
@@ -84,13 +83,14 @@ bool opt_io_is_present(void) {
   return file_present;
 }
 
-void opt_io_remove(void) {
+void opt_io_remove(bool force) {
 #if defined(OPTKING_PACKAGE_PSI)
   // check retention setting in .psi4rc - maybe the user likes file 1 !
-  if (! psi::_default_psio_manager_->get_specific_retention(1)) {
+  if (! psi::_default_psio_manager_->get_specific_retention(1) || force) {
     if (!psio_open_check(PSI_OPTDATA_FILE_NUM)) // if not open, open it
       psio_open(PSI_OPTDATA_FILE_NUM, PSIO_OPEN_OLD);
     psio_close(PSI_OPTDATA_FILE_NUM, 0);        // close and delete it
+    oprintf_out("\tRemoving binary optimization data file.\n");
   }
 
 #elif defined(OPTKING_PACKAGE_QCHEM)
@@ -130,7 +130,6 @@ void opt_io_open(OPT_IO_FILE_STATUS status) {
 
 #elif defined(OPTKING_PACKAGE_QCHEM)
   using opt_io::opt_data_stream;
-  using namespace std;
 
   if ( opt_data_stream.is_open() && (status == OPT_IO_OPEN_OLD))
     return;
@@ -166,8 +165,8 @@ void opt_io_close(int keep) {
 
 // key    = char * ; label for entry ; not used by QChem
 // buffer = char * ; stream from which to read
-// size   = unsigned long int ; number of bytes to read
-void opt_io_read_entry(const char *key, char *buffer, ULI size) {
+// size   = size_t ; number of bytes to read
+void opt_io_read_entry(const char *key, char *buffer, size_t size) {
 #if defined(OPTKING_PACKAGE_PSI)
   psio_read_entry(PSI_OPTDATA_FILE_NUM, key, buffer, size);
 #elif defined(OPTKING_PACKAGE_QCHEM)
@@ -178,8 +177,8 @@ void opt_io_read_entry(const char *key, char *buffer, ULI size) {
 
 // key    = char * ; label for entry ; not used by QChem
 // buffer = char * ; stream from which to read
-// size   = unsigned long int ; number of bytes to read
-void opt_io_write_entry(const char *key, char *buffer, ULI size) {
+// size   = size_t ; number of bytes to read
+void opt_io_write_entry(const char *key, char *buffer, size_t size) {
 #if defined(OPTKING_PACKAGE_PSI)
   psio_write_entry(PSI_OPTDATA_FILE_NUM, key, buffer, size);
 #elif defined(OPTKING_PACKAGE_QCHEM)

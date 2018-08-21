@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -64,7 +65,7 @@ int *sbgr_tr_alist;
 
 int *O, *U, *T ;
 int **Tij, **Toij, *Tcnt;
-unsigned int **Tidx;
+size_t **Tidx;
 signed char **Tsgn;
 
 
@@ -119,7 +120,7 @@ void stringlist(struct olsen_graph *Graph, struct stringwr **slist, int repl_otf
    for (irrep=0,listnum=0; irrep < nirreps; irrep++) {
       for (code = 0; code < ncodes; code++,listnum++) {
 
-         if (repl_otf) Occs[listnum] = NULL;
+         if (repl_otf) Occs[listnum] = nullptr;
 
          subgraph = Graph->sg[irrep] + code;
          if (!subgraph->num_strings) continue;
@@ -223,12 +224,12 @@ void form_stringwr(struct stringwr *strlist, int *occs, int N,
       *Graph, int first_orb_active, int repl_otf)
 {
    unsigned char *occlist;
-   unsigned int addr;
+   size_t addr;
    int i;
    struct stringwr *node;
 
    occlist = (unsigned char *) malloc (N * sizeof(unsigned char));
-   if (occlist == NULL) {
+   if (occlist == nullptr) {
       throw PsiException("(form_stringwr): Malloc error",__FILE__,__LINE__);
       }
 
@@ -260,9 +261,9 @@ void og_form_repinfo(struct stringwr *string, int num_ci_orbs,
    int nel, p, q, i, j, k, l, ij, oij;
    int nlists, listnum, strlistnum, nsym, jused, ndrc;
    int diagcnt=0;
-   static int *diagij = NULL;
-   static int *diagoij = NULL;
-   unsigned int cnt, stringridx;
+   static int *diagij = nullptr;
+   static int *diagoij = nullptr;
+   size_t cnt, stringridx;
    int ridx;
    signed char sgn;
 
@@ -282,8 +283,8 @@ void og_form_repinfo(struct stringwr *string, int num_ci_orbs,
 
    /* set up the ij indices for the 'diagonal' entries E_ii           */
    /* this assumes that the values in array O are strictly increasing */
-   if (diagij == NULL) diagij = init_int_array(nel);
-   if (diagoij == NULL) diagoij = init_int_array(nel);
+   if (diagij == nullptr) diagij = init_int_array(nel);
+   if (diagoij == nullptr) diagoij = init_int_array(nel);
    for (i=0; i<nel; i++) {
       j = O[i];
       diagij[i] = ioff[j] + j;
@@ -382,21 +383,21 @@ void og_form_repinfo(struct stringwr *string, int num_ci_orbs,
    string->cnt = init_int_array(nlists);
    string->ij = (int **) malloc(sizeof(int *) * nlists);
    string->oij = (int **) malloc(sizeof(int *) * nlists);
-   string->ridx = (unsigned int **) malloc(sizeof(unsigned int *) * nlists);
+   string->ridx = (size_t **) malloc(sizeof(size_t *) * nlists);
    string->sgn = (signed char **) malloc(sizeof(signed char *) * nlists);
 
 
    for (i=0; i<nlists; i++) {
       string->cnt[i] = cnt = Tcnt[i];
-      string->ij[i] = NULL;
-      string->oij[i] = NULL;
-      string->ridx[i] = NULL;
-      string->sgn[i] = NULL;
+      string->ij[i] = nullptr;
+      string->oij[i] = nullptr;
+      string->ridx[i] = nullptr;
+      string->sgn[i] = nullptr;
       if (cnt) {
          string->ij[i] = init_int_array(cnt);
          string->oij[i] = init_int_array(cnt);
-         string->ridx[i] = (unsigned int *) malloc(cnt *
-            sizeof(unsigned int));
+         string->ridx[i] = (size_t *) malloc(cnt *
+            sizeof(size_t));
          string->sgn[i] = (signed char *) malloc(cnt *
             sizeof(signed char));
 
@@ -431,13 +432,13 @@ void init_stringwr_temps(int nel, int num_ci_orbs, int nsym)
    maxcnt = nel * num_ci_orbs; /* num single replacements inc. self-repl */
    Tij = (int **) malloc(sizeof(int *) * nsym);
    Toij = (int **) malloc(sizeof(int *) * nsym);
-   Tidx = (unsigned int **) malloc(sizeof(unsigned int *) * nsym);
+   Tidx = (size_t **) malloc(sizeof(size_t *) * nsym);
    Tsgn = (signed char **) malloc(sizeof(signed char *) * nsym);
 
    for (i=0; i<nsym; i++) {
       Tij[i] = init_int_array(maxcnt);
       Toij[i] = init_int_array(maxcnt);
-      Tidx[i] = (unsigned int *) malloc(sizeof(unsigned int) * maxcnt);
+      Tidx[i] = (size_t *) malloc(sizeof(size_t) * maxcnt);
       Tsgn[i] = (signed char *) malloc(sizeof(signed char) * maxcnt);
       }
 }

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -71,13 +72,11 @@ class OneBodyAOInt;
 class OneBodySOInt;
 class TwoBodyAOInt;
 class ThreeCenterOverlapInt;
-class Symmetry;
 class CartesianIter;
 class RedundantCartesianIter;
 class RedundantCartesianSubIter;
 class ShellRotation;
 class SymmetryOperation;
-class SOTransform;
 class SOBasisSet;
 class CorrelationFactor;
 
@@ -194,7 +193,7 @@ private:
         int j;
         int k;
         int l;
-        unsigned int index;
+        size_t index;
     };
 
     Integral current;
@@ -269,7 +268,7 @@ public:
     AOIntegralsIterator integrals_iterator();
 };
 
-class SOShellCombinationsIterator
+class PSI_API SOShellCombinationsIterator
 {
 private:
     struct ShellQuartet {
@@ -311,7 +310,7 @@ public:
     int end_of_PK() const { return current.end_of_PK; }
 };
 
-class SO_PQ_Iterator
+class PSI_API SO_PQ_Iterator
 {
 private:
     struct PQ_Pair {
@@ -338,7 +337,7 @@ public:
     int q() const { return current.Q; }
 };
 
-class SO_RS_Iterator
+class PSI_API SO_RS_Iterator
 {
 private:
     struct RS_Pair {
@@ -382,7 +381,7 @@ public:
 
 
 /*! \ingroup MINTS */
-class IntegralFactory
+class PSI_API IntegralFactory
 {
 protected:
     /// Center 1 basis set
@@ -403,8 +402,6 @@ public:
     /** Initialize IntegralFactory object given a BasisSet for each center. */
     IntegralFactory(std::shared_ptr<BasisSet> bs1, std::shared_ptr<BasisSet> bs2,
                     std::shared_ptr<BasisSet> bs3, std::shared_ptr<BasisSet> bs4);
-    /** Initialize IntegralFactory object given a BasisSet for two centers. Becomes (bs1 bs2 | bs1 bs2). */
-    IntegralFactory(std::shared_ptr<BasisSet> bs1, std::shared_ptr<BasisSet> bs2);
     /** Initialize IntegralFactory object given a BasisSet for two centers. Becomes (bs1 bs1 | bs1 bs1). */
     IntegralFactory(std::shared_ptr<BasisSet> bs1);
 
@@ -439,6 +436,10 @@ public:
     /// Returns an OneBodyInt that computes the nuclear attraction integral.
     virtual OneBodyAOInt* ao_potential(int deriv=0);
     virtual OneBodySOInt* so_potential(int deriv=0);
+    
+    /// Returns an OneBodyInt that computes the ECP integral.
+    virtual OneBodyAOInt* ao_ecp(int deriv=0);
+    virtual OneBodySOInt* so_ecp(int deriv=0);
 
     /// Returns an OneBodyInt that computes the relativistic nuclear attraction integral.
     virtual OneBodyAOInt* ao_rel_potential(int deriv=0);
@@ -477,7 +478,7 @@ public:
     virtual OneBodySOInt* so_efp_multipole_potential(int deriv=0);
 
     /// Returns an OneBodyInt that computes the electric field
-    virtual OneBodyAOInt *electric_field();
+    virtual OneBodyAOInt *electric_field(int deriv=0);
 
     /// Returns an OneBodyInt that computes the point electrostatic potential
     virtual OneBodyAOInt *electrostatic();

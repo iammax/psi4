@@ -7,8 +7,7 @@
 #   upon updating EFP potentials a couple years ago, so
 #   assuming ok, and copying in a new ref. --LAB
 
-ref_efp = [
-
+refEFP = psi4.Matrix.from_list([
 
 molecule efp_spec {
 efp h2o
@@ -60,7 +59,7 @@ efp h2o
 set efp_disp no
 set efp_exch no
 set efp_elst_damping screen
-set efp_pol_damping off
+set efp_ind_damping off
 set efp dertype first
 
 energy('efp')

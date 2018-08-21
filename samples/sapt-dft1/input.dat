@@ -1,0 +1,20 @@
+#! SAPT(DFT) aug-cc-pVDZ interaction energy between Ne and Ar atoms.
+
+
+
+molecule dimer {
+  Ne
+  --
+  Ar 1 6.5
+  units bohr
+}
+
+set {
+    basis         aug-cc-pvdz
+    scf_type      df
+    sapt_dft_grac_shift_a 0.203293
+    sapt_dft_grac_shift_b 0.138264
+}
+
+energy('sapt(dft)', molecule=dimer)
+

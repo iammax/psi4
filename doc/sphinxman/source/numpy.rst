@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -48,7 +49,7 @@ various helper functions as detailed in this section.  A quick overview NumPy
 functionality can be found `here
 <https://docs.scipy.org/doc/numpy-dev/user/quickstart.html>`_.  In addition,
 numerous example of hybrid NumPy and Psi4 can be found at the `Psi4Numpy
-project <https://github.com/dgasmith/psi4numpy`_.  Currently only the Matrix
+project <https://github.com/dgasmith/psi4numpy>`_.  Currently only the Matrix
 and Vector objects support NumPy interfacing. Let us begin with a simple
 conversion from these objects to a NumPy array::
 
@@ -96,12 +97,6 @@ Secondly, these objects have a ``.np`` attribute for easy access to the underlyi
 
 this operation is identical to the above.
 
-.. warning:: The following will lead to reference errors: ``view =
-   psi4.Matrix(3, 3).np``. Here, the Python garbage collection deletes the Matrix
-   object, the view then points to deleted data resulting in the view effectively
-   reading random data. As a general rule, never assign the ``.nph`` or ``.np``
-   accessors.
-
 
 |PSIfour| Data Objects with Irreps
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -134,7 +129,7 @@ Matrix to Array
 ~~~~~~~~~~~~~~~
 A general function that converts NumPy arrays to |PSIfour| data objects.
 
-.. autofunction:: psi4.driver.p4util.numpy_helper.to_array
+.. autofunction:: psi4.driver.p4util.numpy_helper._to_array
 
 
 

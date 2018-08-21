@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -41,16 +42,19 @@
 **
 */
 
-#include <cstdlib>
-#include <cstdio>
-#include <cmath>
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libmints/vector.h"
+#include "psi4/libpsi4util/process.h"
+
 #include "psi4/detci/structs.h"
 #include "psi4/detci/civect.h"
 #include "psi4/detci/ci_tol.h"
 #include "psi4/detci/ciwave.h"
+
+#include <cstdlib>
+#include <cstdio>
+#include <cmath>
 
 namespace psi { namespace detci {
 
@@ -371,7 +375,7 @@ void CIWavefunction::mitrush_iter(CIvect &Hd, struct stringwr **alplist, struct 
 
       if (Parameters_->diag_method==METHOD_MITRUSHENKOV &&
           diag_method==METHOD_MITRUSHENKOV && S < S_MAX &&
-          fabs(E_last-E_curr) > MITRUSH_E_DIFF_MIN) {
+          std::fabs(E_last-E_curr) > MITRUSH_E_DIFF_MIN) {
         outfile->Printf( "Taking Mitrushenkov step (S =%10.6lf <%10.6lf)\n",
                  S, S_MAX);
          /* calculate H(i,i-1) = H(i-1,i) */
@@ -493,10 +497,10 @@ void CIWavefunction::mitrush_iter(CIvect &Hd, struct stringwr **alplist, struct 
          last = !last;
         }
 
-      if ((fabs(E - E_last) < conv_e && c1norm < conv_rms) || iter >=maxiter) {
+      if ((std::fabs(E - E_last) < conv_e && c1norm < conv_rms) || iter >=maxiter) {
         outfile->Printf( "Iter %2d  ROOT 1 ECI = %14.9lf", iter, E + enuc);
         outfile->Printf( "    Delta_E %10.3E   Delta_C %10.3E %c\n"
-          ,E-E_last,c1norm,(fabs(E - E_last) < conv_e && c1norm < conv_rms)
+          ,E-E_last,c1norm,(std::fabs(E - E_last) < conv_e && c1norm < conv_rms)
           ? 'c' : ' ');
         evals[0] = E;
         free_matrix(H2x2,2);
@@ -568,7 +572,8 @@ void CIWavefunction::olsen_update(CIvect &C, CIvect &S, CIvect &Hd, double E, do
            CalcInfo_->twoel_ints->pointer(), CalcInfo_->edrc, CalcInfo_->num_alp_expl,
            CalcInfo_->num_bet_expl, CalcInfo_->nmo, buf, Parameters_->hd_ave);
       /* Check norm of residual vector i.e. before preconditioning */
-      dot_arr(buffer1, buffer1, C.buf_size_[buf], &rnormtmp);
+      // dot_arr(buffer1, buffer1, C.buf_size_[buf], &rnormtmp);
+      rnormtmp = C_DDOT(C.buf_size_[buf], buffer1, 1, buffer1, 1);
       /* C = C/(Hd - E) */
       buf_ols_denom(buffer1, buffer2, E, S.buf_size_[buf]);
       /* buffer1 is now equal to C^1, i.e. the correction to C_i
@@ -666,12 +671,14 @@ void CIWavefunction::olsen_iter_xy(CIvect &C, CIvect &S, CIvect &Hd, double *x, 
       if (Parameters_->diag_method <= METHOD_MITRUSHENKOV) {
         /* Olsen and Mitrushenkov iterators */
         S.read(curvect,buf);
-        dot_arr(buffer1, buffer2, C.buf_size_[buf], &ty);
+        // dot_arr(buffer1, buffer2, C.buf_size_[buf], &ty);
+        ty = C_DDOT(C.buf_size_[buf], buffer1, 1, buffer2, 1);
         }
       else { /* Dot buffer2 with all Sigma vectors on disk */
         for (i=0; i<L; i++) {
            S.read(i,buf);
-           dot_arr(buffer1, buffer2, C.buf_size_[buf], &tmpy);
+           //dot_arr(buffer1, buffer2, C.buf_size_[buf], &tmpy);
+           tmpy = C_DDOT(C.buf_size_[buf], buffer1, 1, buffer2, 1);
            ty += tmpy * alpha[i][curvect];
            zero_arr(sigma0b1,H0block_->size);
            S.h0block_gather_multivec(sigma0b1);

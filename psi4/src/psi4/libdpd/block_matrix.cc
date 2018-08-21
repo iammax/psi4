@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -47,7 +48,7 @@
 ** LRU order) until the memory limits are satisfied.  If, after
 ** deletion of the entire dpd_file4_cache (or at least until no other
 ** zero-priority entries remain), there is still insufficient memory
-** available to satisfy the request, a NULL pointer is returned to the
+** available to satisfy the request, a nullptr pointer is returned to the
 ** caller, indicating that either an out-of-core algorithm must be
 ** used, or the caller must exit().
 **
@@ -58,13 +59,15 @@
 //#include <mm_malloc.h>
 #endif
 
+#include "dpd.h"
+
+#include "psi4/libqt/qt.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/psi4-dec.h"
+
 #include<cstdio>
 #include<cstdlib>
 #include<cstring>
-#include "psi4/libqt/qt.h"
-#include "dpd.h"
-
-#include "psi4/psi4-dec.h"
 
 namespace psi {
 
@@ -78,7 +81,7 @@ DPD::dpd_block_matrix(size_t n, size_t m)
     timer_on("block_mat");
 #endif
 
-    A = NULL;  B = NULL;
+    A = nullptr;  B = nullptr;
 
     size_t size = m * n;
 
@@ -111,22 +114,22 @@ DPD::dpd_block_matrix(size_t n, size_t m)
 #ifdef DPD_TIMER
         timer_off("block_mat");
 #endif
-        return(NULL);
+        return(nullptr);
     }
 
-    if((A = (double **) malloc(n * sizeof(double *)))==NULL) {
+    if((A = (double **) malloc(n * sizeof(double *)))==nullptr) {
         outfile->Printf("dpd_block_matrix: trouble allocating memory \n");
         outfile->Printf("n = %zd  m = %zd\n",n, m);
         exit(PSI_RETURN_FAILURE);
     }
 
     /* Allocate the main block here */
-    /* NB: If we delete the entire cache and STILL get NULL from malloc(), */
+    /* NB: If we delete the entire cache and STILL get nullptr from malloc(), */
     /* we're either out of real memory or the heap is seriously fragmented */
 //#ifdef HAVE_MM_MALLOC_H
-//    while((B = (double *)_mm_malloc(size * sizeof(double), 64)) == NULL) {
+//    while((B = (double *)_mm_malloc(size * sizeof(double), 64)) == nullptr) {
 //#else
-    while((B = (double *) malloc(size * sizeof(double))) == NULL) {
+    while((B = (double *) malloc(size * sizeof(double))) == nullptr) {
 //#endif
         /* Priority-based cache */
         if(dpd_main.cachetype == 1) {
@@ -166,7 +169,7 @@ DPD::dpd_block_matrix(size_t n, size_t m)
 void DPD::free_dpd_block(double **array, size_t n, size_t m)
 {
     size_t size =  m * n;
-    if(array == NULL) return;
+    if(array == nullptr) return;
 
 //#ifdef HAVE_MM_MALLOC_H
 //    _mm_free(array[0]);

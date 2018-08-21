@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -27,12 +28,12 @@
 #include <cstdio>
 #include <utility>
 #include <algorithm>
+#include <vector>
 #include "psi4/libmints/writer.h"
-#include "psi4/libmints/view.h"
 #include "psi4/psi4-dec.h"
 #include "psi4/physconst.h"
 #include "psi4/masses.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/libmints/pointgrp.h"
 #include "psi4/libmints/molecule.h"
@@ -42,7 +43,6 @@
 #include "psi4/libmints/mintshelper.h"
 
 
-using namespace std;
 using namespace psi;
 ;
 
@@ -53,7 +53,7 @@ GradientWriter::GradientWriter(std::shared_ptr<Molecule> mol, const Matrix& grad
 
 void GradientWriter::write(const std::string &filename)
 {
-   std::shared_ptr<OutFile> printer(new OutFile(filename,APPEND));
+   auto printer = std::make_shared<PsiOutStream>(filename,std::ostream::app);
    int i;
 
 
@@ -78,202 +78,10 @@ void GradientWriter::write(const std::string &filename)
 MoldenWriter::MoldenWriter(std::shared_ptr<Wavefunction> wavefunction)
     : wavefunction_(wavefunction)
 {
-
 }
-void MoldenWriter::writeNO(const std::string &filename, std::shared_ptr<Matrix> Na, std::shared_ptr<Matrix> Nb, std::shared_ptr<Vector> Oa, std::shared_ptr<Vector> Ob)
-{
-    //Same as MO Writer below
-    std::shared_ptr<OutFile> printer(new OutFile(filename,APPEND));
-
-    int atom;
-
-    printer->Printf("[Molden Format]\n");
-    BasisSet& basisset = *wavefunction_->basisset().get();
-    Molecule& mol = *basisset.molecule().get();
-
-    // Print the molecule to molden
-    printer->Printf("[Atoms] (AU)\n");
-    for (atom=0; atom<mol.natom(); ++atom) {
-        Vector3 coord = mol.xyz(atom);
-        printer->Printf("%-2s  %2d  %3d   %20.12f %20.12f %20.12f\n",
-                mol.symbol(atom).c_str(), atom+1, static_cast<int>(mol.Z(atom)), coord[0], coord[1], coord[2]);
-    }
-
-    // Dump the basis set using code adapted from psi2molden
-    printer->Printf("[GTO]\n");
-
-    // For each atom
-    for (atom=0; atom<mol.natom(); ++atom) {
-        printer->Printf("  %d 0\n", atom+1);
-
-        // Go through all the shells on this center
-        for (int shell=0; shell < basisset.nshell_on_center(atom); ++shell) {
-            int overall_shell = basisset.shell_on_center(atom, shell);
-
-            const GaussianShell& gs = basisset.shell(overall_shell);
-
-            printer->Printf(" %c%5d  1.00\n", gs.amchar(), gs.nprimitive());
-
-            for (int prim=0; prim<gs.nprimitive(); ++prim) {
-                printer->Printf("%20.10f %20.10f\n", gs.exp(prim), gs.original_coef(prim));
-            }
-        }
-
-        // An empty line separates atoms
-        printer->Printf("\n");
-    }
-    /* Natural Orbital Transformation to AO basis
-     *N  (mo x no)
-     *1st Half Transform
-     *N' (so x no) = C (so x mo) x N (mo x no)
-     *Fully transformed
-     *N'' (ao x no) = S (ao x no) x N'(so x no)
-     */
-    //setup
-    // get the "S" transformation matrix, ao by so
-    std::shared_ptr<PetiteList> pl(new PetiteList(wavefunction_->basisset(), wavefunction_->integral()));
-    SharedMatrix aotoso = pl->aotoso();
-    //get C's
-    SharedMatrix Ca = wavefunction_->Ca();
-    SharedMatrix Cb = wavefunction_->Cb();
-    // need dimensions
-    const Dimension aos = pl->AO_basisdim();
-    const Dimension sos = pl->SO_basisdim();
-    const Dimension nmo = Ca->colspi();
-    const Dimension nos = Na->colspi();
-    //New N's
-    SharedMatrix Naprime(new Matrix("Na' ", sos, nos));
-    SharedMatrix Nbprime(new Matrix("Nb' ", sos, nos));
-    // do N' = C x N
-    Naprime->gemm(false, false, 1.0, Ca,Na, 0.0);
-    Nbprime->gemm(false, false, 1.0, Cb,Na, 0.0);
-    //Fully transformed
-    SharedMatrix NaFT(new Matrix("NaFT", aos,nos));
-    SharedMatrix NbFT(new Matrix("NbFT", aos,nos));
-    // do N'' = S x N'
-    NaFT->gemm(false,false,1.0,aotoso,Naprime,0.0);
-    NbFT->gemm(false,false,1.0,aotoso,Nbprime,0.0);
-
-    // The order Molden expects
-    //     P: x, y, z
-    //    5D: D 0, D+1, D-1, D+2, D-2
-    //    6D: xx, yy, zz, xy, xz, yz
-    //
-    //    7F: F 0, F+1, F-1, F+2, F-2, F+3, F-3
-    //   10F: xxx, yyy, zzz, xyy, xxy, xxz, xzz, yzz, yyz, xyz
-    //
-    //    9G: G 0, G+1, G-1, G+2, G-2, G+3, G-3, G+4, G-4
-    //   15G: xxxx yyyy zzzz xxxy xxxz yyyx yyyz zzzx zzzy,
-    //        xxyy xxzz yyzz xxyz yyxz zzxy
-    // Since Molden doesn't handle higher than g we'll just leave them be.
-    int molden_cartesian_order[][15] = {
-        { 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },    // p
-        { 0, 3, 4, 1, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },    // d
-        { 0, 4, 5, 3, 9, 6, 1, 8, 7, 2, 0, 0, 0, 0, 0 },    // f
-        { 0, 3, 4, 9, 12, 10, 5, 13, 14, 7, 1, 6, 11, 8, 2} // g
-    };
-
-    int nirrep = NaFT->nirrep();
-    Dimension countpi(nirrep);
-    Dimension zeropi(nirrep);
-    Dimension ncartpi(nirrep);
-
-    for(int i = 0; i < basisset.nshell(); i++) {
-        int am = basisset.shell(i).am();
-
-        int ncart = basisset.shell(i).nfunction();
-        if((am == 1 && basisset.has_puream()) || (am > 1 && am < 5 && basisset.shell(i).is_cartesian())) {
-            for (int h=0; h<nirrep; ++h)
-                ncartpi[h] = ncart;
-
-            View block_a(NaFT, ncartpi, NaFT->colspi(), countpi, zeropi);
-            View block_b(NbFT, ncartpi, NbFT->colspi(), countpi, zeropi);
-
-            SharedMatrix temp_a = block_a();
-            SharedMatrix temp_b = block_b();
-
-            for( int j =0; j < ncart; j++) {
-                for (int h=0; h < NaFT->nirrep(); ++h) {
-                    for (int k=0; k<NaFT->coldim(h); ++k) {
-                        // outfile->Printf( "am %d\n, from %d to %d\n", am, j, countpi[h] + molden_cartesian_order[am-1][j]);
-                        NaFT->set(h, countpi[h] + molden_cartesian_order[am-1][j], k, temp_a->get(h, j, k));
-                        NaFT->set(h, countpi[h] + molden_cartesian_order[am-1][j], k, temp_b->get(h, j, k));
-                    }
-                }
-            }
-        }
-
-        for (int h=0; h<nirrep; ++h)
-            countpi[h] += ncart;
-    }
-
-    if (basisset.has_puream()) {
-        // Tell Molden to use spherical.  5d implies 5d and 7f.
-        printer->Printf("[5D]\n[9G]\n\n");
-    }
-    CharacterTable ct = mol.point_group()->char_table();
-
-    // Dump MO's to the molden file
-    printer->Printf("[MO]\n");
-
-    std::vector<std::pair<double, std::pair<int, int> > > mos;
-
-    // do alpha's
-    bool SameOcc = true;
-    for (int h=0; h<wavefunction_->nirrep(); ++h) {
-        for (int n=0; n<wavefunction_->nmopi()[h]; ++n) {
-            mos.push_back(make_pair(Oa->get(h, n), make_pair(h, n)));
-            if(fabs(Oa->get(h,n) - Ob->get(h,n)) > 1e-10)
-                SameOcc = false;
-        }
-    }
-    std::sort(mos.begin(), mos.end());
-
-    for (int i=0; i<(int)mos.size(); ++i) {
-        int h = mos[i].second.first;
-        int n = mos[i].second.second;
-
-        printer->Printf(" Sym= %s\n", ct.gamma(h).symbol());
-        printer->Printf(" Ene= %20.10f\n", Oa->get(h, n));
-        printer->Printf(" Spin= Alpha\n");
-        if(Na == Nb && Oa == Ob && SameOcc)
-            printer->Printf(" Occup= %7.4lf\n", Oa->get(h,n)+Ob->get(h,n));
-        else
-            printer->Printf(" Occup= %7.4lf\n", Oa->get(h,n));
-        for (int so=0; so<wavefunction_->nso(); ++so)
-            printer->Printf("%3d %20.12lf\n", so+1, NaFT->get(h, so, n));
-    }
-
-    // do beta's
-    mos.clear();
-    if (Na != Nb || Oa != Ob || !SameOcc) {
-        for (int h=0; h<wavefunction_->nirrep(); ++h) {
-            for (int n=0; n<wavefunction_->nmopi()[h]; ++n) {
-                mos.push_back(make_pair(Ob->get(h, n), make_pair(h, n)));
-            }
-        }
-        std::sort(mos.begin(), mos.end());
-
-        for (int i=0; i<(int)mos.size(); ++i) {
-            int h = mos[i].second.first;
-            int n = mos[i].second.second;
-
-            printer->Printf(" Sym= %s\n", ct.gamma(h).symbol());
-            printer->Printf(" Ene= %20.10lf\n", Ob->get(h, n));
-            printer->Printf(" Spin= Beta\n");
-            printer->Printf(" Occup= %7.4lf\n", Ob->get(h,n));
-            for (int so=0; so<wavefunction_->nso(); ++so)
-                printer->Printf("%3d %20.12lf\n", so+1, NbFT->get(h, so, n));
-        }
-    }
-
-
-}
-
-
 void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca, std::shared_ptr<Matrix> Cb, std::shared_ptr<Vector> Ea, std::shared_ptr<Vector> Eb, std::shared_ptr<Vector> OccA, std::shared_ptr<Vector> OccB, bool dovirtual)
 {
-    std::shared_ptr<OutFile> printer(new OutFile(filename,APPEND));
+    auto printer = std::make_shared<PsiOutStream>(filename,std::ostream::app);
 
     int atom;
 
@@ -318,7 +126,7 @@ void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca
     }
 
     // Convert Ca & Cb
-    std::shared_ptr<PetiteList> pl(new PetiteList(wavefunction_->basisset(), wavefunction_->integral()));
+    auto pl = std::make_shared<PetiteList>(wavefunction_->basisset(), wavefunction_->integral());
     // get the "aotoso" transformation matrix, ao by so
     SharedMatrix aotoso = pl->aotoso();
     // need dimensions
@@ -326,8 +134,8 @@ void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca
     const Dimension sos = pl->SO_basisdim();
     const Dimension nmo = Ca->colspi();
 
-    SharedMatrix Ca_ao_mo(new Matrix("Ca AO x MO", aos, nmo));
-    SharedMatrix Cb_ao_mo(new Matrix("Cb AO x MO", aos, nmo));
+    auto Ca_ao_mo = std::make_shared<Matrix>("Ca AO x MO", aos, nmo);
+    auto Cb_ao_mo = std::make_shared<Matrix>("Cb AO x MO", aos, nmo);
 
     // do the half transform
     Ca_ao_mo->gemm(false, false, 1.0, aotoso, Ca, 0.0);
@@ -369,11 +177,11 @@ void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca
             for (int h=0; h<nirrep; ++h)
                 ncartpi[h] = ncart;
 
-            View block_a(Ca_ao_mo, ncartpi, Ca_ao_mo->colspi(), countpi, zeropi);
-            View block_b(Cb_ao_mo, ncartpi, Cb_ao_mo->colspi(), countpi, zeropi);
-
-            SharedMatrix temp_a = block_a();
-            SharedMatrix temp_b = block_b();
+            Slice row_slice(countpi,countpi + ncartpi);
+            Slice acol_slice(zeropi,zeropi + Ca_ao_mo->colspi());
+            Slice bcol_slice(zeropi,zeropi + Cb_ao_mo->colspi());
+            SharedMatrix temp_a = Ca_ao_mo->get_block(row_slice,acol_slice);
+            SharedMatrix temp_b = Cb_ao_mo->get_block(row_slice,bcol_slice);
 
             for( int j =0; j < ncart; j++) {
                 for (int h=0; h < Ca_ao_mo->nirrep(); ++h) {
@@ -402,7 +210,7 @@ void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca
     std::vector<std::pair<double, std::pair<int, int> > > mos;
 
     // Number of MOs to write
-    int nmoh[wavefunction_->nirrep()];
+    std::vector<int> nmoh(wavefunction_->nirrep());
     for (int h=0; h<wavefunction_->nirrep(); ++h) {
 	if (dovirtual)
 	    nmoh[h] = wavefunction_->nmopi()[h];
@@ -414,8 +222,8 @@ void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca
     bool SameOcc = true;
     for (int h=0; h<wavefunction_->nirrep(); ++h) {
         for (int n=0; n<nmoh[h]; ++n) {
-            mos.push_back(make_pair(Ea->get(h, n), make_pair(h, n)));
-            if(fabs(OccA->get(h,n) - OccB->get(h,n)) > 1e-10)
+            mos.push_back(std::make_pair(Ea->get(h, n), std::make_pair(h, n)));
+            if(std::fabs(OccA->get(h,n) - OccB->get(h,n)) > 1e-10)
                 SameOcc = false;
         }
     }
@@ -441,7 +249,7 @@ void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca
     if (Ca != Cb || Ea != Eb || !SameOcc) {
         for (int h=0; h<wavefunction_->nirrep(); ++h) {
             for (int n=0; n<nmoh[h]; ++n) {
-                mos.push_back(make_pair(Eb->get(h, n), make_pair(h, n)));
+                mos.push_back(std::make_pair(Eb->get(h, n), std::make_pair(h, n)));
             }
         }
         std::sort(mos.begin(), mos.end());
@@ -465,6 +273,8 @@ void MoldenWriter::write(const std::string &filename, std::shared_ptr<Matrix> Ca
 FCHKWriter::FCHKWriter(std::shared_ptr<Wavefunction> wavefunction)
     : wavefunction_(wavefunction)
 {
+    SharedMatrix Ca = wavefunction_->Ca();
+    Ca->print();
 }
 
 
@@ -709,7 +519,7 @@ void FCHKWriter::write(const std::string &filename)
          ///*  0 */  { pf1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 },
     };
 
-    SharedMatrix transmat(new Matrix("Reorder", nbf, nbf));
+    auto transmat = std::make_shared<Matrix>("Reorder", nbf, nbf);
     transmat->identity();
     int offset = 0;
     for(int nshell = 0; nshell < basis->nshell(); ++nshell){
@@ -748,21 +558,21 @@ void FCHKWriter::write(const std::string &filename)
     SharedMatrix reorderedDs(Dtot_ao->clone());
     reorderedDt->back_transform(Dtot_ao, transmat);
     reorderedDs->back_transform(Dspin_ao, transmat);
-    SharedMatrix reorderedCa(new Matrix("Reordered Ca", Ca_ao->ncol(), Ca_ao->nrow()));
-    SharedMatrix reorderedCb(new Matrix("Reordered Cb", Cb_ao->ncol(), Cb_ao->nrow()));
+    auto reorderedCa = std::make_shared<Matrix>("Reordered Ca", Ca_ao->ncol(), Ca_ao->nrow());
+    auto reorderedCb = std::make_shared<Matrix>("Reordered Cb", Cb_ao->ncol(), Cb_ao->nrow());
     reorderedCa->gemm(true, true, 1.0, Ca_ao, transmat, 0.0);
     reorderedCb->gemm(true, true, 1.0, Cb_ao, transmat, 0.0);
     for(int i = 0; i < reorderedDt->nrow(); ++i)
         for(int j = 0; j < reorderedDt->ncol(); ++j)
-            if(fabs(reorderedDt->get(i,j)) < 1E-12)
+            if(std::fabs(reorderedDt->get(i,j)) < 1E-12)
                 reorderedDt->set(i,j,0.0);
     for(int i = 0; i < reorderedCa->nrow(); ++i)
         for(int j = 0; j < reorderedCa->ncol(); ++j)
-            if(fabs(reorderedCa->get(i,j)) < 1E-12)
+            if(std::fabs(reorderedCa->get(i,j)) < 1E-12)
                 reorderedCa->set(i,j,0.0);
     for(int i = 0; i < reorderedCb->nrow(); ++i)
         for(int j = 0; j < reorderedCb->ncol(); ++j)
-            if(fabs(reorderedCb->get(i,j)) < 1E-12)
+            if(std::fabs(reorderedCb->get(i,j)) < 1E-12)
                 reorderedCb->set(i,j,0.0);
     std::vector<double> shell_coords;
     std::vector<double> coefficients;
@@ -825,10 +635,14 @@ void FCHKWriter::write(const std::string &filename)
     write_matrix("Contraction coefficients", coefficients);
     write_matrix("Coordinates of each shell", shell_coords);
     write_number("Total Energy", wavefunction_->reference_energy());
-    write_matrix("Alpha Orbital Energies", wavefunction_->epsilon_a_subset("AO"));
-    write_matrix("Alpha MO coefficients", reorderedCa);
-    write_matrix("Beta Orbital Energies", wavefunction_->epsilon_b_subset("AO"));
-    write_matrix("Beta MO coefficients", reorderedCb);
+    //write_matrix("Alpha Orbital Energies", wavefunction_->epsilon_a_subset("AO"));
+    write_matrix(wavefunction_->epsilon_a()->name().c_str(), wavefunction_->epsilon_a_subset("AO"));
+    //write_matrix("Alpha MO coefficients", reorderedCa);
+    write_matrix(wavefunction_->Ca()->name().c_str(), reorderedCa);
+    //write_matrix("Beta Orbital Energies", wavefunction_->epsilon_b_subset("AO"));
+    write_matrix(wavefunction_->epsilon_b()->name().c_str(), wavefunction_->epsilon_b_subset("AO"));
+    //write_matrix("Beta MO coefficients", reorderedCb);
+    write_matrix(wavefunction_->Cb()->name().c_str(), reorderedCb);
     char* label = new char[256];
     std::string type = name == "DFT" ? "SCF" : name;
     sprintf(label, "Total %s Density", type.c_str());
@@ -865,7 +679,7 @@ void NBOWriter::write(const std::string &filename)
 
     MintsHelper helper(wavefunction_->basisset(), wavefunction_->options(), 0);
     SharedMatrix sotoao = helper.petite_list()->sotoao();
-    std::shared_ptr<OutFile> printer(new OutFile(filename,APPEND));
+    auto printer = std::make_shared<PsiOutStream>(filename,std::ostream::app);
 
 
     //Get the basis set and molecule from the wavefuntion
@@ -1094,17 +908,17 @@ void NBOWriter::write(const std::string &filename)
 
     //Alpha Density Matrix
     SharedMatrix soalphadens = wavefunction_->Da();
-    SharedMatrix alphadens(new Matrix(nbf, nbf));
+    auto alphadens = std::make_shared<Matrix>(nbf, nbf);
     alphadens->remove_symmetry (soalphadens, sotoao);
     //Beta density
-    SharedMatrix betadens(new Matrix(nbf, nbf));
+    auto betadens = std::make_shared<Matrix>(nbf, nbf);
     SharedMatrix sobetadens = wavefunction_->Db();
     betadens->remove_symmetry (sobetadens, sotoao);
     //Now print the density matrix
     printer->Printf( "\n $DENSITY");
     if(wavefunction_->same_a_b_dens ())
     {
-        SharedMatrix density(new Matrix(nbf, nbf));
+        auto density = std::make_shared<Matrix>(nbf, nbf);
         density->copy (alphadens);
         density->add (betadens);
         for( int i=0; i<nbf; i++)
@@ -1146,7 +960,7 @@ void NBOWriter::write(const std::string &filename)
 
     // alpha Fock matrix
     SharedMatrix alphasofock = wavefunction_->Fa();
-    SharedMatrix alphafock(new Matrix(nbf, nbf));
+    auto alphafock = std::make_shared<Matrix>(nbf, nbf);
     alphafock->remove_symmetry (alphasofock, sotoao);
     // print the Fock matrix
     printer->Printf( "\n $FOCK");
@@ -1166,7 +980,7 @@ void NBOWriter::write(const std::string &filename)
     else
     {
         // beta Fock
-        SharedMatrix betafock(new Matrix(nbf, nbf));
+        auto betafock = std::make_shared<Matrix>(nbf, nbf);
         SharedMatrix betasofock = wavefunction_->Fb();
         betafock->remove_symmetry(betasofock, sotoao);
         int count=0;
@@ -1197,7 +1011,7 @@ void NBOWriter::write(const std::string &filename)
     SharedMatrix soalphac = wavefunction_->Ca();
     const Dimension aos = helper.petite_list()->AO_basisdim();
     const Dimension nmo = wavefunction_->Ca()->colspi();
-    SharedMatrix alphac(new Matrix("Ca AO x MO", aos, nmo));
+    auto alphac = std::make_shared<Matrix>("Ca AO x MO", aos, nmo);
     alphac->gemm(true, false, 1.00, sotoao, soalphac, 0.00);
 
     printer->Printf( "\n $LCAOMO");
@@ -1217,7 +1031,7 @@ void NBOWriter::write(const std::string &filename)
     else
     {
         //Beta AO->MO transformation
-        SharedMatrix betac(new Matrix(nbf, nbf));
+        auto betac = std::make_shared<Matrix>(nbf, nbf);
         SharedMatrix sobetac = wavefunction_->Cb();
         betac->gemm(true, false, 1.00, sotoao, sobetac, 0.00);
 
@@ -1268,7 +1082,7 @@ void MOWriter::write()
     Vector& Ea = *wavefunction_->epsilon_a().get();
     Vector& Eb = *wavefunction_->epsilon_b().get();
 
-    std::shared_ptr<PetiteList> pl(new PetiteList(wavefunction_->basisset(), wavefunction_->integral()));
+    auto pl = std::make_shared<PetiteList>(wavefunction_->basisset(), wavefunction_->integral());
 
     // get the "aotoso" transformation matrix, ao by so
     SharedMatrix aotoso = pl->aotoso();
@@ -1277,8 +1091,8 @@ void MOWriter::write()
     const Dimension sos = pl->SO_basisdim();
     const Dimension mos = wavefunction_->nmopi();
 
-    SharedMatrix Ca_ao_mo(new Matrix("Ca AO x MO", aos, mos));
-    SharedMatrix Cb_ao_mo(new Matrix("Cb AO x MO", aos, mos));
+    auto Ca_ao_mo = std::make_shared<Matrix>("Ca AO x MO", aos, mos);
+    auto Cb_ao_mo = std::make_shared<Matrix>("Cb AO x MO", aos, mos);
 
     // do the half transform
     Ca_ao_mo->gemm(false, false, 1.0, aotoso, Ca, 0.0);

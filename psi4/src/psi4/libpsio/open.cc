@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,12 +32,24 @@
  */
 
 #include <cstdio>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <cstring>
 #include <cstdlib>
+#ifdef _MSC_VER
+#include <io.h>
+#define SYSTEM_OPEN ::_open
+#define SYSTEM_CLOSE ::_close
+#define PSIO_OPEN_OLD_FLAGS _O_BINARY | _O_CREAT | _O_RDWR
+#define PSIO_OPEN_NEW_FLAGS _O_BINARY | _O_CREAT | _O_RDWR | _O_TRUNC
+#define PERMISSION_MODE _S_IWRITE
+#else
 #include <unistd.h>
+#define SYSTEM_OPEN ::open
+#define SYSTEM_CLOSE ::close
+#define PSIO_OPEN_OLD_FLAGS O_CREAT | O_RDWR
+#define PSIO_OPEN_NEW_FLAGS O_CREAT | O_RDWR | O_TRUNC
+#define PERMISSION_MODE S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
+#endif
 #include <string>
 #include <map>
 #include <sstream>
@@ -45,8 +58,8 @@
 #include "psi4/psi4-dec.h"
 namespace psi {
 
-void PSIO::open(unsigned int unit, int status) {
-  unsigned int i;
+void PSIO::open(size_t unit, int status) {
+  size_t i;
   char *name, *path;
   psio_ud *this_unit;
 
@@ -101,7 +114,7 @@ void PSIO::open(unsigned int unit, int status) {
     const char* path2 = spath2.c_str();
 
     fullpath = (char*) malloc( (strlen(path2)+strlen(name)+80)*sizeof(char));
-    sprintf(fullpath, "%s%s.%u", path2, name, unit);
+    sprintf(fullpath, "%s%s.%zu", path2, name, unit);
     this_unit->vol[i].path = strdup(fullpath);
     free(fullpath);
 
@@ -110,10 +123,14 @@ void PSIO::open(unsigned int unit, int status) {
 
     /* Now open the volume */
     if (status == PSIO_OPEN_OLD) {
-        this_unit->vol[i].stream = ::open(this_unit->vol[i].path,O_CREAT|O_RDWR,0644);
+        this_unit->vol[i].stream = SYSTEM_OPEN(this_unit->vol[i].path,
+                                               PSIO_OPEN_OLD_FLAGS,
+                                               PERMISSION_MODE);
     }
     else if(status == PSIO_OPEN_NEW) {
-        this_unit->vol[i].stream = ::open(this_unit->vol[i].path,O_CREAT|O_RDWR|O_TRUNC,0644);
+        this_unit->vol[i].stream = SYSTEM_OPEN(this_unit->vol[i].path,
+                                               PSIO_OPEN_NEW_FLAGS,
+                                               PERMISSION_MODE);
     }
     else psio_error(unit,PSIO_ERROR_OSTAT);
 
@@ -127,7 +144,7 @@ void PSIO::open(unsigned int unit, int status) {
   else if (status == PSIO_OPEN_NEW) {
     /* Init the TOC stats and write them to disk */
     this_unit->toclen = 0;
-    this_unit->toc = NULL;
+    this_unit->toc = nullptr;
     wt_toclen(unit, 0);
   }
   else psio_error(unit,PSIO_ERROR_OSTAT);
@@ -137,8 +154,8 @@ void PSIO::open(unsigned int unit, int status) {
 
 // Mirrors PSIO::open() but just check to see if the file is there
 // status needs is assumed PSIO_OPEN_OLD if this is called
-bool PSIO::exists(unsigned int unit) {
-  unsigned int i;
+bool PSIO::exists(size_t unit) {
+  size_t i;
   char *name, *path;
   psio_ud *this_unit;
 
@@ -198,13 +215,13 @@ bool PSIO::exists(unsigned int unit) {
     const char* path2 = spath2.c_str();
 
     fullpath = (char*) malloc( (strlen(path2)+strlen(name)+80)*sizeof(char));
-    sprintf(fullpath, "%s%s.%u", path2, name, unit);
+    sprintf(fullpath, "%s%s.%zu", path2, name, unit);
 
     /* Now open the volume */
-      stream = ::open(fullpath,O_RDWR);
+      stream = SYSTEM_OPEN(fullpath,O_RDWR);
       /* and close it again, if opening worked */
       if (stream != -1) {
-        ::close(stream);
+        SYSTEM_CLOSE(stream);
       }
 
     if (stream == -1) {
@@ -222,7 +239,7 @@ bool PSIO::exists(unsigned int unit) {
 
 
 void
-PSIO::rehash(unsigned int unit)
+PSIO::rehash(size_t unit)
 {
   if (open_check(unit)) {
     close(unit,1);
@@ -230,7 +247,7 @@ PSIO::rehash(unsigned int unit)
   }
 }
 
-  int psio_open(unsigned int unit, int status) {
+  int psio_open(size_t unit, int status) {
     _default_psio_lib_->open(unit, status);
     return 1;
   }

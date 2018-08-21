@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -109,10 +110,10 @@ void reduce(uint64_t &num, uint64_t &den)
     }
 }
 
-uint64_t powll(uint64_t n, unsigned long p)
+uint64_t powll(uint64_t n, size_t p)
 {
     uint64_t result = 1;
-    for (unsigned long i=0; i<p; i++) result *= n;
+    for (size_t i=0; i<p; i++) result *= n;
     return result;
 }
 
@@ -149,17 +150,17 @@ void solidharmcontrib(int sign,
 // l is the total angular momentum
 // m is the z component
 // r2 is the number of factors of r^2 that are included
-void solidharm(unsigned int l, int m, unsigned int r2, Matrix& coefmat)
+void solidharm(size_t l, int m, size_t r2, Matrix& coefmat)
 {
-//    printf("in solidharm(unsigned int l, int m, unsigned int r2, RefSCMatrix coefmat\n");
+//    printf("in solidharm(size_t l, int m, size_t r2, RefSCMatrix coefmat\n");
 //    printf("l = %d, m = %d, r2 = %d\n", l, m, r2);
 
     int pureindex = ipure(l,m);
 //    printf("pureindex = %d\n", pureindex);
-    for (unsigned int i=1; i<=r2; i++) pureindex += npure(l+2*i);
+    for (size_t i=1; i<=r2; i++) pureindex += npure(l+2*i);
 //    printf("pureindex = %d\n", pureindex);
 
-    unsigned int absm = abs(m);
+    size_t absm = std::abs(m);
 
     // this overflows 32bits for l=9
     uint64_t norm2num = factoverfact(l+absm,l);
@@ -173,12 +174,12 @@ void solidharm(unsigned int l, int m, unsigned int r2, Matrix& coefmat)
     if (m != 0) norm2num *= 2;
     reduce(norm2num,norm2den);
 
-    for (unsigned int t=0; t <= (l - absm)/2; t++) {
-        for (unsigned int u=0; u<=t; u++) {
+    for (size_t t=0; t <= (l - absm)/2; t++) {
+        for (size_t u=0; u<=t; u++) {
             int v2m;
             if (m >= 0) v2m = 0;
             else v2m = 1;
-            for (unsigned int v2 = v2m; v2 <= absm; v2+=2) {
+            for (size_t v2 = v2m; v2 <= absm; v2+=2) {
                 int x = 2*t + absm - 2*u - v2;
                 int y = 2*u + v2;
                 int z = l - x - y;

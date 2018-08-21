@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -31,9 +32,9 @@ to data tables and text.
 
 """
 import sys
-import re
+
 from psi4 import core
-from psi4.driver import p4const
+from psi4.driver import constants
 from .exceptions import *
 
 class Table(object):
@@ -119,7 +120,7 @@ class Table(object):
         import copy
         return copy.deepcopy(self)
 
-    def absolute_to_relative(self, Factor=p4const.psi_hartree2kcalmol):
+    def absolute_to_relative(self, Factor=constants.hartree2kcalmol):
         """Function to shift the data of each column of the Table object
         such that the lowest value is zero. A scaling factor of *Factor* is applied.
 
@@ -140,7 +141,7 @@ class Table(object):
                 #print datarow[1][col]
                 datarow[1][col] = (datarow[1][col] - current_min[col]) * Factor
 
-    def scale(self, Factor=p4const.psi_hartree2kcalmol):
+    def scale(self, Factor=constants.hartree2kcalmol):
         """Function to apply a scaling factor *Factor* to the
         data of the Table object.
 
@@ -187,7 +188,6 @@ def banner(text, type=1, width=35, strNotOutfile=False):
     else:
         core.print_out(banner)
 
-
 def print_stdout(stuff):
     """Function to print *stuff* to standard output stream."""
     print(stuff, file=sys.stdout)
@@ -200,10 +200,10 @@ def print_stderr(stuff):
 def levenshtein(seq1, seq2):
     """Function to compute the Levenshtein distance between two strings."""
     oneago = None
-    thisrow = range(1, len(seq2) + 1) + [0]
-    for x in xrange(len(seq1)):
+    thisrow = list(range(1, len(seq2) + 1)) + [0]
+    for x in range(len(seq1)):
         twoago, oneago, thisrow = oneago, thisrow, [0] * len(seq2) + [x + 1]
-        for y in xrange(len(seq2)):
+        for y in range(len(seq2)):
             delcost = oneago[y] + 1
             addcost = thisrow[y - 1] + 1
             subcost = oneago[y - 1] + (seq1[x] != seq2[y])

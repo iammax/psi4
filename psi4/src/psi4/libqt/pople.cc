@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -36,7 +37,7 @@
 #include <cmath>
 #include "psi4/libciomr/libciomr.h"
 #include "qt.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 namespace psi {
 
 #define ZERO 1e-13
@@ -60,7 +61,7 @@ int pople(double **A, double *x, int dimen, int /*num_vecs*/, double tolerance,
           std::string out, int print_lvl)
 {
    std::shared_ptr<psi::PsiOutStream> printer=(out=="outfile"?outfile:
-            std::shared_ptr<OutFile>(new OutFile(out)));
+            std::make_shared<PsiOutStream>(out));
    double det, tval;
    double **Bmat; /* Matrix of expansion vectors */
    double **Ab;   /* Matrix of A x expansion vectors */
@@ -112,7 +113,7 @@ int pople(double **A, double *x, int dimen, int /*num_vecs*/, double tolerance,
        for (i=0; i<dimen; i++) {
            Bmat[0][i] = x[i];
            b[i] = x[i];
-           dvec[i] = sqrt(fabs(A[i][i]));
+           dvec[i] = sqrt(std::fabs(A[i][i]));
            b[i] /= dvec[i];
            /*   outfile->Printf("A[%d][%d] = %lf\n",i,i, A[i][i]);
                 outfile->Printf("dvec[%d] = %lf\n",i, dvec[i]);
@@ -161,19 +162,22 @@ int pople(double **A, double *x, int dimen, int /*num_vecs*/, double tolerance,
        for (i=0; i<dimen; i++) Bmat[0][i] /= dvec[i];
 
 
-       dot_arr(Bmat[0],Bmat[0],dimen,&norm);
+       //dot_arr(Bmat[0],Bmat[0],dimen,&norm);
+       norm = C_DDOT(dimen, Bmat[0], 1, Bmat[0], 1);
        norm = sqrt(norm);
        for (i=0; i<dimen; i++) {
            x[i] = Bmat[0][i];
            Bmat[0][i] /= norm;
          }
 
-       dot_arr(Bmat[0],x,dimen,&(n[0]));
+       // dot_arr(Bmat[0],x,dimen,&(n[0]));
+       n[0] = C_DDOT(dimen, Bmat[0], 1, x, 1);
 
        while (!last) {
            /* form A*b_i */
            for (i=0; i<dimen; i++)
-               dot_arr(A[i], Bmat[L], dimen, &(Ab[L][i]));
+               // dot_arr(A[i], Bmat[L], dimen, &(Ab[L][i]));
+               Ab[L][i] = C_DDOT(dimen, A[i], 1, Bmat[L], 1);
 
 
            /* Construct M matrix */
@@ -181,7 +185,8 @@ int pople(double **A, double *x, int dimen, int /*num_vecs*/, double tolerance,
            zero_mat(M, maxdimen, maxdimen);
            for (i=0; i<=L; i++) {
                for (j=0; j<=L; j++) {
-                   dot_arr(Bmat[i], Ab[j], dimen, &(dotprod[i]));
+                   // dot_arr(Bmat[i], Ab[j], dimen, &(dotprod[i]));
+                   dotprod[i] = C_DDOT(dimen, Bmat[i], 1, Ab[j], 1);
                    if (i==j) M[i][j] = 1.0 - dotprod[i];
                    else M[i][j] = -dotprod[i];
                  }
@@ -212,7 +217,8 @@ int pople(double **A, double *x, int dimen, int /*num_vecs*/, double tolerance,
 
            for (I=0; I<dimen; I++) r[I] -= b[I];
 
-           dot_arr(r, r, dimen, &rnorm);
+           // dot_arr(r, r, dimen, &rnorm);
+           rnorm = C_DDOT(dimen, r, 1, r, 1);
            rnorm = sqrt(rnorm);
            if (print_lvl > 6) {
                printer->Printf(
@@ -241,13 +247,15 @@ int pople(double **A, double *x, int dimen, int /*num_vecs*/, double tolerance,
 
            /* Schmidt orthonormalize new b vec to expansion space */
            for (j=0; j<=L; j++) {
-               dot_arr(Bmat[j], Bmat[L+1], dimen, &(dotprod[j]));
+               // dot_arr(Bmat[j], Bmat[L+1], dimen, &(dotprod[j]));
+               dotprod[j] = C_DDOT(dimen, Bmat[j], 1, Bmat[L+1], 1);
                for (I=0; I<dimen; I++)
                    Bmat[L+1][I] -= dotprod[j] * Bmat[j][I];
              }
 
            /* Normalize new expansion vector */
-           dot_arr(Bmat[L+1], Bmat[L+1], dimen, &norm);
+           // dot_arr(Bmat[L+1], Bmat[L+1], dimen, &norm);
+           norm = C_DDOT(dimen, Bmat[L+1], 1, Bmat[L+1], 1);
            norm = sqrt(norm);
            for (I=0; I<dimen; I++) Bmat[L+1][I] /= norm;
 
@@ -255,7 +263,8 @@ int pople(double **A, double *x, int dimen, int /*num_vecs*/, double tolerance,
            if (0) {
                for (i=0; i<=L+1; i++) {
                    for (j=0; j<=i; j++) {
-                       dot_arr(Bmat[i], Bmat[j], dimen, &tval);
+                       // dot_arr(Bmat[i], Bmat[j], dimen, &tval);
+                       tval = C_DDOT(dimen, Bmat[i], 1, Bmat[j], 1);
                        printer->Printf( "Bvec[%d] * Bvec[%d] = %f\n",i,j,tval);
                      }
                  }

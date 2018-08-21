@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -42,11 +43,6 @@
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/twobody.h"
 #include "psi4/libmints/integral.h"
-#include "psi4/libmints/basisset_parser.h"
-
-using ULI=unsigned long int;
-
-using namespace std;
 
 namespace psi {
 
@@ -91,8 +87,8 @@ void DFTensor::common_init()
     nso_ = C_->rowspi()[0];
     nmo_ = C_->colspi()[0];
 
-    Caocc_ = SharedMatrix(new Matrix("C active occupied", nso_, naocc_));
-    Cavir_ = SharedMatrix(new Matrix("C active virtual", nso_, navir_));
+    Caocc_ = std::make_shared<Matrix>("C active occupied", nso_, naocc_);
+    Cavir_ = std::make_shared<Matrix>("C active virtual", nso_, navir_);
 
     double** Cp = C_->pointer();
     double** Cop  = Caocc_->pointer();
@@ -127,7 +123,7 @@ void DFTensor::print_header()
 }
 void DFTensor::build_metric()
 {
-    std::shared_ptr<FittingMetric> met(new FittingMetric(auxiliary_, true));
+    auto met = std::make_shared<FittingMetric>(auxiliary_, true);
     met->form_eig_inverse();
     metric_ = met->get_metric();
 
@@ -137,15 +133,15 @@ void DFTensor::build_metric()
 }
 SharedMatrix DFTensor::Qso()
 {
-    SharedMatrix B(new Matrix("Bso", naux_, nso_ * nso_));
-    SharedMatrix A(new Matrix("Aso", naux_, nso_ * nso_));
+    auto B = std::make_shared<Matrix>("Bso", naux_, nso_ * nso_);
+    auto A = std::make_shared<Matrix>("Aso", naux_, nso_ * nso_);
     double** Ap = A->pointer();
     double** Bp = B->pointer();
     double** Jp = metric_->pointer();
 
     std::shared_ptr<BasisSet> zero = BasisSet::zero_ao_basis_set();
 
-    std::shared_ptr<IntegralFactory> fact(new IntegralFactory(auxiliary_,zero,primary_,primary_));
+    auto fact = std::make_shared<IntegralFactory>(auxiliary_,zero,primary_,primary_);
     std::shared_ptr<TwoBodyAOInt> eri(fact->eri());
     const double* buffer = eri->buffer();
 
@@ -189,18 +185,18 @@ SharedMatrix DFTensor::Qso()
 SharedMatrix DFTensor::Qoo()
 {
     SharedMatrix Amn = Qso();
-    SharedMatrix Ami(new Matrix("Ami", naux_, naocc_ * (ULI) nso_));
+    auto Ami = std::make_shared<Matrix>("Ami", naux_, naocc_ * (size_t) nso_);
 
     double** Amnp = Amn->pointer();
     double** Amip = Ami->pointer();
     double** Cop = Caocc_->pointer();
 
-    C_DGEMM('N','N', naux_ * (ULI) nso_, naocc_, nso_, 1.0, Amnp[0], nso_, Cop[0], naocc_,
+    C_DGEMM('N','N', naux_ * (size_t) nso_, naocc_, nso_, 1.0, Amnp[0], nso_, Cop[0], naocc_,
         0.0, Amip[0], naocc_);
 
     Amn.reset();
 
-    SharedMatrix Aia(new Matrix("Aij", naux_, naocc_ * (ULI) naocc_));
+    auto Aia = std::make_shared<Matrix>("Aij", naux_, naocc_ * (size_t) naocc_);
     double** Aiap = Aia->pointer();
 
     for (int Q = 0; Q < naux_; Q++) {
@@ -221,20 +217,20 @@ SharedMatrix DFTensor::Qoo()
 SharedMatrix DFTensor::Qov()
 {
     SharedMatrix Amn = Qso();
-    SharedMatrix Ami(new Matrix("Qmi", naux_, naocc_ * (ULI) nso_));
+    auto Ami = std::make_shared<Matrix>("Qmi", naux_, naocc_ * (size_t) nso_);
 
     double** Amnp = Amn->pointer();
     double** Amip = Ami->pointer();
     double** Cop = Caocc_->pointer();
     double** Cvp = Cavir_->pointer();
 
-    C_DGEMM('N','N', naux_ * (ULI) nso_, naocc_, nso_, 1.0, Amnp[0], nso_, Cop[0], naocc_,
+    C_DGEMM('N','N', naux_ * (size_t) nso_, naocc_, nso_, 1.0, Amnp[0], nso_, Cop[0], naocc_,
         0.0, Amip[0], naocc_);
 
     Amn.reset();
 
     outfile->Printf( "DFTensor::Qov: naux %d, naocc %d, navir %d\n", naux_, naocc_, navir_);
-    SharedMatrix Aia(new Matrix("Qia", naux_, naocc_ * (ULI) navir_));
+    auto Aia = std::make_shared<Matrix>("Qia", naux_, naocc_ * (size_t) navir_);
     double** Aiap = Aia->pointer();
 
     for (int Q = 0; Q < naux_; Q++) {
@@ -256,18 +252,18 @@ SharedMatrix DFTensor::Qov()
 SharedMatrix DFTensor::Qvv()
 {
     SharedMatrix Amn = Qso();
-    SharedMatrix Ami(new Matrix("Qmi", naux_, navir_ * (ULI) nso_));
+    auto Ami = std::make_shared<Matrix>("Qmi", naux_, navir_ * (size_t) nso_);
 
     double** Amnp = Amn->pointer();
     double** Amip = Ami->pointer();
     double** Cvp = Cavir_->pointer();
 
-    C_DGEMM('N','N', naux_ * (ULI) nso_, navir_, nso_, 1.0, Amnp[0], nso_, Cvp[0], navir_,
+    C_DGEMM('N','N', naux_ * (size_t) nso_, navir_, nso_, 1.0, Amnp[0], nso_, Cvp[0], navir_,
         0.0, Amip[0], navir_);
 
     Amn.reset();
 
-    SharedMatrix Aia(new Matrix("Qab", naux_, navir_ * (ULI) navir_));
+    auto Aia = std::make_shared<Matrix>("Qab", naux_, navir_ * (size_t) navir_);
     double** Aiap = Aia->pointer();
 
     for (int Q = 0; Q < naux_; Q++) {
@@ -288,18 +284,18 @@ SharedMatrix DFTensor::Qvv()
 SharedMatrix DFTensor::Qmo()
 {
     SharedMatrix Amn = Qso();
-    SharedMatrix Ami(new Matrix("Qmi", naux_, nmo_ * (ULI) nso_));
+    auto Ami = std::make_shared<Matrix>("Qmi", naux_, nmo_ * (size_t) nso_);
 
     double** Amnp = Amn->pointer();
     double** Amip = Ami->pointer();
     double** Cvp = C_->pointer();
 
-    C_DGEMM('N','N', naux_ * (ULI) nso_, nmo_, nso_, 1.0, Amnp[0], nso_, Cvp[0], nmo_,
+    C_DGEMM('N','N', naux_ * (size_t) nso_, nmo_, nso_, 1.0, Amnp[0], nso_, Cvp[0], nmo_,
         0.0, Amip[0], nmo_);
 
     Amn.reset();
 
-    SharedMatrix Aia(new Matrix("Qmo", naux_, nmo_ * (ULI) nmo_));
+    auto Aia = std::make_shared<Matrix>("Qmo", naux_, nmo_ * (size_t) nmo_);
     double** Aiap = Aia->pointer();
 
     for (int Q = 0; Q < naux_; Q++) {
@@ -319,7 +315,7 @@ SharedMatrix DFTensor::Qmo()
 }
 SharedMatrix DFTensor::Imo()
 {
-    std::shared_ptr<MintsHelper> mints(new MintsHelper(primary_, options_, 0));
+    auto mints = std::make_shared<MintsHelper>(primary_, options_, 0);
     return mints->mo_eri(C_,C_);
 }
 SharedMatrix DFTensor::Idfmo()
@@ -327,7 +323,7 @@ SharedMatrix DFTensor::Idfmo()
     SharedMatrix Amo = Qmo();
     double** Amop = Amo->pointer();
 
-    SharedMatrix Imo(new Matrix("DF MO ERI Tensor", nmo_ * nmo_, nmo_ * nmo_));
+    auto Imo = std::make_shared<Matrix>("DF MO ERI Tensor", nmo_ * nmo_, nmo_ * nmo_);
     double** Imop = Imo->pointer();
 
     C_DGEMM('T','N',nmo_ * nmo_, nmo_ * nmo_, naux_, 1.0, Amop[0], nmo_ * nmo_,

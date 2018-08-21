@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,13 +30,17 @@
 #define FISAPT_H
 
 #include "psi4/libmints/typedefs.h"
+#include "psi4/libmints/basisset.h"
 #include "psi4/libmints/wavefunction.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+
 #include <map>
 #include <tuple>
 
 namespace psi {
 
 class JK;
+class BasisSet;
 
 namespace fisapt {
 
@@ -66,6 +71,31 @@ protected:
     /// Map of matrices
     std::map<std::string, std::shared_ptr<Matrix> > matrices_;
 
+    // Build the ExchInd20 potential in the monomer A ov space
+    std::shared_ptr<Matrix> build_exch_ind_pot(std::map<std::string, std::shared_ptr<Matrix> >& vars);
+    // Build the Ind20 potential in the monomer A ov space
+    std::shared_ptr<Matrix> build_ind_pot(std::map<std::string, std::shared_ptr<Matrix> >& vars);
+
+    /// Helper to drop a matrix to filepath/A->name().dat
+    /// Helper to drop a vector to filepath/A->name().dat
+    //  drop(<Matrix> or <Vector>, filepath) moved py-side
+    /// Helper to extract columns from a matrix
+    static std::shared_ptr<Matrix> extract_columns(
+        const std::vector<int>& cols,
+        std::shared_ptr<Matrix> A);
+
+public:
+    /// Initialize an FISAPT object with an SCF reference
+    FISAPT(std::shared_ptr<Wavefunction> scf);
+    FISAPT(std::shared_ptr<Wavefunction> scf, Options& options);
+    virtual ~FISAPT();
+
+    /// Gogo!
+    //  void compute_energy(); moved py-side
+
+    /// Get Molecule associated with FISAPT
+    std::shared_ptr<Molecule> molecule() { return primary_->molecule(); }
+
     // => FISAPT 0th-Order Wavefunction <= //
 
     /// Common initialization (bases, orbitals, eigenvalues, etc)
@@ -91,7 +121,7 @@ protected:
     /// Produce unified matrices for A', B', and C'
     void unify();
     /// Plot some analysis files
-    void plot();
+    void raw_plot(const std::string& filepath);
 
     // => F-SAPT0 <= //
 
@@ -106,7 +136,7 @@ protected:
     /// Dispersion
     void fdisp();
     /// Output
-    void fdrop();
+    //  fdrop() moved py-side
 
     // => SAPT0 <= //
 
@@ -118,33 +148,17 @@ protected:
     void exch();
     /// Induction
     void ind();
-    /// Dispersion
-    void disp();
     /// Print SAPT results
     void print_trailer();
 
-    // Build the ExchInd20 potential in the monomer A ov space
-    std::shared_ptr<Matrix> build_exch_ind_pot(std::map<std::string, std::shared_ptr<Matrix> >& vars);
-    // Build the Ind20 potential in the monomer A ov space
-    std::shared_ptr<Matrix> build_ind_pot(std::map<std::string, std::shared_ptr<Matrix> >& vars);
+    /// Dispersion
+    void disp(std::map<std::string, SharedMatrix> matrix_cache,
+              std::map<std::string, SharedVector> vector_cache, bool do_print);
 
-    /// Helper to drop a matrix to filepath/A->name().dat
-    void drop(std::shared_ptr<Matrix> A, const std::string& filepath);
-    /// Helper to drop a vector to filepath/A->name().dat
-    void drop(std::shared_ptr<Vector> A, const std::string& filepath);
-    /// Helper to extract columns from a matrix
-    static std::shared_ptr<Matrix> extract_columns(
-        const std::vector<int>& cols,
-        std::shared_ptr<Matrix> A);
-
-public:
-    /// Initialize an FISAPT object with an SCF reference
-    FISAPT(std::shared_ptr<Wavefunction> scf, Options& options);
-    virtual ~FISAPT();
-
-    /// Gogo!
-    void compute_energy();
-
+    /// Return arrays
+    std::map<std::string, double>& scalars()                    { return scalars_; }
+    std::map<std::string, std::shared_ptr<Vector> >& vectors()  { return vectors_; }
+    std::map<std::string, std::shared_ptr<Matrix> >& matrices() { return matrices_; }
 };
 
 class FISAPTSCF {
@@ -190,7 +204,7 @@ public:
 
     void compute_energy();
 
-    std::map<std::string, double>& scalars()                      { return scalars_; }
+    std::map<std::string, double>& scalars()                    { return scalars_; }
     std::map<std::string, std::shared_ptr<Vector> >& vectors()  { return vectors_; }
     std::map<std::string, std::shared_ptr<Matrix> >& matrices() { return matrices_; }
 

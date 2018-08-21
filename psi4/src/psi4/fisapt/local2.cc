@@ -3,27 +3,30 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
+
+#include "psi4/fisapt/local2.h"
 
 #include "psi4/libqt/qt.h"
 #include "psi4/libmints/molecule.h"
@@ -31,9 +34,10 @@
 #include "psi4/libmints/vector.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/integral.h"
-#include "psi4/fisapt/local2.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/liboptions/liboptions.h"
 
-
+#include <functional>
 
 namespace psi {
 
@@ -80,7 +84,7 @@ std::shared_ptr<IBOLocalizer2> IBOLocalizer2::build(
 {
 //    Options& options = Process::environment.options;
 
-    std::shared_ptr<IBOLocalizer2> local(new IBOLocalizer2(primary, minao, C));
+    auto local = std::make_shared<IBOLocalizer2>(primary, minao, C);
 
     local->set_print(options.get_int("PRINT"));
     local->set_debug(options.get_int("DEBUG"));
@@ -140,17 +144,17 @@ void IBOLocalizer2::build_iaos()
 
     // => Overlap Integrals <= //
 
-    std::shared_ptr<IntegralFactory> fact11(new IntegralFactory(primary_,primary_));
-    std::shared_ptr<IntegralFactory> fact12(new IntegralFactory(primary_,minao_));
-    std::shared_ptr<IntegralFactory> fact22(new IntegralFactory(minao_,minao_));
+    auto fact11 = std::make_shared<IntegralFactory>(primary_,primary_,primary_,primary_);
+    auto fact12 = std::make_shared<IntegralFactory>(primary_,minao_,primary_,minao_);
+    auto fact22 = std::make_shared<IntegralFactory>(minao_,minao_,minao_,minao_);
 
     std::shared_ptr<OneBodyAOInt> ints11(fact11->ao_overlap());
     std::shared_ptr<OneBodyAOInt> ints12(fact12->ao_overlap());
     std::shared_ptr<OneBodyAOInt> ints22(fact22->ao_overlap());
 
-    std::shared_ptr<Matrix> S11(new Matrix("S11", primary_->nbf(), primary_->nbf()));
-    std::shared_ptr<Matrix> S12f(new Matrix("S12f", primary_->nbf(), minao_->nbf()));
-    std::shared_ptr<Matrix> S22f(new Matrix("S22f", minao_->nbf(), minao_->nbf()));
+    auto S11 = std::make_shared<Matrix>("S11", primary_->nbf(), primary_->nbf());
+    auto S12f = std::make_shared<Matrix>("S12f", primary_->nbf(), minao_->nbf());
+    auto S22f = std::make_shared<Matrix>("S22f", minao_->nbf(), minao_->nbf());
 
     ints11->compute(S11);
     ints12->compute(S12f);
@@ -166,8 +170,8 @@ void IBOLocalizer2::build_iaos()
 
     // => Ghosted Overlap Integrals <= //
 
-    std::shared_ptr<Matrix> S12(new Matrix("S12", primary_->nbf(), true_iaos_.size()));
-    std::shared_ptr<Matrix> S22(new Matrix("S22", true_iaos_.size(), true_iaos_.size()));
+    auto S12 = std::make_shared<Matrix>("S12", primary_->nbf(), true_iaos_.size());
+    auto S22 = std::make_shared<Matrix>("S22", true_iaos_.size(), true_iaos_.size());
 
     double** S12p  = S12->pointer();
     double** S12fp = S12f->pointer();
@@ -249,7 +253,7 @@ std::map<std::string, std::shared_ptr<Matrix> > IBOLocalizer2::localize_task(
     L2->copy(L);
     double** Lp = L2->pointer();
 
-    std::shared_ptr<Matrix> U(new Matrix("U", nocc, nocc));
+    auto U = std::make_shared<Matrix>("U", nocc, nocc);
     U->identity();
     double** Up = U->pointer();
 
@@ -346,7 +350,7 @@ std::shared_ptr<Matrix> IBOLocalizer2::reorder_orbitals(
     int nmo = F->rowspi()[0];
     double** Fp = F->pointer();
 
-    std::shared_ptr<Matrix> U(new Matrix("U", nmo, nmo));
+    auto U = std::make_shared<Matrix>("U", nmo, nmo);
     double** Up = U->pointer();
 
     for (int ind = 0; ind < ranges.size() - 1; ind++) {
@@ -417,7 +421,7 @@ std::map<std::string, std::shared_ptr<Matrix> > IBOLocalizer2::localize(
         for (int i = 0; i < nocc; i++) {
             std::vector<double> Qs;
             for (int A = 0; A < natom; A++) {
-                Qs.push_back(fabs(Qp[A][i]));
+                Qs.push_back(std::fabs(Qp[A][i]));
             }
             std::sort(Qs.begin(),Qs.end(),std::greater<double>());
             double Qtot = 0.0;
@@ -484,7 +488,7 @@ std::map<std::string, std::shared_ptr<Matrix> > IBOLocalizer2::localize(
         for (int i = 0; i < nocc; i++) {
             std::vector<double> Qs;
             for (int A = 0; A < natom; A++) {
-                Qs.push_back(fabs(Qp[A][i]));
+                Qs.push_back(std::fabs(Qp[A][i]));
             }
             std::sort(Qs.begin(),Qs.end(),std::greater<double>());
             double Qtot = 0.0;
@@ -501,7 +505,7 @@ std::map<std::string, std::shared_ptr<Matrix> > IBOLocalizer2::localize(
             int i = pi_orbs[i2];
             int ind = 0;
             for (int A = 0; A < natom; A++) {
-                if (fabs(Qp[A][i]) >= fabs(Qp[ind][i])) {
+                if (std::fabs(Qp[A][i]) >= std::fabs(Qp[ind][i])) {
                     ind = A;
                 }
             }
@@ -548,7 +552,7 @@ std::shared_ptr<Matrix> IBOLocalizer2::orbital_charges(
     int nmin = L->colspi()[0];
     int natom = true_atoms_.size();
 
-    std::shared_ptr<Matrix> Q(new Matrix("Q", natom, nocc));
+    auto Q = std::make_shared<Matrix>("Q", natom, nocc);
     double** Qp = Q->pointer();
 
     for (int i = 0; i < nocc; i++) {
@@ -571,7 +575,7 @@ void IBOLocalizer2::print_charges(double scale)
     std::shared_ptr<Matrix> Q = orbital_charges(L);
     double** Qp = Q->pointer();
 
-    std::shared_ptr<Vector> N(new Vector("N", natom));
+    auto N = std::make_shared<Vector>("N", natom);
     double* Np = N->pointer();
 
     for (int A = 0; A < natom; A++) {

@@ -4,21 +4,18 @@ set(sources_list apps.cc
                  points.cc
                  cubature.cc
                  solver.cc
-                 link.cc
-                 direct_screening.cc
                  wrapper.cc
                  jk.cc
                  DiskJK.cc
                  PKJK.cc
                  DirectJK.cc
-                 DFJK.cc
+                 DiskDFJK.cc
                  CDJK.cc
-                 FastDFJK.cc
-                 #PSJK.cc
                  GTFockJK.cc
                  soscf.cc
                  PK_workers.cc
                  PKmanagers.cc
+                 MemDFJK.cc
 )
 add_definitions("-Drestrict=${RESTRICT_KEYWORD}")
 
@@ -27,3 +24,4 @@ if(ENABLE_GTFOCK)
 endif()
 
 psi4_add_module(lib fock sources_list mints functional 3index psio)
+target_link_libraries(fock PRIVATE gau2grid::gg)

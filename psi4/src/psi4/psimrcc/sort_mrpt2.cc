@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -41,8 +42,6 @@ extern FILE* outfile;
 
 namespace psi{ namespace psimrcc{
     extern MOInfo *moinfo;
-
-using namespace std;
 
 void CCSort::build_integrals_mrpt2(IntegralTransform *ints)
 {
@@ -100,18 +99,18 @@ void CCSort::form_fock_mrpt2(MatrixMap::iterator& iter)
 {
   CCMatrix* Matrix = iter->second;
   if(Matrix->is_fock()){
-    string label     = Matrix->get_label();
+    std::string label     = Matrix->get_label();
     double*** matrix = Matrix->get_matrix();
     short* pq = new short[2];
     const intvec& oa2p = moinfo->get_occ_to_mo();
 
     bool alpha = true;
-    if((label.find("O")!=string::npos) || (label.find("V")!=string::npos) || (label.find("A")!=string::npos) || (label.find("F")!=string::npos)) // NB This was missing the last bit, this might be a problem
+    if((label.find("O")!=std::string::npos) || (label.find("V")!=std::string::npos) || (label.find("A")!=std::string::npos) || (label.find("F")!=std::string::npos)) // NB This was missing the last bit, this might be a problem
       alpha = false;
 
     // N.B. Never introduce Matrices/Vectors with O or V in the name before you compute the Fock matrix elements
-    vector<int> aocc = moinfo->get_aocc(Matrix->get_reference(),AllRefs);
-    vector<int> bocc = moinfo->get_bocc(Matrix->get_reference(),AllRefs);
+    std::vector<int> aocc = moinfo->get_aocc(Matrix->get_reference(),AllRefs);
+    std::vector<int> bocc = moinfo->get_bocc(Matrix->get_reference(),AllRefs);
     for(int h=0;h<moinfo->get_nirreps();h++){
       for(int i = 0;i<Matrix->get_left_pairpi(h);i++){
         for(int j = 0;j<Matrix->get_right_pairpi(h);j++){

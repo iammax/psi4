@@ -3,33 +3,35 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
 #include "psi4/psi4-dec.h"
-#include "psi4/libparallel/parallel.h"
+#include "psi4/pybind11.h"
 #include "psi4/liboptions/liboptions.h"
 
-#include "psi4/libmints/view.h"
+#include "psi4/libscf_solver/rohf.h"
+
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libiwl/iwl.hpp"
 #include "psi4/libtrans/integraltransform.h"
@@ -39,7 +41,7 @@
 #include "psi4/libfock/apps.h"
 #include "psi4/libqt/qt.h"
 #include <vector>
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/fnocc/frozen_natural_orbitals.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/molecule.h"
@@ -54,14 +56,14 @@ namespace mrcc {
 
 namespace {
 
-void write_oei_to_disk(std::shared_ptr <OutFile> &printer, SharedMatrix moH)
+void write_oei_to_disk(std::shared_ptr<PsiOutStream> &printer, SharedMatrix moH)
 {
     // Walk through moH and save the non-zero values
     int offset = 0;
     for (int h = 0; h < moH->nirrep(); ++h) {
         for (int m = 0; m < moH->rowdim(h); ++m) {
             for (int n = 0; n <= m; ++n) {
-                if (fabs(moH->get(h, m, n)) > 1.0e-12) {
+                if (std::fabs(moH->get(h, m, n)) > 1.0e-12) {
                     printer->Printf("%28.20E%4d%4d%4d%4d\n", moH->get(h, m, n), m + offset + 1, n + offset + 1, 0, 0);
                 }
             }
@@ -70,7 +72,7 @@ void write_oei_to_disk(std::shared_ptr <OutFile> &printer, SharedMatrix moH)
     }
 }
 
-void write_tei_to_disk(std::shared_ptr <OutFile> &printer, int nirrep, dpdbuf4 &K, double ints_tolerance)
+void write_tei_to_disk(std::shared_ptr<PsiOutStream> &printer, int nirrep, dpdbuf4 &K, double ints_tolerance)
 {
     for (int h = 0; h < nirrep; ++h) {
         global_dpd_->buf4_mat_irrep_init(&K, h);
@@ -82,7 +84,7 @@ void write_tei_to_disk(std::shared_ptr <OutFile> &printer, int nirrep, dpdbuf4 &
                 int r = K.params->colorb[h][rs][0];
                 int s = K.params->colorb[h][rs][1];
 
-                if (fabs(K.matrix[h][pq][rs]) > ints_tolerance)
+                if (std::fabs(K.matrix[h][pq][rs]) > ints_tolerance)
                     printer->Printf("%28.20E%4d%4d%4d%4d\n",
                                     K.matrix[h][pq][rs], p + 1, q + 1, r + 1, s + 1);
             }
@@ -257,7 +259,7 @@ public:
                 // It's also normalized differently to Psi's, by a factor of 2.
                 if (r != 0 && s != 0) {
                     if (p >= r && q >= s)
-                        if (fabs(value) > tolerance_)
+                        if (std::fabs(value) > tolerance_)
                             filler(bucket, p - 1, r - 1, q - 1, s - 1, value * 0.5);
                 } else
                     one_particle_->set(abs_mo_to_irrep_[p - 1], abs_mo_to_rel_[p - 1], abs_mo_to_rel_[q - 1], value);
@@ -318,7 +320,7 @@ public:
 
 		    p = static_cast<int **>(realloc(static_cast<void *>(bucket_offset_),
 						    nbucket_ * sizeof(int *)));
-		    if(p == NULL) {
+		    if(p == nullptr) {
 		      throw PsiException("file_build: allocation error", __FILE__, __LINE__);
 		    } else {
 		      bucket_offset_ = p;
@@ -328,7 +330,7 @@ public:
 
 		    p = static_cast<int **>(realloc(static_cast<void *>(bucket_row_dim_),
 						    nbucket_ * sizeof(int *)));
-		    if(p == NULL) {
+		    if(p == nullptr) {
 		      throw PsiException("file_build: allocation error", __FILE__, __LINE__);
 		    } else {
 		      bucket_row_dim_ = p;
@@ -338,7 +340,7 @@ public:
 
 		    p = static_cast<int **>(realloc(static_cast<void *>(bucket_size_),
 						    nbucket_ * sizeof(int *)));
-		    if(p == NULL) {
+		    if(p == nullptr) {
 		      throw PsiException("file_build: allocation error", __FILE__, __LINE__);
 		    } else {
 		      bucket_size_ = p;
@@ -431,7 +433,7 @@ void load_restricted(SharedWavefunction ref, FILE *ccdensities, double tolerance
     global_dpd_->file4_init(&I, PSIF_TPDM_PRESORT, 0,
                             ints.DPD_ID("[A>=A]+"), ints.DPD_ID("[A>=A]+"), "MO TPDM (AA|AA)");
 
-    SharedMatrix one_particle(new Matrix("MO-basis OPDM", active_mopi, active_mopi));
+    auto one_particle = std::make_shared<Matrix>("MO-basis OPDM", active_mopi, active_mopi);
 
     DPDBucketFiller bucket(&I, Process::environment.get_memory());
     // While MRCCRestricedReader is processing the two particle values it will
@@ -460,10 +462,10 @@ void load_restricted(SharedWavefunction ref, FILE *ccdensities, double tolerance
      */
 
     // One-electron contribution: Xpq <- h_pr D_rq
-    SharedMatrix H(new Matrix(PSIF_MO_FZC, nmopi, nmopi));
+    auto H = std::make_shared<Matrix>(PSIF_MO_FZC, nmopi, nmopi);
     // TODO make sure the density is frozen appropriately with frozen core
     H->load(_default_psio_lib_, PSIF_OEI);
-    SharedMatrix X(new Matrix("X (1e contribution)", nmopi, nmopi));
+    auto X = std::make_shared<Matrix>("X (1e contribution)", nmopi, nmopi);
     X->gemm(false, false, 1.0, one_particle, H, 0.0);
 
     // Two-electron contribution: Xpq <- 2 (pr|st) G_qrst
@@ -482,7 +484,7 @@ void load_restricted(SharedWavefunction ref, FILE *ccdensities, double tolerance
                             "X (2e contribution)");
 
     // Check energy
-    double enuc = ref->molecule()->nuclear_repulsion_energy();
+    double enuc = ref->molecule()->nuclear_repulsion_energy(ref->get_dipole_field_strength());
     double E1e = one_particle->vector_dot(H);
     double E2e = global_dpd_->buf4_dot(&G, &D);
     outfile->Printf("\tEnergies recomputed from MRCC's density matrices:\n");
@@ -491,7 +493,7 @@ void load_restricted(SharedWavefunction ref, FILE *ccdensities, double tolerance
     outfile->Printf("\t\tTotal energy        = %16.10f\n", enuc + E1e + E2e);
 
     global_dpd_->contract442(&G, &D, &X2, 0, 0, 2.0, 0.0);
-    SharedMatrix X2mat(new Matrix(&X2));
+    auto X2mat = std::make_shared<Matrix>(&X2);
     X->print();
     X2mat->print();
     X->add(X2mat);
@@ -523,7 +525,7 @@ void load_restricted(SharedWavefunction ref, FILE *ccdensities, double tolerance
     // Form the energy-weighted OPDM
 
     // Form the Lagrangian
-    //SharedMatrix Lia(new Matrix("Lia", naocc, navir));
+    //auto Lia = std::make_shared<Matrix>("Lia", naocc, navir);
     //for (int h = 0; h < Lia->nirrep(); h++) {
     //    int ni = naocc[h];
     //    int na = navir[h];
@@ -539,8 +541,7 @@ void load_restricted(SharedWavefunction ref, FILE *ccdensities, double tolerance
     //}
 
     // Form the orbital response contributions to the relaxed OPDM
-    View ia_view(one_particle, aocc, avir, focc, docc);
-    SharedMatrix Pia = ia_view();
+    SharedMatrix Pia = one_particle->get_block({focc, focc + aocc},{docc,docc + avir});
     Pia->set_name("Pia (MRCC OPDM ov Block)");
 
     if (debug) {
@@ -550,11 +551,11 @@ void load_restricted(SharedWavefunction ref, FILE *ccdensities, double tolerance
     // Construct a RCPHF Object
     Options &options = Process::environment.options;
 
-    std::shared_ptr <RCPHF> cphf(new RCPHF(ref, options));
+    auto cphf = std::make_shared<RCPHF>(ref, options);
     cphf->preiterations();
 
     // TODO: Add pre-CPHF A-matrix correction
-    std::shared_ptr <JK> jk = cphf->jk();
+    std::shared_ptr<JK> jk = cphf->jk();
 
     // Task and solve orbital Z-Vector Equations
     std::map <std::string, SharedMatrix> &b = cphf->b();
@@ -626,7 +627,7 @@ PsiReturnType mrcc_load_ccdensities(SharedWavefunction wave, Options &options, c
     int exlevel = level["order"].cast<int>();
     std::string fullname = level["fullname"].cast<std::string>();
     bool pertcc = exlevel > 0 ? false : true;
-    exlevel = abs(exlevel);
+    exlevel = std::abs(exlevel);
 
     outfile->Printf("    Loading gradient data for %s.\n\n", fullname.c_str());
 
@@ -640,20 +641,23 @@ PsiReturnType mrcc_load_ccdensities(SharedWavefunction wave, Options &options, c
     if (options.get_str("REFERENCE") == "UHF")
         restricted = false;
 
-    if (pertcc && options.get_str("REFERENCE") == "ROHF")
-        throw PSIEXCEPTION("Perturbative methods not implemented for ROHF references.");
+    if (pertcc && options.get_str("REFERENCE") == "ROHF") {
+        outfile->Printf("\n");
+        outfile->Printf("  WARNING: ROHF references are not implemented for perturbative\n");
+        outfile->Printf("           methods on older versions of MRCC. Proceed with caution.\n\n");
+    }
 
     // Use libtrans to initialize DPD
     std::vector <std::shared_ptr<MOSpace>> spaces;
     spaces.push_back(MOSpace::all);
-    IntegralTransform ints(wave, spaces, restricted ? IntegralTransform::Restricted : IntegralTransform::Unrestricted);
+    IntegralTransform ints(wave, spaces, restricted ? IntegralTransform::TransformationType::Restricted : IntegralTransform::TransformationType::Unrestricted);
 
     // Use the IntegralTransform object's DPD instance, for convenience
     dpd_set_default(ints.get_dpd_id());
 
     // Obtain a single handle to the CCDENSITIES file
     FILE *ccdensities = fopen("CCDENSITIES", "r");
-    if (ccdensities == NULL)
+    if (ccdensities == nullptr)
         throw PSIEXCEPTION("MRCC interface: Unable to open CCDENSITIES. Did MRCC finish successfully?");
 
     const Dimension active_mopi = wave->nmopi() - wave->frzcpi() - wave->frzvpi();
@@ -686,7 +690,7 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
     int exlevel = level["order"].cast<int>();
     std::string fullname = level["fullname"].cast<std::string>();
     bool pertcc = exlevel > 0 ? false : true;
-    exlevel = abs(exlevel);
+    exlevel = std::abs(exlevel);
 
     outfile->Printf("    Generating inputs for %s.\n\n", fullname.c_str());
 
@@ -694,16 +698,16 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
     outfile->Printf("        method %d\n        exlevel %d\n        fullname %s\n\n",
                     method, exlevel, fullname.c_str());
 
-    std::shared_ptr <Wavefunction> wave;
+    std::shared_ptr<Wavefunction> wave;
     //   freeze MP2 natural virtual orbitals?
     if (options.get_bool("NAT_ORBS")) {
-        std::shared_ptr <psi::fnocc::FrozenNO> fno(new psi::fnocc::FrozenNO(ref_wfn, options));
+        auto fno = std::make_shared<psi::fnocc::FrozenNO>(ref_wfn, options);
         fno->ComputeNaturalOrbitals();
-        wave = (std::shared_ptr <Wavefunction>) fno;
+        wave = (std::shared_ptr<Wavefunction>) fno;
     } else {
         wave = ref_wfn;
     }
-    std::shared_ptr <Molecule> molecule = wave->molecule();
+    std::shared_ptr<Molecule> molecule = wave->molecule();
 
     // Orbitals spaces
     Dimension docc = wave->doccpi();
@@ -728,7 +732,7 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
 
     outfile->Printf("\n");
     //FILE* fort55 = fopen("fort.55", "w");
-    std::shared_ptr <OutFile> printer(new OutFile("fort.55", TRUNCATE));
+    auto printer = std::make_shared<PsiOutStream>("fort.55", std::ostream::trunc);
     printer->Printf("%22d%22d\n", nbf, nelectron);
 
     // Print out orbital symmetries
@@ -753,13 +757,17 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
     spaces.push_back(MOSpace::all);
 
     // Check the reference.
-    bool restricted = true;
+    bool closedshell = ref_wfn->same_a_b_dens();
+    bool canonical = true;
 
-    if (options.get_str("REFERENCE") == "UHF")
-        restricted = false;
+    if (options.get_str("REFERENCE") == "ROHF")
+        canonical = false;
 
-    if (pertcc && options.get_str("REFERENCE") == "ROHF")
-        throw PSIEXCEPTION("Perturbative methods not implemented for ROHF references.");
+    if (pertcc && options.get_str("REFERENCE") == "ROHF") {
+        outfile->Printf("\n");
+        outfile->Printf("  WARNING: ROHF references are not implemented for perturbative\n");
+        outfile->Printf("           methods on older versions of MRCC. Proceed with caution.\n\n");
+    }
 
     if (!_default_psio_lib_->exists(PSIF_SO_TEI)) {
         outfile->Printf("\n");
@@ -772,8 +780,14 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
         MintsHelper helper(wave->basisset(), options, 0);
         helper.integrals();
     }
+
+    if (options.get_str("REFERENCE") == "ROHF") {
+        scf::HF* wave = (scf::HF*)ref_wfn.get();
+        wave->semicanonicalize();
+    }
+
     // Create integral transformation object
-    IntegralTransform ints(wave, spaces, restricted ? IntegralTransform::Restricted : IntegralTransform::Unrestricted);
+    IntegralTransform ints(wave, spaces, closedshell ? IntegralTransform::TransformationType::Restricted : IntegralTransform::TransformationType::Unrestricted);
 
     // This transforms everything (OEI and TEI)
     ints.transform_tei(MOSpace::all, MOSpace::all, MOSpace::all, MOSpace::all);
@@ -792,7 +806,7 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
     printer->Printf(" 150000\n");
 
     // RHF
-    if (restricted) {
+    if (closedshell) {
 
         // We want only the permutationally unique integrals, hence [A>=A]+, see libtrans documenation for details
         global_dpd_->buf4_init(&K, PSIF_LIBTRANS_DPD, 0,
@@ -804,15 +818,15 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
         global_dpd_->buf4_close(&K);
 
         // Load in frozen core operator, in the event of FREEZE_CORE = FALSE this is the MO OEI
-        SharedMatrix moH(new Matrix(PSIF_MO_FZC, wave->nmopi(), wave->nmopi()));
+        auto moH = std::make_shared<Matrix>(PSIF_MO_FZC, wave->nmopi(), wave->nmopi());
         moH->load(_default_psio_lib_, PSIF_OEI);
-        View vmoH(moH, active_mopi, active_mopi, wave->frzcpi(), wave->frzcpi());
-        moH = vmoH();
-        write_oei_to_disk(printer, moH);
+        Slice slice_fc(wave->frzcpi(),wave->frzcpi() + active_mopi);
+        SharedMatrix moHblock = moH->get_block(slice_fc,slice_fc);
+        write_oei_to_disk(printer, moHblock);
 
         // Print nuclear repulsion energy.
         // Eventually needs to be changed to frozen core energy + nuclear repulsion energy
-        printer->Printf("%28.20E%4d%4d%4d%4d\n", ints.get_frozen_core_energy() + molecule->nuclear_repulsion_energy(), 0, 0, 0, 0);
+        printer->Printf("%28.20E%4d%4d%4d%4d\n", ints.get_frozen_core_energy() + molecule->nuclear_repulsion_energy(wave->get_dipole_field_strength()), 0, 0, 0, 0);
     } else {
 
         // We want only the permutationally unique integrals, hence [A>=A]+, see libtrans documenation for details
@@ -854,35 +868,34 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
         printer->Printf("%28.20E%4d%4d%4d%4d\n", 0.0, 0, 0, 0, 0);
 
         // Load in alpha frozen core operator, in the event of FREEZE_CORE = FALSE this is the MO OEI
-        SharedMatrix moH(new Matrix(PSIF_MO_A_FZC, wave->nmopi(), wave->nmopi()));
+        auto moH = std::make_shared<Matrix>(PSIF_MO_A_FZC, wave->nmopi(), wave->nmopi());
         moH->load(_default_psio_lib_, PSIF_OEI);
-        View vmoH(moH, active_mopi, active_mopi, wave->frzcpi(), wave->frzcpi());
-        moH = vmoH();
-        write_oei_to_disk(printer, moH);
+        Slice slice_fc(wave->frzcpi(),wave->frzcpi() + active_mopi);
+        SharedMatrix moHblock = moH->get_block(slice_fc,slice_fc);
+        write_oei_to_disk(printer, moHblock);
 
         // Write out separator
         printer->Printf("%28.20E%4d%4d%4d%4d\n", 0.0, 0, 0, 0, 0);
 
         // Load in beta frozen core operator, in the event of FREEZE_CORE = FALSE this is the MO OEI
-        SharedMatrix moHb(new Matrix(PSIF_MO_B_FZC, wave->nmopi(), wave->nmopi()));
+        auto moHb = std::make_shared<Matrix>(PSIF_MO_B_FZC, wave->nmopi(), wave->nmopi());
         moHb->load(_default_psio_lib_, PSIF_OEI);
-        View vmoHb(moHb, active_mopi, active_mopi, wave->frzcpi(), wave->frzcpi());
-        moHb = vmoHb();
-        write_oei_to_disk(printer, moHb);
+        SharedMatrix moHblockb = moHb->get_block(slice_fc,slice_fc);
+        write_oei_to_disk(printer, moHblockb);
 
         // Write out separator
         printer->Printf("%28.20E%4d%4d%4d%4d\n", 0.0, 0, 0, 0, 0);
 
         // Print nuclear repulsion energy.
         // Eventually needs to be changed to frozen core energy + nuclear repulsion energy
-        printer->Printf("%28.20E%4d%4d%4d%4d\n", ints.get_frozen_core_energy() + molecule->nuclear_repulsion_energy(), 0, 0, 0, 0);
+        printer->Printf("%28.20E%4d%4d%4d%4d\n", ints.get_frozen_core_energy() + molecule->nuclear_repulsion_energy(wave->get_dipole_field_strength()), 0, 0, 0, 0);
     }
     _default_psio_lib_->close(PSIF_LIBTRANS_DPD, 1);
 
     outfile->Printf("done.\n  Generating fort.56 input file...");
 
     // Determine energy convergence to pass to MRCC
-    double user_e = fabs(Process::environment.options.get_double("E_CONVERGENCE"));
+    double user_e = std::fabs(Process::environment.options.get_double("E_CONVERGENCE"));
     int e_conv = 0;
 
     if (user_e >= 1.0)
@@ -911,7 +924,7 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
 
     int nsocc = active_socc.sum();
 
-    if (options.get_str("REFERENCE") == "ROHF" || options.get_str("REFERENCE") == "UHF") {
+    if (!closedshell) {
         closed_shell = 0;
         nsing = 0;
         spatial_orbitals = 0;
@@ -939,14 +952,17 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
     if (options["MRCC_NUM_DOUBLET_ROOTS"].has_changed())
         ndoub = options.get_int("MRCC_NUM_DOUBLET_ROOTS");
 
+    int HF_canonical = 1;
+    if (!canonical) HF_canonical = 0;
+
     int symm = 0;
     for (int h = 0; h < nirrep; ++h)
         for (int n = 0; n < active_socc[h]; ++n)
             symm ^= h;
     symm += 1; // stupid 1 based fortran
-    printer = std::shared_ptr<OutFile>(new OutFile("fort.56", TRUNCATE));
+    printer = std::make_shared<PsiOutStream>("fort.56", std::ostream::trunc);
     //FILE* fort56 = fopen("fort.56", "w");
-    printer->Printf("%6d%6d%6d%6d%6d      0     0%6d     0%6d%6d     1%6d      0      0%6d     0     0    0.00    0%6lu\n",
+    printer->Printf("%6d%6d%6d%6d%6d      0     0%6d     0%6d%6d%6d%6d      0      0%6d     0     0    0.00    0%6lu\n",
                     exlevel,                                         // # 1
                     nsing,                                           // # 2
                     ntrip,                                           // # 3
@@ -955,6 +971,7 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
                     symm,                                            // # 8
                     closed_shell,                                    // #10
                     spatial_orbitals,                                // #11
+                    HF_canonical,                                    // #12
                     ndoub,                                           // #13
                     e_conv,                                          // #16
                     Process::environment.get_memory() / 1000 / 1000  // #21
@@ -1005,6 +1022,10 @@ PsiReturnType mrcc_generate_input(SharedWavefunction ref_wfn, Options &options, 
 //  Process::environment.globals["CCSD(T) CORRELATION ENERGY"] =
 //  Process::environment.globals["CCSDT(Q) TOTAL ENERGY"] =
 //  Process::environment.globals["CCSDT(Q) CORRELATION ENERGY"] =
+//  Process::environment.globals["CCSDT(Q)/A TOTAL ENERGY"] =
+//  Process::environment.globals["CCSDT(Q)/A CORRELATION ENERGY"] =
+//  Process::environment.globals["CCSDT(Q)/B TOTAL ENERGY"] =
+//  Process::environment.globals["CCSDT(Q)/B CORRELATION ENERGY"] =
 //  Process::environment.globals["CC(n-1)(n) TOTAL ENERGY"] =
 //  Process::environment.globals["CC(n-1)(n) CORRELATION ENERGY"] =
 

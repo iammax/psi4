@@ -1,5 +1,4 @@
 #! SCF/cc-pVDZ optimization example with frozen cartesian
-memory 500 MB
 
 molecule h2o {
 0 1
@@ -7,6 +6,8 @@ O   1.000000   1.000000   1.000000
 H   2.000000   1.000000   1.000000
 H   1.000000   2.000000   1.000000
 units angstrom
+no_com
+no_reorient
 }
 
 set {

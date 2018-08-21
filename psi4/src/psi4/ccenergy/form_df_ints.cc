@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -66,7 +67,7 @@ void CCEnergyWavefunction::form_df_ints(Options &options, int **cachelist, int *
     SharedMatrix dfAOtoSO = petite.aotoso();
     const Dimension &soDim = AO2SO_->colspi();
     const Dimension &dfDim = dfAOtoSO->colspi();
-    SharedMatrix symQao(new Matrix(nirrep_, (const int*)dfDim, nbf2));
+    auto symQao = std::make_shared<Matrix>(nirrep_, (const int*)dfDim, nbf2);
     double **pQao = Qao->pointer();
     for(int h = 0; h < nirrep_; ++h){
         double **pAOSO = dfAOtoSO->pointer(h);
@@ -128,7 +129,7 @@ void CCEnergyWavefunction::form_df_ints(Options &options, int **cachelist, int *
     aospaces.push_back(dummyorbspi);
     aospaces.push_back(dummyorbsym);
 
-    dpd_init(1, moinfo_.nirreps, params_.memory, 0, cachefiles, cachelist, NULL, aospaces.size()/2, aospaces);
+    dpd_init(1, moinfo_.nirreps, params_.memory, 0, cachefiles, cachelist, nullptr, aospaces.size()/2, aospaces);
 
     delete [] dforbspi;
     delete [] dforbsym;

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -40,12 +41,11 @@
 namespace psi {
 class Options;
 class JK;
-class DFERI;
 class IntegralTransform;
 class MOSpace;
 typedef std::shared_ptr<Matrix> SharedMatrix;
-typedef std::shared_ptr<Matrix> SharedMatrix;
 class SOMCSCF;
+class DFHelper;
 
 // Well this is not ideal
 struct _SlaterDetSet;
@@ -61,10 +61,7 @@ struct params;
 struct stringwr;
 struct ci_blks;
 struct olsen_graph;
-struct graph_set;
 struct H_zero_block;
-struct detci_timings;
-struct mcscf_params;
 typedef std::shared_ptr<psi::detci::CIvect> SharedCIVector;
 }}
 
@@ -273,6 +270,11 @@ public:
      */
     void ci_nat_orbs();
 
+    /**
+     * Form CI Semicanonical Orbitals
+     */
+    void semicanonical_orbs();
+
     // Cleanup Functions
 
     /**
@@ -339,7 +341,7 @@ private:
     std::shared_ptr<IntegralTransform> ints_; // Non-DF
     std::shared_ptr<MOSpace> rot_space_;
     std::shared_ptr<MOSpace> act_space_;
-    std::shared_ptr<DFERI> dferi_; // DF
+    std::shared_ptr<DFHelper> dfh_; // DF
     std::shared_ptr<JK> jk_;
     std::shared_ptr<SOMCSCF> somcscf_;
 
@@ -383,7 +385,7 @@ private:
     unsigned char ***Occs_;
 
     /// => H0block functions <= //
-    void H0block_init(unsigned int size);
+    void H0block_init(size_t size);
     void H0block_free(void);
     void H0block_print(void);
     int  H0block_calc(double E);
@@ -458,7 +460,7 @@ private:
           int *Cnt[2], int **Ij[2], int **Oij[2], int **Ridx[2],
           signed char **Sgn[2], unsigned char **Toccs);
 
-    void print_vec(unsigned int nprint, int *Ialist, int *Iblist,
+    void print_vec(size_t nprint, int *Ialist, int *Iblist,
           int *Iaidx, int *Ibidx, double *coeff);
 
     /// => MCSCF helpers <= //

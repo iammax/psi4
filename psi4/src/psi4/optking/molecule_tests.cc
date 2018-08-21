@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -50,8 +51,6 @@
 #endif
 
 namespace opt {
-
-using namespace std;
 
 // test the analytic B matrix (and displacement code) by comparing
 // analytic DqDx to finite-difference DqDx
@@ -124,8 +123,8 @@ void MOLECULE::test_B(void) {
   int max_error_intco = -1;
   for (int i=0; i<Nintco; ++i)
     for (int j=0; j<3*Natom; ++j)
-      if ( fabs(B_analytic[i][j] - B_fd[i][j]) > max_error ) {
-        max_error = fabs(B_analytic[i][j] - B_fd[i][j]);
+      if ( std::fabs(B_analytic[i][j] - B_fd[i][j]) > max_error ) {
+        max_error = std::fabs(B_analytic[i][j] - B_fd[i][j]);
         max_error_intco = i;
       }
 
@@ -217,8 +216,8 @@ void MOLECULE::test_derivative_B(void) {
     double max_error = 0.0;
     for (int ii=0; ii<3*Natom; ++ii)
       for (int j=0; j<3*Natom; ++j)
-        if ( fabs(dq2dx2_analytic[ii][j] - dq2dx2_fd[ii][j]) > max_error )
-          max_error = fabs(dq2dx2_analytic[ii][j] - dq2dx2_fd[ii][j]);
+        if ( std::fabs(dq2dx2_analytic[ii][j] - dq2dx2_fd[ii][j]) > max_error )
+          max_error = std::fabs(dq2dx2_analytic[ii][j] - dq2dx2_fd[ii][j]);
 
     oprintf_out("Maximum difference is %.1e. ", max_error);
     if (max_error > MAX_ERROR) {

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -40,7 +41,7 @@
 #include <pthread.h>
 #include "dpd.h"
 #include "psi4/psi4-dec.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 //MKL Header
 #ifdef USING_LAPACK_MKL
 #include <mkl.h>
@@ -71,7 +72,7 @@ void DPD::cc3_sigma_RHF_ic(dpdbuf4 *CIjAb, dpdbuf4 *WAbEi, dpdbuf4 *WMbIj,
                            double omega, std::string out, int nthreads, int newtrips)
 {
    std::shared_ptr<psi::PsiOutStream> printer=(out=="outfile"?outfile:
-            std::shared_ptr<OutFile>(new OutFile(out)));
+            std::make_shared<PsiOutStream>(out));
     int h, nirreps, thread, nijk, *ijk_part, errcod=0;
     int Gi, Gj, Gk, Gl, Ga, Gb, Gc, Gd;
     int i, j, k, l, a, b, c, d, row, col;
@@ -238,7 +239,7 @@ void DPD::cc3_sigma_RHF_ic(dpdbuf4 *CIjAb, dpdbuf4 *WAbEi, dpdbuf4 *WMbIj,
                 /* execute threads */
                 for (thread=0;thread<nthreads;++thread) {
                     if (!ijk_part[thread]) continue;
-                    errcod = pthread_create(&(p_thread[thread]), NULL, cc3_sigma_RHF_ic_thread,
+                    errcod = pthread_create(&(p_thread[thread]), nullptr, cc3_sigma_RHF_ic_thread,
                                             (void *) &thread_data_array[thread]);
                     if (errcod) {
                         outfile->Printf("pthread_create in cc3_sigma_RHF_ic failed\n");
@@ -248,7 +249,7 @@ void DPD::cc3_sigma_RHF_ic(dpdbuf4 *CIjAb, dpdbuf4 *WAbEi, dpdbuf4 *WMbIj,
 
                 for (thread=0; thread<nthreads;++thread) {
                     if (!ijk_part[thread]) continue;
-                    errcod = pthread_join(p_thread[thread], NULL);
+                    errcod = pthread_join(p_thread[thread], nullptr);
                     if (errcod) {
                         outfile->Printf("pthread_join in cc3_sigma_RHF_ic failed\n");
                         exit(PSI_RETURN_FAILURE);
@@ -343,7 +344,7 @@ void* cc3_sigma_RHF_ic_thread(void* thread_data_in)
     double omega;
     dpdfile2 *FME, *fIJ, *fAB;
     dpdbuf4 *CIjAb, *WAbEi, *WMbIj, *Dints, *WmAEf, *WMnIe;
-    std::string OutFileRMR;
+    std::string out_fname;
     int newtrips;
     int Gcb, Gac, cb, ac;
 
@@ -922,7 +923,9 @@ void* cc3_sigma_RHF_ic_thread(void* thread_data_in)
     free(Wa);
     free(Va);
 
-    pthread_exit(NULL);
+    pthread_exit(nullptr);
+
+    return nullptr;
 }
 
 }

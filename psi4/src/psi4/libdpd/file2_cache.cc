@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,12 +34,12 @@
 #include <cstdlib>
 #include <cstring>
 #include "dpd.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 namespace psi {
 
 void DPD::file2_cache_init(void)
 {
-    dpd_main.file2_cache = NULL;
+    dpd_main.file2_cache = nullptr;
 }
 
 void DPD::file2_cache_close(void)
@@ -51,7 +52,7 @@ void DPD::file2_cache_close(void)
 
     dpdnum = dpd_default;
 
-    while(this_entry != NULL) {
+    while(this_entry != nullptr) {
 
         dpd_set_default(this_entry->dpdnum);
 
@@ -77,7 +78,7 @@ DPD::file2_cache_scan(int filenum, int irrep, int pnum, int qnum, const char *la
 
     this_entry = dpd_main.file2_cache;
 
-    while(this_entry != NULL) {
+    while(this_entry != nullptr) {
         if(this_entry->filenum == filenum       &&
                 this_entry->irrep == irrep           &&
                 this_entry->pnum == pnum             &&
@@ -98,12 +99,12 @@ DPD::dpd_file2_cache_last(void)
 
     this_entry = dpd_main.file2_cache;
 
-    while(this_entry !=NULL) {
-        if(this_entry->next == NULL) return(this_entry);
+    while(this_entry !=nullptr) {
+        if(this_entry->next == nullptr) return(this_entry);
         this_entry = this_entry->next;
     }
 
-    return(NULL);
+    return(nullptr);
 }
 
 int DPD::file2_cache_add(dpdfile2 *File)
@@ -117,7 +118,7 @@ int DPD::file2_cache_add(dpdfile2 *File)
                                   File->params->pnum, File->params->qnum,
                                   File->label, File->dpdnum);
 
-    if(this_entry == NULL) { /* New cache entry */
+    if(this_entry == nullptr) { /* New cache entry */
         this_entry = (dpd_file2_cache_entry *)
                 malloc(sizeof(dpd_file2_cache_entry));
 
@@ -130,10 +131,10 @@ int DPD::file2_cache_add(dpdfile2 *File)
         this_entry->pnum = File->params->pnum;
         this_entry->qnum = File->params->qnum;
         strcpy(this_entry->label,File->label);
-        this_entry->next = NULL;
+        this_entry->next = nullptr;
         this_entry->last = dpd_file2_cache_last();
 
-        if(this_entry->last != NULL) this_entry->last->next = this_entry;
+        if(this_entry->last != nullptr) this_entry->last->next = this_entry;
         else dpd_main.file2_cache = this_entry;
 
         this_entry->size = 0;
@@ -175,7 +176,7 @@ int DPD::file2_cache_del(dpdfile2 *File)
                                   File->label, File->dpdnum);
 
 
-    if(this_entry == NULL) dpd_error("File2 cache delete error!", "outfile");
+    if(this_entry == nullptr) dpd_error("File2 cache delete error!", "outfile");
     else {
         File->incore = 0;
 
@@ -196,8 +197,8 @@ int DPD::file2_cache_del(dpdfile2 *File)
         free(this_entry);
 
         /* Reassign pointers for adjacent entries in the list */
-        if(next_entry != NULL) next_entry->last = last_entry;
-        if(last_entry != NULL) last_entry->next = next_entry;
+        if(next_entry != nullptr) next_entry->last = last_entry;
+        if(last_entry != nullptr) last_entry->next = next_entry;
 
         dpd_set_default(dpdnum);
     }
@@ -208,7 +209,7 @@ int DPD::file2_cache_del(dpdfile2 *File)
 void DPD::file2_cache_print(std::string out)
 {
    std::shared_ptr<psi::PsiOutStream> printer=(out=="outfile"?outfile:
-            std::shared_ptr<OutFile>(new OutFile(out)));
+            std::make_shared<PsiOutStream>(out));
     int total_size=0;
     dpd_file2_cache_entry *this_entry;
 
@@ -219,7 +220,7 @@ void DPD::file2_cache_print(std::string out)
             "Cache Label                     File symm  p  q  size(kB)\n");
     printer->Printf(
             "---------------------------------------------------------\n");
-    while(this_entry != NULL) {
+    while(this_entry != nullptr) {
         printer->Printf(
                 "%-32s %3d    %1d  %1d  %1d  %8.1f\n",
                 this_entry->label, this_entry->filenum, this_entry->irrep,
@@ -241,9 +242,9 @@ void DPD::file2_cache_dirty(dpdfile2 *File)
                                   File->params->pnum, File->params->qnum,
                                   File->label, File->dpdnum);
 
-    if((this_entry == NULL && File->incore) ||
-            (this_entry != NULL && !File->incore) ||
-            (this_entry == NULL && !File->incore))
+    if((this_entry == nullptr && File->incore) ||
+            (this_entry != nullptr && !File->incore) ||
+            (this_entry == nullptr && !File->incore))
         dpd_error("Error setting file4_cache dirty flag!", "outfile");
     else {
         this_entry->clean = 0;

@@ -3,44 +3,48 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
+#include "scf_grad.h"
+#include "jk_grad.h"
 
 #include "psi4/libqt/qt.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/liboptions/liboptions_python.h"
 #include "psi4/libmints/matrix.h"
+#include "psi4/libmints/molecule.h"
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/integral.h"
 #include "psi4/libmints/vector.h"
 #include "psi4/libmints/extern.h"
+#include "psi4/libmints/mintshelper.h"
 #include "psi4/psi4-dec.h"
 #include "psi4/libfock/v.h"
 #include "psi4/libfunctional/superfunctional.h"
 #include "psi4/libdisp/dispersion.h"
 #include "psi4/libscf_solver/hf.h"
-#include "scf_grad.h"
-#include "jk_grad.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 #include <algorithm>
 
@@ -48,9 +52,9 @@
 
 #ifdef _OPENMP
 #include <omp.h>
+#include "psi4/libpsi4util/process.h"
 #endif
 
-using namespace std;
 using namespace psi;
 
 
@@ -66,7 +70,10 @@ SCFGrad::SCFGrad(SharedWavefunction ref_wfn, Options& options) :
     functional_ = scfwfn->functional();
     potential_ = scfwfn->V_potential();
     if (ref_wfn->arrays().count("-D Gradient")){
-        gradients_["-D"] = ref_wfn->get_array("-D Gradient");
+        gradients_["-D Gradient"] = ref_wfn->get_array("-D Gradient");
+    }
+    if (ref_wfn->arrays().count("-D Hessian")){
+        hessians_["-D Hessian"] = ref_wfn->get_array("-D Hessian");
     }
 
 }
@@ -76,14 +83,6 @@ SCFGrad::~SCFGrad()
 void SCFGrad::common_init()
 {
 
-    // if (!reference_wavefunction_) {
-    //     throw PSIEXCEPTION("SCFGrad: Run SCF first");
-    // }
-
-    //if (options_.get_str("REFERENCE") == "ROHF" || options_.get_str("REFERENCE") == "CUHF")
-    //    reference_wavefunction_->semicanonicalize();
-
-    //copy(reference_wavefunction_);
 
     print_ = options_.get_int("PRINT");
     debug_ = options_.get_int("DEBUG");
@@ -102,7 +101,7 @@ SharedMatrix SCFGrad::compute_gradient()
     outfile->Printf( "  ==> Geometry <==\n\n");
     molecule_->print();
 
-    outfile->Printf( "  Nuclear repulsion = %20.15f\n", basisset_->molecule()->nuclear_repulsion_energy());
+    outfile->Printf( "  Nuclear repulsion = %20.15f\n", basisset_->molecule()->nuclear_repulsion_energy(dipole_field_strength_));
     outfile->Printf( "\n");
 
     outfile->Printf( "  ==> Basis Set <==\n\n");
@@ -114,14 +113,13 @@ SharedMatrix SCFGrad::compute_gradient()
 
     std::vector<std::string> gradient_terms;
     gradient_terms.push_back("Nuclear");
-    gradient_terms.push_back("Kinetic");
-    gradient_terms.push_back("Potential");
+    gradient_terms.push_back("Core");
     gradient_terms.push_back("Overlap");
     gradient_terms.push_back("Coulomb");
     gradient_terms.push_back("Exchange");
     gradient_terms.push_back("Exchange,LR");
     gradient_terms.push_back("XC");
-    gradient_terms.push_back("-D");
+    gradient_terms.push_back("-D Gradient");
     gradient_terms.push_back("Total");
 
     // => Densities <= //
@@ -140,209 +138,54 @@ SharedMatrix SCFGrad::compute_gradient()
     Dt->set_name("Dt");
 
     // => Occupations (AO) <= //
-    SharedMatrix Ca;
-    SharedMatrix Cb;
-    SharedVector eps_a;
-    SharedVector eps_b;
+    SharedMatrix Ca_occ;
+    SharedMatrix Cb_occ;
+    SharedVector eps_a_occ;
+    SharedVector eps_b_occ;
 
-    Ca = Ca_subset("AO", "OCC");
-    eps_a = epsilon_a_subset("AO", "OCC");
+    Ca_occ = Ca_subset("AO", "OCC");
+    eps_a_occ = epsilon_a_subset("AO", "OCC");
     if (options_.get_str("REFERENCE") == "RHF" || options_.get_str("REFERENCE") == "RKS") {
-        Cb = Ca;
-        eps_b = eps_a;
+        Cb_occ = Ca_occ;
+        eps_b_occ = eps_a_occ;
     } else {
-        Cb = Cb_subset("AO", "OCC");
-        eps_b = epsilon_b_subset("AO", "OCC");
+        Cb_occ = Cb_subset("AO", "OCC");
+        eps_b_occ = epsilon_b_subset("AO", "OCC");
     }
 
     // => Potential/Functional <= //
-    if (options_.get_str("REFERENCE") == "RKS") {
-        std::vector<SharedMatrix>& C = potential_->C();
-        C.clear();
-        C.push_back(Ca_subset("SO", "OCC"));
-    } else if (options_.get_str("REFERENCE") == "UKS") {
-        std::vector<SharedMatrix>& C = potential_->C();
-        C.clear();
-        C.push_back(Ca_subset("SO", "OCC"));
-        C.push_back(Cb_subset("SO", "OCC"));
+    if (functional_->needs_xc()) {
+        if (options_.get_str("REFERENCE") == "RKS") {
+            potential_->set_D({Da_});
+        } else {
+            potential_->set_D({Da_, Db_});
+        }
     }
 
     // => Sizings <= //
     int natom = molecule_->natom();
     int nso = basisset_->nbf();
-    int nalpha = Ca->colspi()[0];
-    int nbeta = Cb->colspi()[0];
+    int nalpha = Ca_occ->colspi()[0];
+    int nbeta = Cb_occ->colspi()[0];
 
     // => Nuclear Gradient <= //
-    gradients_["Nuclear"] = SharedMatrix(molecule_->nuclear_repulsion_energy_deriv1().clone());
+    gradients_["Nuclear"] = SharedMatrix(molecule_->nuclear_repulsion_energy_deriv1(dipole_field_strength_).clone());
     gradients_["Nuclear"]->set_name("Nuclear Gradient");
 
-    // => Kinetic Gradient <= //
-    timer_on("Grad: T");
-    {
-        double** Dp = Dt->pointer();
+    auto mints = std::make_shared<MintsHelper>(basisset_, options_);
 
-        gradients_["Kinetic"] = SharedMatrix(gradients_["Nuclear"]->clone());
-        gradients_["Kinetic"]->set_name("Kinetic Gradient");
-        gradients_["Kinetic"]->zero();
-        double** Tp = gradients_["Kinetic"]->pointer();
-
-        // Kinetic derivatives
-        std::shared_ptr<OneBodyAOInt> Tint(integral_->ao_kinetic(1));
-        const double* buffer = Tint->buffer();
-
-        for (int P = 0; P < basisset_->nshell(); P++) {
-            for (int Q = 0; Q <= P; Q++) {
-
-                Tint->compute_shell_deriv1(P,Q);
-
-                int nP = basisset_->shell(P).nfunction();
-                int oP = basisset_->shell(P).function_index();
-                int aP = basisset_->shell(P).ncenter();
-
-                int nQ = basisset_->shell(Q).nfunction();
-                int oQ = basisset_->shell(Q).function_index();
-                int aQ = basisset_->shell(Q).ncenter();
-
-                int offset = nP * nQ;
-                const double* ref = buffer;
-                double perm = (P == Q ? 1.0 : 2.0);
-
-                // Px
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Tp[aP][0] += perm * Dp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Py
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Tp[aP][1] += perm * Dp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Pz
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Tp[aP][2] += perm * Dp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Qx
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Tp[aQ][0] += perm * Dp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Qy
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Tp[aQ][1] += perm * Dp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Qz
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Tp[aQ][2] += perm * Dp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-            }
-        }
-    }
-    timer_off("Grad: T");
-
-    // => Potential Gradient <= //
-    timer_on("Grad: V");
-    {
-        double** Dp = Dt->pointer();
-
-        gradients_["Potential"] = SharedMatrix(gradients_["Nuclear"]->clone());
-        gradients_["Potential"]->set_name("Potential Gradient");
-        gradients_["Potential"]->zero();
-
-            // Thread count
-            int threads = 1;
-            #ifdef _OPENMP
-                threads = omp_get_max_threads();
-            #endif
-
-            // Potential derivatives
-            std::vector<std::shared_ptr<OneBodyAOInt> > Vint;
-            std::vector<SharedMatrix> Vtemps;
-            for (int t = 0; t < threads; t++) {
-                Vint.push_back(std::shared_ptr<OneBodyAOInt>(integral_->ao_potential(1)));
-                Vtemps.push_back(SharedMatrix(gradients_["Potential"]->clone()));
-            }
-
-            // Lower Triangle
-            std::vector<std::pair<int,int> > PQ_pairs;
-            for (int P = 0; P < basisset_->nshell(); P++) {
-                for (int Q = 0; Q <= P; Q++) {
-                    PQ_pairs.push_back(std::pair<int,int>(P,Q));
-                }
-            }
-
-        #pragma omp parallel for schedule(dynamic) num_threads(threads)
-        for (long int PQ = 0L; PQ < PQ_pairs.size(); PQ++) {
-
-            int P = PQ_pairs[PQ].first;
-            int Q = PQ_pairs[PQ].second;
-
-            int thread = 0;
-            #ifdef _OPENMP
-                thread = omp_get_thread_num();
-            #endif
-
-            Vint[thread]->compute_shell_deriv1(P,Q);
-            const double* buffer = Vint[thread]->buffer();
-
-            int nP = basisset_->shell(P).nfunction();
-            int oP = basisset_->shell(P).function_index();
-            int aP = basisset_->shell(P).ncenter();
-
-            int nQ = basisset_->shell(Q).nfunction();
-            int oQ = basisset_->shell(Q).function_index();
-            int aQ = basisset_->shell(Q).ncenter();
-
-            double perm = (P == Q ? 1.0 : 2.0);
-
-            double** Vp = Vtemps[thread]->pointer();
-
-            for (int A = 0; A < natom; A++) {
-                const double* ref0 = &buffer[3 * A * nP * nQ + 0 * nP * nQ];
-                const double* ref1 = &buffer[3 * A * nP * nQ + 1 * nP * nQ];
-                const double* ref2 = &buffer[3 * A * nP * nQ + 2 * nP * nQ];
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        double Vval = perm * Dp[p + oP][q + oQ];
-                        Vp[A][0] += Vval * (*ref0++);
-                        Vp[A][1] += Vval * (*ref1++);
-                        Vp[A][2] += Vval * (*ref2++);
-                    }
-                }
-            }
-        }
-
-        for (int t = 0; t < threads; t++) {
-            gradients_["Potential"]->add(Vtemps[t]);
-        }
-    }
-    timer_off("Grad: V");
+    // => V T Perturbation Gradients <= //
+    timer_on("Grad: V T Perturb");
+    gradients_["Core"] = mints->core_hamiltonian_grad(Dt);
+    timer_off("Grad: V T Perturb");
 
     // If an external field exists, add it to the one-electron Hamiltonian
-    py::object pyExtern = dynamic_cast<PythonDataType*>(options_["EXTERN"].get())->to_python();
-    if (pyExtern) {
-        std::shared_ptr<ExternalPotential> external = pyExtern.cast<std::shared_ptr<ExternalPotential>>();
-        if (external) {
-            gradient_terms.push_back("External Potential");
-            timer_on("Grad: External");
-            gradients_["External Potential"] = external->computePotentialGradients(basisset_, Dt);
-            timer_off("Grad: External");
-        }  // end external
-    }
+    if (external_pot_) {
+        gradient_terms.push_back("External Potential");
+        timer_on("Grad: External");
+        gradients_["External Potential"] = external_pot_->computePotentialGradients(basisset_, Dt);
+        timer_off("Grad: External");
+    }  // end external
 
     // => Overlap Gradient <= //
     timer_on("Grad: S");
@@ -351,99 +194,22 @@ SharedMatrix SCFGrad::compute_gradient()
         SharedMatrix W(Da->clone());
         W->set_name("W");
 
-        double** Wp = W->pointer();
-        double** Cap = Ca->pointer();
-        double** Cbp = Cb->pointer();
-        double* eps_ap = eps_a->pointer();
-        double* eps_bp = eps_b->pointer();
-
-        double* temp = new double[nso * (ULI) nalpha];
-
-        ::memset((void*) temp, '\0', sizeof(double) * nso * nalpha);
-        for (int i = 0; i < nalpha; i++) {
-            C_DAXPY(nso,eps_ap[i], &Cap[0][i], nalpha, &temp[i], nalpha);
+        // Alpha
+        auto tmp = Ca_occ->clone();
+        for (size_t i = 0; i < nalpha; i++){
+            tmp->scale_column(0, i, eps_a_occ->get(i));
         }
+        W->gemm(false, true, 1.0, tmp, Ca_occ, 0.0);
 
-        C_DGEMM('N','T',nso,nso,nalpha,1.0,Cap[0],nalpha,temp,nalpha,0.0,Wp[0],nso);
-
-        ::memset((void*) temp, '\0', sizeof(double) * nso * nbeta);
-        for (int i = 0; i < nbeta; i++) {
-            C_DAXPY(nso,eps_bp[i], &Cbp[0][i], nbeta, &temp[i], nbeta);
+        // Beta
+        tmp->copy(Cb_occ);
+        for (size_t i = 0; i < nbeta; i++){
+            tmp->scale_column(0, i, eps_b_occ->get(i));
         }
+        W->gemm(false, true, 1.0, tmp, Cb_occ, 1.0);
 
-        C_DGEMM('N','T',nso,nso,nbeta,1.0,Cbp[0],nbeta,temp,nbeta,1.0,Wp[0],nso);
-
-        delete[] temp;
-
-        gradients_["Overlap"] = SharedMatrix(gradients_["Nuclear"]->clone());
-        gradients_["Overlap"]->set_name("Overlap Gradient");
-        gradients_["Overlap"]->zero();
-        double** Sp = gradients_["Overlap"]->pointer();
-
-        // Overlap derivatives
-        std::shared_ptr<OneBodyAOInt> Sint(integral_->ao_overlap(1));
-        const double* buffer = Sint->buffer();
-
-        for (int P = 0; P < basisset_->nshell(); P++) {
-            for (int Q = 0; Q <= P; Q++) {
-
-                Sint->compute_shell_deriv1(P,Q);
-
-                int nP = basisset_->shell(P).nfunction();
-                int oP = basisset_->shell(P).function_index();
-                int aP = basisset_->shell(P).ncenter();
-
-                int nQ = basisset_->shell(Q).nfunction();
-                int oQ = basisset_->shell(Q).function_index();
-                int aQ = basisset_->shell(Q).ncenter();
-
-                int offset = nP * nQ;
-                const double* ref = buffer;
-                double perm = (P == Q ? 1.0 : 2.0);
-
-                // Px
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Sp[aP][0] -= perm * Wp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Py
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Sp[aP][1] -= perm * Wp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Pz
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Sp[aP][2] -= perm * Wp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Qx
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Sp[aQ][0] -= perm * Wp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Qy
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Sp[aQ][1] -= perm * Wp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-
-                // Qz
-                for (int p = 0; p < nP; p++) {
-                    for (int q = 0; q < nQ; q++) {
-                        Sp[aQ][2] -= perm * Wp[p + oP][q + oQ] * (*ref++);
-                    }
-                }
-            }
-        }
+        gradients_["Overlap"] = mints->overlap_grad(W);
+        gradients_["Overlap"]->scale(-1.0);
     }
     timer_off("Grad: S");
 
@@ -451,10 +217,10 @@ SharedMatrix SCFGrad::compute_gradient()
     timer_on("Grad: JK");
 
     std::shared_ptr<JKGrad> jk = JKGrad::build_JKGrad(1, basisset_, basissets_["DF_BASIS_SCF"]);
-    jk->set_memory((ULI) (options_.get_double("SCF_MEM_SAFETY_FACTOR") * memory_ / 8L));
+    jk->set_memory((size_t) (options_.get_double("SCF_MEM_SAFETY_FACTOR") * memory_ / 8L));
 
-    jk->set_Ca(Ca);
-    jk->set_Cb(Cb);
+    jk->set_Ca(Ca_occ);
+    jk->set_Cb(Cb_occ);
     jk->set_Da(Da);
     jk->set_Db(Db);
     jk->set_Dt(Dt);
@@ -479,29 +245,21 @@ SharedMatrix SCFGrad::compute_gradient()
     gradients_["Coulomb"] = jk_gradients["Coulomb"];
     if (functional_->is_x_hybrid()) {
         gradients_["Exchange"] = jk_gradients["Exchange"];
-        gradients_["Exchange"]->scale(-(functional_->x_alpha()));
+        gradients_["Exchange"]->scale(-functional_->x_alpha());
     }
     if (functional_->is_x_lrc()) {
         gradients_["Exchange,LR"] = jk_gradients["Exchange,LR"];
-        gradients_["Exchange,LR"]->scale(-(1.0 - functional_->x_alpha()));
+        gradients_["Exchange,LR"]->scale(-functional_->x_beta());
     }
     timer_off("Grad: JK");
 
     // => XC Gradient <= //
     timer_on("Grad: XC");
-    if (potential_) {
+    if (functional_->needs_xc()) {
         potential_->print_header();
         gradients_["XC"] = potential_->compute_gradient();
     }
     timer_off("Grad: XC");
-
-    // => -D Gradient <= //
-    // py::object
-    // for (auto item : )
-    // gradients_["-D"] = py_grad.cast<SharedMatrix>();
-    // if (functional_ && functional_->dispersion()) {
-    //     gradients_["-D"] = functional_->dispersion()->compute_gradient(basisset_->molecule());
-    // }
 
     // => Total Gradient <= //
     SharedMatrix total = SharedMatrix(gradients_["Nuclear"]->clone());
@@ -547,15 +305,13 @@ SharedMatrix SCFGrad::compute_hessian()
     outfile->Printf( "  ==> Geometry <==\n\n");
     molecule_->print();
 
-    outfile->Printf( "  Nuclear repulsion = %20.15f\n", basisset_->molecule()->nuclear_repulsion_energy());
+    outfile->Printf( "  Nuclear repulsion = %20.15f\n", basisset_->molecule()->nuclear_repulsion_energy(dipole_field_strength_));
     outfile->Printf( "\n");
 
     outfile->Printf( "  ==> Basis Set <==\n\n");
     basisset_->print_by_level("outfile", print_);
 
     // => Registers <= //
-
-    std::map<std::string, SharedMatrix> hessians;
 
     std::vector<std::string> hessian_terms;
     hessian_terms.push_back("Nuclear");
@@ -566,7 +322,7 @@ SharedMatrix SCFGrad::compute_hessian()
     hessian_terms.push_back("Exchange");
     hessian_terms.push_back("Exchange,LR");
     hessian_terms.push_back("XC");
-    hessian_terms.push_back("-D");
+    hessian_terms.push_back("-D Hessian");
     hessian_terms.push_back("Response");
     hessian_terms.push_back("Total");
 
@@ -605,21 +361,13 @@ SharedMatrix SCFGrad::compute_hessian()
     std::shared_ptr<SuperFunctional> functional;
     std::shared_ptr<VBase> potential;
 
-    if (options_.get_str("REFERENCE") == "RKS") {
+    if (functional_->needs_xc()) {
         throw PSIEXCEPTION("Missing XC derivates for Hessians");
-        //potential = VBase::build_V(basisset_, options_, "RV");
-        //potential->initialize();
-        //std::vector<SharedMatrix>& C = potential->C();
-        //C.push_back(Ca_subset("SO", "OCC"));
-        //functional = potential->functional();
-    } else if (options_.get_str("REFERENCE") == "UKS") {
-        throw PSIEXCEPTION("Missing XC derivates for Hessians");
-        //potential = VBase::build_V(basisset_, options_, "UV");
-        //potential->initialize();
-        //std::vector<SharedMatrix>& C = potential->C();
-        //C.push_back(Ca_subset("SO", "OCC"));
-        //C.push_back(Cb_subset("SO", "OCC"));
-        //functional = potential->functional();
+        // if (options_.get_str("REFERENCE") == "RKS") {
+        //     potential_->set_D({Da_});
+        // } else {
+        //     potential_->set_D({Da_, Db_});
+        // }
     }
 
     // => Sizings <= //
@@ -629,20 +377,20 @@ SharedMatrix SCFGrad::compute_hessian()
     int nbeta = Cb->colspi()[0];
 
     // => Nuclear Hessian <= //
-    hessians["Nuclear"] = SharedMatrix(molecule_->nuclear_repulsion_energy_deriv2().clone());
-    hessians["Nuclear"]->set_name("Nuclear Hessian");
+    hessians_["Nuclear"] = SharedMatrix(molecule_->nuclear_repulsion_energy_deriv2().clone());
+    hessians_["Nuclear"]->set_name("Nuclear Hessian");
 
-    SharedMatrix Zxyz(new Matrix("Zxyz", 1, 4));
+    auto Zxyz = std::make_shared<Matrix>("Zxyz", 1, 4);
 
     // => Potential Hessian <= //
     timer_on("Hess: V");
     {
         double** Dp = Dt->pointer();
 
-        hessians["Potential"] = SharedMatrix(hessians["Nuclear"]->clone());
-        hessians["Potential"]->set_name("Potential Hessian");
-        hessians["Potential"]->zero();
-        double** Vp = hessians["Potential"]->pointer();
+        hessians_["Potential"] = SharedMatrix(hessians_["Nuclear"]->clone());
+        hessians_["Potential"]->set_name("Potential Hessian");
+        hessians_["Potential"]->zero();
+        double** Vp = hessians_["Potential"]->pointer();
 
         // Potential energy derivatives
         std::shared_ptr<OneBodyAOInt> Vint(integral_->ao_potential(2));
@@ -906,7 +654,7 @@ SharedMatrix SCFGrad::compute_hessian()
             }
         }
         // Symmetrize the result
-        int dim = hessians["Potential"]->rowdim();
+        int dim = hessians_["Potential"]->rowdim();
         for (int row = 0; row < dim; ++row){
             for (int col = 0; col < row; ++col){
                 Vp[row][col] = Vp[col][row] = (Vp[row][col] + Vp[col][row]);
@@ -921,10 +669,10 @@ SharedMatrix SCFGrad::compute_hessian()
     {
         double** Dp = Dt->pointer();
 
-        hessians["Kinetic"] = SharedMatrix(hessians["Nuclear"]->clone());
-        hessians["Kinetic"]->set_name("Kinetic Hessian");
-        hessians["Kinetic"]->zero();
-        double** Tp = hessians["Kinetic"]->pointer();
+        hessians_["Kinetic"] = SharedMatrix(hessians_["Nuclear"]->clone());
+        hessians_["Kinetic"]->set_name("Kinetic Hessian");
+        hessians_["Kinetic"]->zero();
+        double** Tp = hessians_["Kinetic"]->pointer();
 
         // Kinetic energy derivatives
         std::shared_ptr<OneBodyAOInt> Tint(integral_->ao_kinetic(2));
@@ -1054,7 +802,7 @@ SharedMatrix SCFGrad::compute_hessian()
             }
         }
         // Symmetrize the result
-        int dim = hessians["Kinetic"]->rowdim();
+        int dim = hessians_["Kinetic"]->rowdim();
         for (int row = 0; row < dim; ++row){
             for (int col = 0; col < row; ++col){
                 Tp[row][col] = Tp[col][row] = (Tp[row][col] + Tp[col][row]);
@@ -1076,7 +824,7 @@ SharedMatrix SCFGrad::compute_hessian()
         double* eps_ap = eps_a->pointer();
         double* eps_bp = eps_b->pointer();
 
-        double* temp = new double[nso * (ULI) nalpha];
+        double* temp = new double[nso * (size_t) nalpha];
 
         ::memset((void*) temp, '\0', sizeof(double) * nso * nalpha);
         for (int i = 0; i < nalpha; i++) {
@@ -1094,10 +842,10 @@ SharedMatrix SCFGrad::compute_hessian()
 
         delete[] temp;
 
-        hessians["Overlap"] = SharedMatrix(hessians["Nuclear"]->clone());
-        hessians["Overlap"]->set_name("Overlap Hessian");
-        hessians["Overlap"]->zero();
-        double** Sp = hessians["Overlap"]->pointer();
+        hessians_["Overlap"] = SharedMatrix(hessians_["Nuclear"]->clone());
+        hessians_["Overlap"]->set_name("Overlap Hessian");
+        hessians_["Overlap"]->zero();
+        double** Sp = hessians_["Overlap"]->pointer();
 
         // Overlap derivatives
         std::shared_ptr<OneBodyAOInt> Sint(integral_->ao_overlap(2));
@@ -1227,7 +975,7 @@ SharedMatrix SCFGrad::compute_hessian()
             }
         }
         // Symmetrize the result
-        int dim = hessians["Overlap"]->rowdim();
+        int dim = hessians_["Overlap"]->rowdim();
         for (int row = 0; row < dim; ++row){
             for (int col = 0; col < row; ++col){
                 Sp[row][col] = Sp[col][row] = (Sp[row][col] + Sp[col][row]);
@@ -1240,7 +988,7 @@ SharedMatrix SCFGrad::compute_hessian()
     timer_on("Hess: JK");
 
     std::shared_ptr<JKGrad> jk = JKGrad::build_JKGrad(2, basisset_, basissets_["DF_BASIS_SCF"]);
-    jk->set_memory((ULI) (options_.get_double("SCF_MEM_SAFETY_FACTOR") * memory_ / 8L));
+    jk->set_memory((size_t) (options_.get_double("SCF_MEM_SAFETY_FACTOR") * memory_ / 8L));
 
     jk->set_Ca(Ca);
     jk->set_Cb(Cb);
@@ -1271,19 +1019,19 @@ SharedMatrix SCFGrad::compute_hessian()
 
     std::map<std::string, SharedMatrix>& jk_hessians = jk->hessians();
     if (functional) {
-        hessians["Coulomb"] = jk_hessians["Coulomb"];
+        hessians_["Coulomb"] = jk_hessians["Coulomb"];
         if (functional->is_x_hybrid()) {
-            hessians["Exchange"] = jk_hessians["Exchange"];
-            hessians["Exchange"]->scale(-(functional->x_alpha()));
+            hessians_["Exchange"] = jk_hessians["Exchange"];
+            hessians_["Exchange"]->scale(-functional->x_alpha());
         }
         if (functional->is_x_lrc()) {
-            hessians["Exchange,LR"] = jk_hessians["Exchange,LR"];
-            hessians["Exchange,LR"]->scale(-(1.0 - functional->x_alpha()));
+            hessians_["Exchange,LR"] = jk_hessians["Exchange,LR"];
+            hessians_["Exchange,LR"]->scale(-functional->x_beta());
         }
     } else {
-        hessians["Coulomb"] = jk_hessians["Coulomb"];
-        hessians["Exchange"] = jk_hessians["Exchange"];
-        hessians["Exchange"]->scale(-1.0);
+        hessians_["Coulomb"] = jk_hessians["Coulomb"];
+        hessians_["Exchange"] = jk_hessians["Exchange"];
+        hessians_["Exchange"]->scale(-1.0);
     }
     timer_off("Hess: JK");
 
@@ -1292,42 +1040,43 @@ SharedMatrix SCFGrad::compute_hessian()
     if (functional) {
         potential->print_header();
         throw PSIEXCEPTION("KS Hessians not implemented");
-        //hessians["XC"] = potential->compute_hessian();
+        //hessians_["XC"] = potential->compute_hessian();
     }
     timer_off("Hess: XC");
 
     // => Response Terms (Brace Yourself) <= //
     if (options_.get_str("REFERENCE") == "RHF") {
-        hessians["Response"] = rhf_hessian_response();
+        hessians_["Response"] = rhf_hessian_response();
     } else {
         throw PSIEXCEPTION("SCFHessian: Response not implemented for this reference");
     }
 
     // => Total Hessian <= //
-    SharedMatrix total = SharedMatrix(hessians["Nuclear"]->clone());
+    SharedMatrix total = SharedMatrix(hessians_["Nuclear"]->clone());
     total->zero();
 
     for (int i = 0; i < hessian_terms.size(); i++) {
-        if (hessians.count(hessian_terms[i])) {
-            total->add(hessians[hessian_terms[i]]);
+        if (hessians_.count(hessian_terms[i])) {
+            total->add(hessians_[hessian_terms[i]]);
         }
     }
+    // total->symmetrize_hessian(molecule_);
 
-    hessians["Total"] = total;
-    hessians["Total"]->set_name("Total Hessian");
+    hessians_["Total"] = total;
+    hessians_["Total"]->set_name("Total Hessian");
 
     // => Final Printing <= //
     if (print_ > 1) {
         for (int i = 0; i < hessian_terms.size(); i++) {
-            if (hessians.count(hessian_terms[i])) {
-                hessians[hessian_terms[i]]->print();
+            if (hessians_.count(hessian_terms[i])) {
+                printf("%s\n", hessian_terms[i].c_str());
+                hessians_[hessian_terms[i]]->print();
             }
         }
-    } else {
-        hessians["Total"]->print();
     }
+    // hessians_["Total"]->print();
 
-    return hessians["Total"];
+    return hessians_["Total"];
 }
 
 }} // Namespaces

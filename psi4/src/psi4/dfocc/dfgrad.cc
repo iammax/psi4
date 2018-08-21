@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -40,16 +41,14 @@
 #endif
 
 using namespace psi;
-using namespace std;
 
-namespace psi{ namespace dfoccwave{
+namespace psi {
+namespace dfoccwave {
 
-void DFOCC::dfgrad()
-{
-
-//===========================================================================================
-//============================ Preliminaries ================================================
-//===========================================================================================
+void DFOCC::dfgrad() {
+    //===========================================================================================
+    //============================ Preliminaries ================================================
+    //===========================================================================================
     tstop();
     tstart();
     title_grad();
@@ -58,21 +57,18 @@ void DFOCC::dfgrad()
     if (wfn_type_ == "DF-OMP2") {
         tpdm_tilde();
         back_trans();
-    }
-    else {
+    } else {
         tpdm_tilde_cc();
         back_trans_cc();
     }
 
-//===========================================================================================
-//============================ Gradient =====================================================
-//===========================================================================================
+    //===========================================================================================
+    //============================ Gradient =====================================================
+    //===========================================================================================
     outfile->Printf("\tComputing analytic gradients...\n");
 
-
     gradient_terms.push_back("Nuclear");
-    gradient_terms.push_back("Kinetic");
-    gradient_terms.push_back("Potential");
+    gradient_terms.push_back("Core");
     gradient_terms.push_back("Overlap");
     gradient_terms.push_back("3-Index:RefSep");
     gradient_terms.push_back("3-Index:Corr");
@@ -87,9 +83,9 @@ void DFOCC::dfgrad()
     tei_grad_ref();
     tei_grad_corr();
 
-//===========================================================================================
-//========================= Total Gradient ==================================================
-//===========================================================================================
+    //===========================================================================================
+    //========================= Total Gradient ==================================================
+    //===========================================================================================
     // => Total Gradient <= //
     SharedMatrix total = SharedMatrix(gradients["Nuclear"]->clone());
     total->zero();
@@ -104,11 +100,8 @@ void DFOCC::dfgrad()
     gradients["Total"]->set_name("Total Gradient");
 
     // OEI grad
-    gradients["One-Electron"] = SharedMatrix(gradients["Nuclear"]->clone());
+    gradients["One-Electron"] = gradients["Core"]->clone();
     gradients["One-Electron"]->set_name("One-Electron Gradient");
-    gradients["One-Electron"]->zero();
-    gradients["One-Electron"]->add(gradients["Kinetic"]);
-    gradients["One-Electron"]->add(gradients["Potential"]);
     gradients["One-Electron"]->print_atom_vector();
 
     // TEI grad
@@ -119,8 +112,7 @@ void DFOCC::dfgrad()
     gradients["Two-Electron"]->add(gradients["3-Index:Corr"]);
     gradients["Two-Electron"]->add(gradients["Metric:RefSep"]);
     gradients["Two-Electron"]->add(gradients["Metric:Corr"]);
-    gradients["Two-Electron"]->print_atom_vector();//UB
-
+    gradients["Two-Electron"]->print_atom_vector();  // UB
 
     // => Final Printing <= //
     if (print_ > 1) {
@@ -135,9 +127,8 @@ void DFOCC::dfgrad()
 
     gradient_ = total;
 
-//outfile->Printf("\tdfgrad is done. \n");
-}// end dfgrad
+    // outfile->Printf("\tdfgrad is done. \n");
+}  // end dfgrad
 
-}} // End Namespaces
-
-
+}  // namespace dfoccwave
+}  // namespace psi

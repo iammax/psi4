@@ -1,8 +1,6 @@
 #! DFT Functional Test
 
 
-memory 250 mb
-
 molecule h2o {
 0 1
 O
@@ -23,7 +21,6 @@ dft_basis_tolerance 1.0E-10
 reference rks
 }
 
-#set dft_functional b97
 V11 = energy('b97-0')
 
 set dft_block_scheme octree

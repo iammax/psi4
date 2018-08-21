@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,56 +35,55 @@
 #include "psi4/libmints/potential.h"
 #include "psi4/libmints/basisset.h"
 
-namespace psi { namespace sapt {
+#include <cstring>
 
-SAPT::SAPT(SharedWavefunction Dimer, SharedWavefunction MonomerA,
-           SharedWavefunction MonomerB, Options& options,
+namespace psi {
+namespace sapt {
+
+SAPT::SAPT(SharedWavefunction Dimer, SharedWavefunction MonomerA, SharedWavefunction MonomerB, Options &options,
            std::shared_ptr<PSIO> psio)
-            : Wavefunction(options)
-{
-  shallow_copy(Dimer);
+    : Wavefunction(options) {
+    shallow_copy(Dimer);
 
-  if ((Dimer->nirrep() != 1) || (MonomerA->nirrep() != 1) || (MonomerA->nirrep() != 1)){
-    throw PSIEXCEPTION("SAPT must be run in C1 symmetry. Period.");
-  }
+    if ((Dimer->nirrep() != 1) || (MonomerA->nirrep() != 1) || (MonomerA->nirrep() != 1)) {
+        throw PSIEXCEPTION("SAPT must be run in C1 symmetry. Period.");
+    }
 
-  if ((Dimer->soccpi().sum() != 0) || (MonomerA->soccpi().sum() != 0) ||
-       (MonomerA->soccpi().sum() != 0)){
-    throw PSIEXCEPTION("This is a RHF SAPT constructor. Pair those electrons up cracker!");
-  }
+    if ((Dimer->soccpi().sum() != 0) || (MonomerA->soccpi().sum() != 0) || (MonomerA->soccpi().sum() != 0)) {
+        throw PSIEXCEPTION("This is a RHF SAPT constructor. Pair those electrons up cracker!");
+    }
 
-
-  psio_ = psio;
+    psio_ = psio;
 
 #ifdef USING_LAPACK_MKL
-  mkl_set_dynamic(1);
+    mkl_set_dynamic(1);
 #endif
 
 #ifdef _OPENMP
-  omp_set_nested(0);
+    omp_set_nested(0);
 #endif
 
-  initialize(MonomerA, MonomerB);
-  get_denom();
+    initialize(MonomerA, MonomerB);
+    get_denom();
 }
 
-SAPT::~SAPT()
-{
-  if (evalsA_ != NULL) free(evalsA_);
-  if (evalsB_ != NULL) free(evalsB_);
-  if (diagAA_ != NULL) free(diagAA_);
-  if (diagBB_ != NULL) free(diagBB_);
-  if (CA_ != NULL) free_block(CA_);
-  if (CB_ != NULL) free_block(CB_);
-  if (CHFA_ != NULL) free_block(CHFA_);
-  if (CHFB_ != NULL) free_block(CHFB_);
-  if (sAB_ != NULL) free_block(sAB_);
-  if (vABB_ != NULL) free_block(vABB_);
-  if (vBAA_ != NULL) free_block(vBAA_);
-  if (vAAB_ != NULL) free_block(vAAB_);
-  if (vBAB_ != NULL) free_block(vBAB_);
-  zero_.reset();
+SAPT::~SAPT() {
+    if (evalsA_ != nullptr) free(evalsA_);
+    if (evalsB_ != nullptr) free(evalsB_);
+    if (diagAA_ != nullptr) free(diagAA_);
+    if (diagBB_ != nullptr) free(diagBB_);
+    if (CA_ != nullptr) free_block(CA_);
+    if (CB_ != nullptr) free_block(CB_);
+    if (CHFA_ != nullptr) free_block(CHFA_);
+    if (CHFB_ != nullptr) free_block(CHFB_);
+    if (sAB_ != nullptr) free_block(sAB_);
+    if (vABB_ != nullptr) free_block(vABB_);
+    if (vBAA_ != nullptr) free_block(vBAA_);
+    if (vAAB_ != nullptr) free_block(vAAB_);
+    if (vBAB_ != nullptr) free_block(vBAB_);
+    zero_.reset();
 }
+
 
 void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
 {
@@ -132,17 +132,15 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
   realsA.push_back(0);
   std::vector<int> ghostsA;
   ghostsA.push_back(1);
-  std::shared_ptr<Molecule> monomerA = molecule_->extract_subsets(realsA,
-    ghostsA);
-  foccA_ = monomerA->nfrozen_core(options_.get_str("FREEZE_CORE"));
+  auto monomerA = std::shared_ptr<Molecule>(molecule_->extract_subsets(realsA, ghostsA));
+  foccA_ = MonomerA->basisset()->n_frozen_core(options_.get_str("FREEZE_CORE"), monomerA);
 
   std::vector<int> realsB;
   realsB.push_back(1);
   std::vector<int> ghostsB;
   ghostsB.push_back(0);
-  std::shared_ptr<Molecule> monomerB = molecule_->extract_subsets(realsB,
-    ghostsB);
-  foccB_ = monomerB->nfrozen_core(options_.get_str("FREEZE_CORE"));
+  auto monomerB = std::shared_ptr<Molecule>(molecule_->extract_subsets(realsB, ghostsB));
+  foccB_ = MonomerB->basisset()->n_frozen_core(options_.get_str("FREEZE_CORE"), monomerB);
 
   natomsA_ = 0;
   natomsB_ = 0;
@@ -158,7 +156,7 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
   double eHFD, eHFA, eHFB;
 
   eHFD = energy_;
-  enucD = molecule_->nuclear_repulsion_energy();
+  enucD = molecule_->nuclear_repulsion_energy(dipole_field_strength_);
 
   // Monomer A info
   nsoA_  = MonomerA->nso();
@@ -167,7 +165,7 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
   nvirA_ = nmoA_ - noccA_;
   NA_    = 2 * noccA_;
   eHFA   = MonomerA->reference_energy();
-  enucA  = MonomerA->molecule()->nuclear_repulsion_energy();
+  enucA  = MonomerA->molecule()->nuclear_repulsion_energy(dipole_field_strength_);
   aoccA_ = noccA_ - foccA_;
 
   // Monomer B info
@@ -177,7 +175,7 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
   nvirB_ = nmoB_ - noccB_;
   NB_    = 2 * noccB_;
   eHFB   = MonomerB->reference_energy();
-  enucB  = MonomerB->molecule()->nuclear_repulsion_energy();
+  enucB  = MonomerB->molecule()->nuclear_repulsion_energy(dipole_field_strength_);
   aoccB_ = noccB_ - foccB_;
 
   enuc_ = enucD - enucA - enucB;
@@ -214,17 +212,13 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
 
   int nbf[8];
   nbf[0] = nso_;
-  std::shared_ptr<MatrixFactory> fact =
-    std::shared_ptr<MatrixFactory>(new MatrixFactory);
+  auto fact = std::make_shared<MatrixFactory>();
   fact->init_with(1, nbf, nbf);
 
-  std::shared_ptr<IntegralFactory> intfact =
-    std::shared_ptr<IntegralFactory>(new IntegralFactory(basisset_,
-    basisset_, basisset_, basisset_));
+  auto intfact = std::make_shared<IntegralFactory>(basisset_, basisset_, basisset_, basisset_);
 
   std::shared_ptr<OneBodyAOInt> Sint(intfact->ao_overlap());
-  SharedMatrix Smat = SharedMatrix
-    (fact->create_matrix("Overlap"));
+  auto Smat = std::make_shared<Matrix>(fact->create_matrix("Overlap"));
   Sint->compute(Smat);
 
   double **sIJ = Smat->pointer();
@@ -238,8 +232,7 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
 
   free_block(sAJ);
 
-  std::shared_ptr<PotentialInt> potA(static_cast<PotentialInt*>(
-    intfact->ao_potential()));
+  auto potA = std::shared_ptr<PotentialInt>(dynamic_cast<PotentialInt*>(intfact->ao_potential()));
   SharedMatrix ZxyzA(new Matrix("Charges A (Z,x,y,z)", natomsA_, 4));
   for (int n=0, p=0; n<monomerA->natom(); n++) {
     if (monomerA->Z(n)) {
@@ -255,13 +248,11 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
     }
   }
   potA->set_charge_field(ZxyzA);
-  SharedMatrix VAmat = SharedMatrix
-    (fact->create_matrix("Nuclear Attraction (Monomer A)"));
+  auto VAmat = std::make_shared<Matrix>(fact->create_matrix("Nuclear Attraction (Monomer A)"));
   potA->compute(VAmat);
 
-  std::shared_ptr<PotentialInt> potB(static_cast<PotentialInt*>(
-    intfact->ao_potential()));
-  SharedMatrix ZxyzB(new Matrix("Charges B (Z,x,y,z)", natomsB_, 4));
+  auto potB = std::shared_ptr<PotentialInt>(dynamic_cast<PotentialInt*>(intfact->ao_potential()));
+  auto ZxyzB = std::make_shared<Matrix>("Charges B (Z,x,y,z)", natomsB_, 4);
   for (int n=0, p=0; n<monomerB->natom(); n++) {
     if (monomerB->Z(n)) {
       double Z = (double) monomerB->Z(n);
@@ -276,8 +267,7 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
     }
   }
   potB->set_charge_field(ZxyzB);
-  SharedMatrix VBmat = SharedMatrix
-    (fact->create_matrix("Nuclear Attraction (Monomer B)"));
+  auto VBmat = std::make_shared<Matrix>(fact->create_matrix("Nuclear Attraction (Monomer B)"));
   potB->compute(VBmat);
 
   double **vIB = block_matrix(nso_,nmoB_);
@@ -309,102 +299,90 @@ void SAPT::initialize(SharedWavefunction MonomerA, SharedWavefunction MonomerB)
   free_block(vAJ);
 }
 
-void SAPT::get_denom()
-{
-  std::shared_ptr<Vector> evals_aoccA(new Vector(aoccA_));
-  std::shared_ptr<Vector> evals_virA(new Vector(nvirA_));
-  std::shared_ptr<Vector> evals_aoccB(new Vector(aoccB_));
-  std::shared_ptr<Vector> evals_virB(new Vector(nvirB_));
+void SAPT::get_denom() {
+    auto evals_aoccA = std::make_shared<Vector>(aoccA_);
+    auto evals_virA = std::make_shared<Vector>(nvirA_);
+    auto evals_aoccB = std::make_shared<Vector>(aoccB_);
+    auto evals_virB = std::make_shared<Vector>(nvirB_);
 
-  for (int a=0; a<aoccA_; a++)
-    evals_aoccA->set(0,a,evalsA_[a+foccA_]);
-  for (int r=0; r<nvirA_; r++)
-    evals_virA->set(0,r,evalsA_[r+noccA_]);
-  for (int b=0; b<aoccB_; b++)
-    evals_aoccB->set(0,b,evalsB_[b+foccB_]);
-  for (int s=0; s<nvirB_; s++)
-    evals_virB->set(0,s,evalsB_[s+noccB_]);
+    for (int a = 0; a < aoccA_; a++) evals_aoccA->set(0, a, evalsA_[a + foccA_]);
+    for (int r = 0; r < nvirA_; r++) evals_virA->set(0, r, evalsA_[r + noccA_]);
+    for (int b = 0; b < aoccB_; b++) evals_aoccB->set(0, b, evalsB_[b + foccB_]);
+    for (int s = 0; s < nvirB_; s++) evals_virB->set(0, s, evalsB_[s + noccB_]);
 
-  denom_ = SAPTDenominator::buildDenominator(
-    options_.get_str("DENOMINATOR_ALGORITHM"),
-    evals_aoccA, evals_virA, evals_aoccB, evals_virB,
-    options_.get_double("DENOMINATOR_DELTA"), debug_);
+    denom_ =
+        SAPTDenominator::buildDenominator(options_.get_str("DENOMINATOR_ALGORITHM"), evals_aoccA, evals_virA,
+                                          evals_aoccB, evals_virB, options_.get_double("DENOMINATOR_DELTA"), debug_);
 
-  if (debug_ > 1)
-    denom_->debug();
+    if (debug_ > 1) denom_->debug();
 
-  SharedMatrix tauAR = denom_->denominatorA();
-  SharedMatrix tauBS = denom_->denominatorB();
+    SharedMatrix tauAR = denom_->denominatorA();
+    SharedMatrix tauBS = denom_->denominatorB();
 
-  dAR_ = tauAR->pointer();
-  dBS_ = tauBS->pointer();
+    dAR_ = tauAR->pointer();
+    dBS_ = tauBS->pointer();
 
-  nvec_ = denom_->nvector();
+    nvec_ = denom_->nvector();
 }
 
-CPHFDIIS::CPHFDIIS(int length, int maxvec)
-{
-  max_diis_vecs_ = maxvec;
-  vec_length_ = length;
+CPHFDIIS::CPHFDIIS(int length, int maxvec) {
+    max_diis_vecs_ = maxvec;
+    vec_length_ = length;
 
-  curr_vec_ = 0;
-  num_vecs_ = 0;
+    curr_vec_ = 0;
+    num_vecs_ = 0;
 
-  t_vecs_ = block_matrix(maxvec,length);
-  err_vecs_ = block_matrix(maxvec,length);
+    t_vecs_ = block_matrix(maxvec, length);
+    err_vecs_ = block_matrix(maxvec, length);
 }
 
-CPHFDIIS::~CPHFDIIS()
-{
-  free_block(t_vecs_);
-  free_block(err_vecs_);
+CPHFDIIS::~CPHFDIIS() {
+    free_block(t_vecs_);
+    free_block(err_vecs_);
 }
 
-void CPHFDIIS::store_vectors(double *t_vec, double *err_vec)
-{
-  C_DCOPY(vec_length_,t_vec,1,t_vecs_[curr_vec_],1);
-  C_DCOPY(vec_length_,err_vec,1,err_vecs_[curr_vec_],1);
+void CPHFDIIS::store_vectors(double *t_vec, double *err_vec) {
+    C_DCOPY(vec_length_, t_vec, 1, t_vecs_[curr_vec_], 1);
+    C_DCOPY(vec_length_, err_vec, 1, err_vecs_[curr_vec_], 1);
 
-  curr_vec_ = (curr_vec_+1)%max_diis_vecs_;
-  num_vecs_++;
-  if (num_vecs_ > max_diis_vecs_) num_vecs_ = max_diis_vecs_;
+    curr_vec_ = (curr_vec_ + 1) % max_diis_vecs_;
+    num_vecs_++;
+    if (num_vecs_ > max_diis_vecs_) num_vecs_ = max_diis_vecs_;
 }
 
-void CPHFDIIS::get_new_vector(double *t_vec)
-{
-  int *ipiv;
-  double *Cvec;
-  double **Bmat;
+void CPHFDIIS::get_new_vector(double *t_vec) {
+    int *ipiv;
+    double *Cvec;
+    double **Bmat;
 
-  ipiv = init_int_array(num_vecs_+1);
-  Bmat = block_matrix(num_vecs_+1,num_vecs_+1);
-  Cvec = (double *) malloc((num_vecs_+1)*sizeof(double));
+    ipiv = init_int_array(num_vecs_ + 1);
+    Bmat = block_matrix(num_vecs_ + 1, num_vecs_ + 1);
+    Cvec = (double *)malloc((num_vecs_ + 1) * sizeof(double));
 
-  for (int i=0; i<num_vecs_; i++) {
-    for (int j=0; j<=i; j++) {
-      Bmat[i][j] = Bmat[j][i] = C_DDOT(vec_length_,err_vecs_[i],1,
-        err_vecs_[j],1);
-  }}
+    for (int i = 0; i < num_vecs_; i++) {
+        for (int j = 0; j <= i; j++) {
+            Bmat[i][j] = Bmat[j][i] = C_DDOT(vec_length_, err_vecs_[i], 1, err_vecs_[j], 1);
+        }
+    }
 
-  for (int i=0; i<num_vecs_; i++) {
-    Bmat[num_vecs_][i] = -1.0;
-    Bmat[i][num_vecs_] = -1.0;
-    Cvec[i] = 0.0;
-  }
+    for (int i = 0; i < num_vecs_; i++) {
+        Bmat[num_vecs_][i] = -1.0;
+        Bmat[i][num_vecs_] = -1.0;
+        Cvec[i] = 0.0;
+    }
 
-  Bmat[num_vecs_][num_vecs_] = 0.0;
-  Cvec[num_vecs_] = -1.0;
+    Bmat[num_vecs_][num_vecs_] = 0.0;
+    Cvec[num_vecs_] = -1.0;
 
-  C_DGESV(num_vecs_+1,1,&(Bmat[0][0]),num_vecs_+1,&(ipiv[0]),&(Cvec[0]),
-    num_vecs_+1);
+    C_DGESV(num_vecs_ + 1, 1, &(Bmat[0][0]), num_vecs_ + 1, &(ipiv[0]), &(Cvec[0]), num_vecs_ + 1);
 
-  for (int i=0; i<num_vecs_; i++) {
-    C_DAXPY(vec_length_,Cvec[i],t_vecs_[i],1,t_vec,1);
-  }
+    for (int i = 0; i < num_vecs_; i++) {
+        C_DAXPY(vec_length_, Cvec[i], t_vecs_[i], 1, t_vec, 1);
+    }
 
-  free(ipiv);
-  free(Cvec);
-  free_block(Bmat);
+    free(ipiv);
+    free(Cvec);
+    free_block(Bmat);
 }
-
-}}
+}
+}

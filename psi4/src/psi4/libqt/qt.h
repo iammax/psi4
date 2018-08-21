@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -44,40 +45,33 @@
 // I think this is forward-declaring class Options -CDS
 namespace psi {
 class Options;
+class Wavefunction;
 }
 
 namespace psi {
 void dx_write(std::shared_ptr<Wavefunction> wfn, Options& options, double **D);
 void dx_read(double **V_eff, double *phi_ao, double *phi_so,int nao,int nso, double **u);
-int mat_in(FILE *fp, double **array, int width, int max_length, int *stat);
 void fill_sym_matrix(double **A, int size);
 double combinations(int n, int k);
 double factorial(int n);
-void schmidt(double **A, int rows, int cols, std::string OutFileRMR);
-int schmidt_add(double **A, int rows, int cols, double *v);
+void schmidt(double **A, int rows, int cols, std::string out_fname);
+PSI_API int schmidt_add(double **A, int rows, int cols, double *v);
 void normalize(double **A, int rows, int cols);
-double invert_matrix(double **a, double **y, int N, std::string OutFileRMR);
+double invert_matrix(double **a, double **y, int N, std::string out_fname);
 void solve_2x2_pep(double **H, double S, double *evals, double **evecs);
 void reorder_qt(int *docc_in, int *socc_in, int *frozen_docc_in,
       int *frozen_uocc_in, int *order, int *orbs_per_irrep, int nirreps);
 void reorder_qt_uhf(int *docc, int *socc, int *frozen_docc,
       int *frozen_uocc, int *order_alpha, int *order_beta,
       int *orbspi, int nirreps);
-void reorder_ras(int *docc_in, int *socc_in, int *frozen_docc_in,
-      int *frozen_uocc_in, int *order, int *orbs_per_irrep,
-      int *ras1, int *ras2, int *ras3, int *ras4, int do_ras4, int nirreps);
-void reorder_ras2(int *docc_in, int *socc_in, int *frozen_docc_in,
-      int *frozen_uocc_in, int *order, int *orbs_per_irrep,
-      int *ras1, int *ras2, int *ras3, int *ras4, int parsed_ras1,
-      int parsed_ras2, int do_ras4, int nirreps);
-int ras_set(int nirreps, int nbfso, int freeze_core, int *orbspi,
-     int *docc, int *socc, int *frdocc, int *fruocc,
-     int **ras_opi, int *order, int ras_type);
-int ras_set2(int nirreps, int nbfso, int delete_fzdocc,
-     int delete_restrdocc, int *orbspi,
-     int *docc, int *socc, int *frdocc, int *fruocc,
-     int *restrdocc, int *restruocc, int **ras_opi, int *order,
-     int ras_type, int hoffmann, Options& options);
+// int ras_set(int nirreps, int nbfso, int freeze_core, int *orbspi,
+//      int *docc, int *socc, int *frdocc, int *fruocc,
+//      int **ras_opi, int *order, int ras_type);
+// int ras_set2(int nirreps, int nbfso, int delete_fzdocc,
+//      int delete_restrdocc, int *orbspi,
+//      int *docc, int *socc, int *frdocc, int *fruocc,
+//      int *restrdocc, int *restruocc, int **ras_opi, int *order,
+//      int ras_type, int hoffmann, Options& options);
 int ras_set3(int nirreps, int nmo, int *orbspi,
              int *docc, int *socc, int *frdocc, int *fruocc,
              int *restrdocc, int *restruocc, int **ras_opi, int *core_guess,
@@ -87,21 +81,19 @@ void newmm_rking(double **A, int transa, double **B, int transb, double **C,
 double dot_block(double **A, double **B, int rows, int cols, double alpha);
 void dirprd_block(double **A, double **B, int rows, int cols);
 int pople(double **A, double *x, int dimen, int num_vecs, double tolerance,
-           std::string OutFileRMR, int print_lvl);
-void mat_print(double **A, int rows, int cols, std::string OutFileRMR);
+           std::string out_fname, int print_lvl);
+void mat_print(double **A, int rows, int cols, std::string out_fname);
 
 void timer_init(void);
 void timer_done(void);
-void timer_on(const char *key);
-void timer_off(const char *key);
-
-void filter(double *input, double *output, int *ioff, int norbs, int nfzc,
-      int nfzv);
+void timer_on(const std::string& key);
+void timer_off(const std::string& key);
+void parallel_timer_on(const std::string& key, int thread_rank);
+void parallel_timer_off(const std::string& key, int thread_rank);
+void start_skip_timers();
+void stop_skip_timers();
 
 void print_block(double *, int, int, FILE *);
-
-void sort(double *A, double **B, int n);
-void sort_vector(double *A, int n);
 
 int david(double **A, int N, int M, double *eps, double **v, double cutoff,
      int print);
@@ -110,44 +102,29 @@ int* get_frzcpi();
 int* get_frzvpi();
 int cc_excited(const char *wfn);
 int cc_excited(std::string wfn);
-int cc_wfn(const char *wfn);
-int cc_wfn(std::string wfn);
 void free_3d_array(double ***A, int p, int q);
 double ***init_3d_array(int p, int q, int r);
-int ci_wfn(char *wfn);
-int ci_wfn(std::string wfn);
-void orient_fragment(int natom_A, int natom_B, int P_A, int P_B, double **geom_A, double **geom_B,
-  double **ref_coeff_A, double **ref_coeff_B, double R_AB, double theta_A, double theta_B,
-  double tau, double phi_A, double phi_B, std::string OutFileRMR);
-void zmat_point(double *A, double *B, double *C, double R_CD, double theta_BCD, double phi_ABCD, double *D);
-void rotate_vecs(double *axis, double phi, double **vectors, int num_vectors);
-double dot_prod(double *v1, double *v2);
-void cross_prod(double *v1, double *v2, double *out);
-void unit_vec(double *B, double *A, double *AB);
 
 #define MAX_RAS_SPACES 4
 
-/// Same as ::strncpy(), but make sure that dest ends in \0
-char* strncpy(char* dest, const char* source, size_t n);
-
 // BLAS 1 Double routines
-void C_DROT(unsigned long int ntot, double *x, int incx, double *y, int incy,
+void C_DROT(size_t ntot, double *x, int incx, double *y, int incy,
              double costheta, double sintheta);
-void C_DSWAP(unsigned long int length, double *x, int incx, double *y, int inc_y);
-void C_DSCAL(unsigned long int len, double alpha, double *vec, int inc);
-void C_DCOPY(unsigned long int length, double *x, int inc_x,
+void C_DSWAP(size_t length, double *x, int incx, double *y, int inc_y);
+void C_DSCAL(size_t len, double alpha, double *vec, int inc);
+void C_DCOPY(size_t length, double *x, int inc_x,
              double *y, int inc_y);
-void C_DAXPY(unsigned long int length, double a, double *x, int inc_x,
+void C_DAXPY(size_t length, double a, double *x, int inc_x,
              double *y, int inc_y);
-double C_DDOT(unsigned long int n, double *X, int inc_x, double *Y, int inc_y);
-double C_DNRM2(unsigned long int n, double *X, int inc_x);
-double C_DASUM(unsigned long int n, double *X, int inc_x);
-unsigned long int C_IDAMAX(unsigned long int n, double *X, int inc_x);
+double C_DDOT(size_t n, double *X, int inc_x, double *Y, int inc_y);
+double C_DNRM2(size_t n, double *X, int inc_x);
+double C_DASUM(size_t n, double *X, int inc_x);
+size_t C_IDAMAX(size_t n, double *X, int inc_x);
 
 // BLAS 2 Double routines
 void C_DGBMV(char trans, int m, int n, int kl, int ku, double alpha, double* a, int lda, double* x, int incx, double beta, double* y, int incy);
-void C_DGEMV(char trans, int m, int n, double alpha, double* a, int lda, double* x, int incx, double beta, double* y, int incy);
-void C_DGER(int m, int n, double alpha, double* x, int incx, double* y, int incy, double* a, int lda);
+PSI_API void C_DGEMV(char trans, int m, int n, double alpha, double* a, int lda, double* x, int incx, double beta, double* y, int incy);
+PSI_API void C_DGER(int m, int n, double alpha, double* x, int incx, double* y, int incy, double* a, int lda);
 void C_DSBMV(char uplo, int n, int k, double alpha, double* a, int lda, double* x, int incx, double beta, double* y, int incy);
 void C_DSPMV(char uplo, int n, double alpha, double* ap, double* x, int incx, double beta, double* y, int incy);
 void C_DSPR(char uplo, int n, double alpha, double* x, int incx, double* ap);
@@ -163,7 +140,7 @@ void C_DTRMV(char uplo, char trans, char diag, int n, double* a, int lda, double
 void C_DTRSM(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
 
 // BLAS 3 Double routines
-void C_DGEMM(char transa, char transb, int m, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc);
+PSI_API void C_DGEMM(char transa, char transb, int m, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc);
 void C_DSYMM(char side, char uplo, int m, int n, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc);
 void C_DTRMM(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
 void C_DSYRK(char uplo, char trans, int n, int k, double alpha, double* a, int lda, double beta, double* c, int ldc);
@@ -209,7 +186,7 @@ int C_DGEQRF(int m, int n, double* a, int lda, double* tau, double* work, int lw
 int C_DGERFS(char trans, int n, int nrhs, double* a, int lda, double* af, int ldaf, int* ipiv, double* b, int ldb, double* x, int ldx, double* ferr, double* berr, double* work, int* iwork);
 int C_DGERQF(int m, int n, double* a, int lda, double* tau, double* work, int lwork);
 int C_DGESDD(char jobz, int m, int n, double* a, int lda, double* s, double* u, int ldu, double* vt, int ldvt, double* work, int lwork, int* iwork);
-int C_DGESV(int n, int nrhs, double* a, int lda, int* ipiv, double* b, int ldb);
+int PSI_API C_DGESV(int n, int nrhs, double* a, int lda, int* ipiv, double* b, int ldb);
 int C_DGESVX(char fact, char trans, int n, int nrhs, double* a, int lda, double* af, int ldaf, int* ipiv, char equed, double* r, double* c, double* b, int ldb, double* x, int ldx, double* rcond, double* ferr, double* berr, double* work, int* iwork);
 int C_DGETRF(int m, int n, double* a, int lda, int* ipiv);
 int C_DGETRI(int n, double* a, int lda, int* ipiv, double* work, int lwork);
@@ -321,11 +298,11 @@ int C_DSTEVR(char jobz, char range, int n, double* d, double* e, double vl, doub
 int C_DSTEVX(char jobz, char range, int n, double* d, double* e, double vl, double vu, int il, int iu, double abstol, int* m, double* w, double* z, int ldz, double* work, int* iwork, int* ifail);
 int C_DSYCON(char uplo, int n, double* a, int lda, int* ipiv, double anorm, double* rcond, double* work, int* iwork);
 int C_DSYEV(char jobz, char uplo, int n, double* a, int lda, double* w, double* work, int lwork);
-int C_DSYEVD(char jobz, char uplo, int n, double* a, int lda, double* w, double* work, int lwork, int* iwork, int liwork);
+int PSI_API C_DSYEVD(char jobz, char uplo, int n, double* a, int lda, double* w, double* work, int lwork, int* iwork, int liwork);
 int C_DSYEVR(char jobz, char range, char uplo, int n, double* a, int lda, double vl, double vu, int il, int iu, double abstol, int* m, double* w, double* z, int ldz, int* isuppz, double* work, int lwork, int* iwork, int liwork);
 int C_DSYEVX(char jobz, char range, char uplo, int n, double* a, int lda, double vl, double vu, int il, int iu, double abstol, int* m, double* w, double* z, int ldz, double* work, int lwork, int* iwork, int* ifail);
 int C_DSYGST(int itype, char uplo, int n, double* a, int lda, double* b, int ldb);
-int C_DSYGV(int itype, char jobz, char uplo, int n, double* a, int lda, double* b, int ldb, double* w, double* work, int lwork);
+int PSI_API C_DSYGV(int itype, char jobz, char uplo, int n, double* a, int lda, double* b, int ldb, double* w, double* work, int lwork);
 int C_DSYGVD(int itype, char jobz, char uplo, int n, double* a, int lda, double* b, int ldb, double* w, double* work, int lwork, int* iwork, int liwork);
 int C_DSYGVX(int itype, char jobz, char range, char uplo, int n, double* a, int lda, double* b, int ldb, double vl, double vu, int il, int iu, double abstol, int* m, double* w, double* z, int ldz, double* work, int lwork, int* iwork, int* ifail);
 int C_DSYRFS(char uplo, int n, int nrhs, double* a, int lda, double* af, int ldaf, int* ipiv, double* b, int ldb, double* x, int ldx, double* ferr, double* berr, double* work, int* iwork);

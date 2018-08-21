@@ -5,32 +5,34 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
 #
 
 $emslmanipulate = "./emsl_manipulate.pl";
-@HORDINAL = ("D", "T", "Q", "5", "6");
+@HORDINAL = ("d", "t", "q", "5", "6");
 
 $excl = "exclusive";
+$incl = "inclusive";
 $hhe  = "insert_hhe";
 $alar = "insert_alar";
 
@@ -53,6 +55,8 @@ foreach $ord (@HORDINAL) {
    $basis_jk         =       "molpro-basis-cc-pv"   . $ord . "z-jkfit.gbs";
    $basis_dk         =              "basis-cc-pv"   . $ord . "z-dk.gbs";
    $basis_w_core_dk  =            "basis-cc-pwcv"   . $ord . "z-dk.gbs";
+   $partial_pcv      =     "partial-basis-cc-pcv"   . $ord . "z.gbs";
+   $partial_pwcv     =    "partial-basis-cc-pwcv"   . $ord . "z.gbs";
 
    $diffuse          =        "diffuse-aug-cc-pv"   . $ord . "z.gbs";
    $d_diffuse        =      "diffuse-d-aug-cc-pv"   . $ord . "z.gbs";
@@ -94,7 +98,7 @@ foreach $ord (@HORDINAL) {
    $frag_core        =        "corevalence-cc-pcv"  . $ord . "z.gbs";
    $frag_w_core      =              "tight-cc-pwcv" . $ord . "z.gbs";
    $frag_w_core_ri   =              "tight-cc-pwcv" . $ord . "z-ri.gbs";
-   $frag_hhe         = "basis-blankHHe.gbs";
+   $frag_hhe         = "basis-blankhhe.gbs";
 
    $core = "corevalence-cc-pcv" . $ord . "z_autogen.gbs";
    mergegbs($core, $frag_core, $frag_hhe, $hhe, 0);
@@ -146,17 +150,29 @@ foreach $ord (@HORDINAL) {
    $gbs02 = "cc-pV(" . $ord . "+d)Z.gbs";
    copygbs($gbs02, $basis_xpd, 1);
 
+   $otrpartial_pcv = "otrpartial-basis-cc-pcv" . $ord . "z_autogen.gbs";
+   mergegbs($otrpartial_pcv, $gbs01, $core, $excl, 1);
+
+   $otrpartial_pcv_xpd = "otrpartial-basis-cc-pcv_" . $ord . "pd_z_autogen.gbs";
+   mergegbs($otrpartial_pcv_xpd, $gbs02, $core, $excl, 1);
+
+   $otrpartial_pwcv = "otrpartial-basis-cc-pwcv" . $ord . "z_autogen.gbs";
+   mergegbs($otrpartial_pwcv, $gbs01, $w_core, $excl, 1);
+
+   $otrpartial_pwcv_xpd = "otrpartial-basis-cc-pwcv_" . $ord . "pd_z_autogen.gbs";
+   mergegbs($otrpartial_pwcv_xpd, $gbs02, $w_core, $excl, 1);
+
    $gbs03 = "cc-pCV" . $ord . "Z.gbs";
-   mergegbs($gbs03, $gbs01, $core, $excl, 1);
+   mergegbs($gbs03, $partial_pcv, $otrpartial_pcv, $incl, 1);
 
    $gbs04 = "cc-pCV(" . $ord . "+d)Z.gbs";
-   mergegbs($gbs04, $gbs02, $core, $excl, 1);
+   mergegbs($gbs04, $partial_pcv, $otrpartial_pcv_xpd, $incl, 1);
 
    $gbs05 = "cc-pwCV" . $ord . "Z.gbs";
-   mergegbs($gbs05, $gbs01, $w_core, $excl, 1);
+   mergegbs($gbs05, $partial_pwcv, $otrpartial_pwcv, $incl, 1);
 
    $gbs06 = "cc-pwCV(" . $ord . "+d)Z.gbs";
-   mergegbs($gbs06, $gbs02, $w_core, $excl, 1);
+   mergegbs($gbs06, $partial_pwcv, $otrpartial_pwcv_xpd, $incl, 1);
 
    $gbs07 = "aug-cc-pV" . $ord . "Z.gbs";
    mergegbs($gbs07, $gbs01, $diffuse, $excl, 1);
@@ -542,14 +558,14 @@ sub copygbs {
 
    my($dest, $origin, $pywrite) = @_;
 
-   $plaindest = $dest;
+   $plaindest = lc($dest);
    $plaindest =~ s/\(/_/g;
    $plaindest =~ s/\)/_/g;
    $plaindest =~ s/,/_/g;
    $plaindest =~ s/\+/p/g;
    $plaindest =~ s/\*/s/g;
 
-   $plainorigin = $origin;
+   $plainorigin = lc($origin);
    $plainorigin =~ s/\(/_/g;
    $plainorigin =~ s/\)/_/g;
    $plainorigin =~ s/,/_/g;

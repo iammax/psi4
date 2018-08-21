@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -32,10 +33,12 @@
 */
 
 #include "psi4/psifiles.h"
+#include "psi4/psi4-dec.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+
 #include <cstdio>
 #include <cmath>
-#include "psi4/psi4-dec.h"
-#define DSIGN(a,b) (((b) >= 0.0) ? (fabs(a)) : (-fabs(a)))
+#define DSIGN(a,b) (((b) >= 0.0) ? (std::fabs(a)) : (-std::fabs(a)))
 
 namespace psi {
 
@@ -67,11 +70,11 @@ void tqli(int n, double *d, double **z, double *e, int matz, double toler)
          iter = 0;
 L1:
          for (m=l; m < n-1;m++) {
-            dd = fabs(d[m]) + fabs(d[m+1]);
+            dd = std::fabs(d[m]) + std::fabs(d[m+1]);
 #if 0
-            if (fabs(e[m])+dd == dd) goto L2;
+            if (std::fabs(e[m])+dd == dd) goto L2;
 #else
-            if (fabs(e[m]) < toler) goto L2;
+            if (std::fabs(e[m]) < toler) goto L2;
 #endif
             }
          m=n-1;
@@ -94,7 +97,7 @@ L2:
             for (i=m-1; i >= l; i--) {
                f = s*e[i];
                b = c*e[i];
-               if (fabs(f) >= fabs(g)) {
+               if (std::fabs(f) >= std::fabs(g)) {
                   c = g/f;
                   r = sqrt(c*c + 1.0);
                   e[i+1] = f*r;

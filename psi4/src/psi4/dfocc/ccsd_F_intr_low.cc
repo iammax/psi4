@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,14 +31,11 @@
 #include "dfocc.h"
 
 using namespace psi;
-using namespace std;
 
+namespace psi {
+namespace dfoccwave {
 
-namespace psi{ namespace dfoccwave{
-
-void DFOCC::ccsd_F_intr_low()
-{
-
+void DFOCC::ccsd_F_intr_low() {
     // defs
     SharedTensor2d K, T, U, Tau;
 
@@ -56,7 +54,7 @@ void DFOCC::ccsd_F_intr_low()
     FijA->contract332(false, true, navirA, K, Tau, 1.0, 1.0);
     K.reset();
     Tau.reset();
-    //FijA->print();
+    // FijA->print();
 
     // VV block
     // F_ae =  \sum_{Q} t_Q b_ae^Q
@@ -73,7 +71,7 @@ void DFOCC::ccsd_F_intr_low()
     FabA->contract(true, false, navirA, navirA, nQ * naoccA, Tau, K, -1.0, 1.0);
     K.reset();
     Tau.reset();
-    //FabA->print();
+    // FabA->print();
 
     // OV block
     // F_me +=  \sum_{Q} t_Q b_me^Q
@@ -87,19 +85,20 @@ void DFOCC::ccsd_F_intr_low()
     FiaA->contract(true, false, naoccA, navirA, nQ * naoccA, T, K, -1.0, 1.0);
     K.reset();
     T.reset();
-    //FiaA->print();
+    // FiaA->print();
 
     // Ft_mi = F_mi + 1/2 \sum_{e} t_i^e F_me
     FtijA->gemm(false, true, FiaA, t1A, 0.5, 0.0);
     FtijA->add(FijA);
-    //FtijA->print();
+    // FtijA->print();
 
     // Ft_ae = F_ae - 1/2 \sum_{m} t_m^a F_me
     FtabA->gemm(true, false, t1A, FiaA, -0.5, 0.0);
     FtabA->add(FabA);
-    //FtabA->print();
+    // FtabA->print();
 
-    //outfile->Printf("\tF int done.\n");
+    // outfile->Printf("\tF int done.\n");
 
-}// end ccsd_F_intr_low
-}} // End Namespaces
+}  // end ccsd_F_intr_low
+}  // namespace dfoccwave
+}  // namespace psi

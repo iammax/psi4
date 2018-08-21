@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -53,7 +54,7 @@ Interface to ERD by N. Flocke and V. Lotrich
 These are the AcesIII electron repulsion integrals that have
 been partially interfaced into libmints. Enabling erd and adding
 ``set integral_package erd`` (do this in ``~/.psi4rc`` for universal
-effect) runs libderiv from libint for derivative integrals and erd for
+effect) runs libderiv from Libint for derivative integrals and erd for
 non-derivative integrals.
 
 .. warning:: The interface between erd and libderiv is not fully
@@ -64,6 +65,8 @@ non-derivative integrals.
    throw an error if you try to execute that class of computation. But
    there may be more, so use with caution.
 
+.. warning:: erd seems to be having some problems with Intel 2018 compilers. presently disabled in conda package.
+
 Installation
 ~~~~~~~~~~~~
 
@@ -72,16 +75,19 @@ Installation
 * .. image:: https://anaconda.org/psi4/erd/badges/version.svg
      :target: https://anaconda.org/psi4/erd
 
-* ERD is available as a conda package for Linux and macOS.
+* ERD is available as a conda package for Linux and macOS (and Windows, through the Ubuntu shell).
 
 .. * If using the |PSIfour| binary, erd has already been installed alongside.
 
 * If using |PSIfour| built from source, and anaconda or miniconda has
   already been installed (instructions at :ref:`sec:quickconda`),
-  erd can be obtained through ``conda install erd``.
+  erd can be obtained through ``conda install erd -c psi4``.
   Then enable it as a feature with :makevar:`ENABLE_erd`,
   hint its location with :makevar:`CMAKE_PREFIX_PATH`,
   and rebuild |PSIfour| to detect erd and activate dependent code.
+
+* Previous bullet had details. To build |PSIfour| from source and use
+  erd from conda without thinking, consult :ref:`sec:condapsi4dev`.
 
 * To remove a conda installation, ``conda remove erd``.
 
@@ -117,6 +123,7 @@ How to configure erd for building Psi4
 * :makevar:`CMAKE_PREFIX_PATH` |w---w| CMake list variable to specify where pre-built dependencies can be found. For erd, set to an installation directory containing ``include/ERD/ERD_MANGLE.h``
 * :makevar:`erd_DIR` |w---w| CMake variable to specify where pre-built erd can be found. Set to installation directory containing ``share/cmake/erd/erdConfig.cmake``
 * :makevar:`CMAKE_DISABLE_FIND_PACKAGE_erd` |w---w| CMake variable to force internal build of erd instead of detecting pre-built
+* :makevar:`CMAKE_INSIST_FIND_PACKAGE_erd` |w---w| CMake variable to force detecting pre-built erd and not falling back on internal build
 
 **Examples**
 

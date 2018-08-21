@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -36,15 +37,13 @@ extern FILE* outfile;
 namespace psi{ namespace psimrcc{
     extern MOInfo *moinfo;
 
-using namespace std;
-
 /**
  * Read and compute an expression
  * @param cstr
  */
 void CCBLAS::solve(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   solve(str);
 }
 
@@ -52,7 +51,7 @@ void CCBLAS::solve(const char* cstr)
  * Read and compute an expression
  * @param str
  */
-void CCBLAS::solve(string str)
+void CCBLAS::solve(std::string str)
 {
   append(str);
   compute();
@@ -64,7 +63,7 @@ void CCBLAS::solve(string str)
  */
 void CCBLAS::append(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   append(str);
 }
 
@@ -72,7 +71,7 @@ void CCBLAS::append(const char* cstr)
  * Read and store expressions without computing them
  * @param str
  */
-void CCBLAS::append(string str)
+void CCBLAS::append(std::string str)
 {
   // Main driver for solving expressions
   int noperations_added = 0;
@@ -80,7 +79,7 @@ void CCBLAS::append(string str)
     outfile->Printf("\n\nYou have requested the following operation :\n\t\"%s\"",str.c_str());
     outfile->Printf("\n\nCCBLAS::append() has parsed the following:");
   )
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(int n=0;n<names.size();n++){
     noperations_added+=parse(names[n]);
   }
@@ -118,15 +117,15 @@ void CCBLAS::compute()
 //   // Create a map with all the target matrices and how many times they appear
 //   map<string,int> target_count;
 //   for(OpDeque::iterator it = operations.begin();it!=operations.end();++it){
-//     if(it->get_A_Matrix()!=NULL)
+//     if(it->get_A_Matrix()!=nullptr)
 //       target_count[it->get_A_Matrix()->get_label()]++;
 //   }
 //   // Create a map with all the source matrices and how many times they appear
 //   map<string,int> source_count;
 //   for(OpDeque::iterator it = operations.begin();it!=operations.end();++it){
-//     if(it->get_B_Matrix()!=NULL)
+//     if(it->get_B_Matrix()!=nullptr)
 //       source_count[it->get_B_Matrix()->get_label()]++;
-//     if(it->get_C_Matrix()!=NULL)
+//     if(it->get_C_Matrix()!=nullptr)
 //       source_count[it->get_C_Matrix()->get_label()]++;
 //   }
 //
@@ -180,7 +179,7 @@ void CCBLAS::compute()
 //     int nop = distance(it-operations.begin());
 //     outfile->Printf("\nI will process operation #%3d",nop);
 //     int memA=0;
-//     if(it->get_A_Matrix()!=NULL){
+//     if(it->get_A_Matrix()!=nullptr){
 //       memA=it->get_A_Matrix()->get_memory();
 //     }
 //   }
@@ -188,15 +187,15 @@ void CCBLAS::compute()
   // Create a map with all the required matrices and how many times they appear
 
   for(OpDeque::iterator it = operations.begin();it!=operations.end();++it){
-    if(it->get_A_Matrix()!=NULL){
+    if(it->get_A_Matrix()!=nullptr){
       matrices_in_deque[it->get_A_Matrix()]++;
       matrices_in_deque_target[it->get_A_Matrix()]++;
     }
-    if(it->get_B_Matrix()!=NULL){
+    if(it->get_B_Matrix()!=nullptr){
       matrices_in_deque[it->get_B_Matrix()]++;
       matrices_in_deque_source[it->get_B_Matrix()]++;
     }
-    if(it->get_C_Matrix()!=NULL){
+    if(it->get_C_Matrix()!=nullptr){
       matrices_in_deque[it->get_C_Matrix()]++;
       matrices_in_deque_source[it->get_C_Matrix()]++;
     }
@@ -208,15 +207,15 @@ void CCBLAS::compute()
     op.compute();
 
     // Decrease the counters for the matrices to be processed
-    if(op.get_A_Matrix()!=NULL){
+    if(op.get_A_Matrix()!=nullptr){
       matrices_in_deque[op.get_A_Matrix()]--;
       matrices_in_deque_target[op.get_A_Matrix()]--;
     }
-    if(op.get_B_Matrix()!=NULL){
+    if(op.get_B_Matrix()!=nullptr){
       matrices_in_deque[op.get_B_Matrix()]--;
       matrices_in_deque_source[op.get_B_Matrix()]--;
     }
-    if(op.get_C_Matrix()!=NULL){
+    if(op.get_C_Matrix()!=nullptr){
       matrices_in_deque[op.get_C_Matrix()]--;
       matrices_in_deque_source[op.get_C_Matrix()]--;
     }
@@ -231,12 +230,12 @@ void CCBLAS::compute()
  */
 void CCBLAS::append_zero_two_diagonal(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   // To zero diagonals of things like "Fae[v][v]{u}"
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(int n=0;n<names.size();n++){
     CCMatrix* Matrix = get_Matrix(names[n]);
-    CCOperation op(0.0,"","","zero_two_diagonal",Matrix,NULL,NULL,work[0],buffer[0]);
+    CCOperation op(0.0,"","","zero_two_diagonal",Matrix,nullptr,nullptr,work[0],buffer[0]);
     operations.push_back(op);
   }
 }

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -28,19 +29,21 @@
 #ifndef _psi_src_lib_libmints_basisset_h_
 #define _psi_src_lib_libmints_basisset_h_
 
+#include "gshell.h"
+
+#include "psi4/pragma.h"
+#include "psi4/libmints/typedefs.h"
+#include "psi4/psi4-dec.h"
+
 #include <cstdio>
 #include <string>
 #include <vector>
-
-#include "gshell.h"
-#include "molecule.h"
-
- #include "psi4/pragma.h"
+#include <map>
  PRAGMA_WARNING_PUSH
  PRAGMA_WARNING_IGNORE_DEPRECATED_DECLARATIONS
  #include <memory>
  PRAGMA_WARNING_POP
-#include "psi4/psi4-dec.h"
+
 namespace psi {
 
 
@@ -48,16 +51,10 @@ namespace psi {
 class Molecule;
 class GaussianShell;
 
-class Chkpt;
 class BasisSetParser;
-class DealiasBasisSet;
-class SOTransformShell;
-class SphericalTransform;
-class SOTransform;
-class Matrix;
-class Vector3;
 class SOBasisSet;
 class IntegralFactory;
+
 
 /*! \ingroup MINTS */
 
@@ -66,8 +63,9 @@ class IntegralFactory;
     from the checkpoint file storing the information in an internal Molecule class
     which can be accessed using molecule().
 */
-class BasisSet
+class PSI_API BasisSet
 {
+protected:
     friend class BasisSetParser;
 
     //! The name of this basis set (e.g. "BASIS", "RI BASIS")
@@ -79,9 +77,14 @@ class BasisSet
 
     //! Array of gaussian shells
     GaussianShell *shells_;
+    //! Array of ECP shells
+    GaussianShell *ecp_shells_;
 
-    //! vector of shells numbers sorted in acending AM order.
+    //! vector of shells numbers sorted in ascending AM order.
     std::vector<int> sorted_ao_shell_list_;
+
+    //! The number of core electrons for each atom type
+    std::map<std::string, int> ncore_;
 
     //! Molecule object.
     std::shared_ptr<Molecule> molecule_;
@@ -98,12 +101,20 @@ class BasisSet
     int nbf_;
     /// The number of unique primitives
     int n_uprimitive_;
+    /// The number of unique ECP primitives
+    int n_ecp_uprimitive_;
     /// The number of shells
     int n_shells_;
+    /// The number of ECP shells
+    int n_ecp_shells_;
     /// The number of primitives
     int nprimitive_;
+    /// The number of ECP primitives
+    int n_ecp_primitive_;
     /// The maximum angular momentum
     int max_am_;
+    /// The maximum ECP angular momentum
+    int max_ecp_am_;
     /// The maximum number of primitives in a shell
     int max_nprimitive_;
     /// Whether the basis set is uses spherical basis functions or not
@@ -120,6 +131,8 @@ class BasisSet
     int *shell_first_basis_function_;
     /// Shell number to atomic center.
     int *shell_center_;
+    /// ECP Shell number to atomic center.
+    int *ecp_shell_center_;
     /// Which shell does a given (Cartesian / spherical) function belong to?
     int *function_to_shell_;
     /// Which shell does a given Cartesian function belong to?
@@ -130,6 +143,10 @@ class BasisSet
     int *center_to_nshell_;
     /// What's the first shell on each center?
     int *center_to_shell_;
+    /// How many ECP shells are there on each center?
+    int *center_to_ecp_nshell_;
+    /// What's the first ECP shell on each center?
+    int *center_to_ecp_shell_;
 
     /// The flattened lists of unique exponents
     double *uexponents_;
@@ -137,6 +154,12 @@ class BasisSet
     double *ucoefficients_;
     /// The flattened lists of unique contraction coefficients (as provided by the user)
     double *uoriginal_coefficients_;
+    /// The flattened lists of unique ECP exponents
+    double *uecpexponents_;
+    /// The flattened lists of unique ECP contraction coefficients (normalized)
+    double *uecpcoefficients_;
+    /// The flattened list of r exponenets for ECP calculations
+    int *uecpns_;
     /// The flattened lists of ERD normalized contraction coefficients
     double *uerd_coefficients_;
     /// The flattened list of Cartesian coordinates for each atom
@@ -149,7 +172,8 @@ public:
     BasisSet();
 
     BasisSet(const std::string &basistype, SharedMolecule mol,
-             std::map<std::string, std::map<std::string, std::vector<ShellInfo> > > &shell_map);
+             std::map<std::string, std::map<std::string, std::vector<ShellInfo> > > &shell_map,
+             std::map<std::string, std::map<std::string, std::vector<ShellInfo> > > &ecp_shell_map);
 
     /** Builder factory method
      * @param molecule the molecule to build the BasisSet around
@@ -166,6 +190,10 @@ public:
      *  @return The total number of primitives in all contractions.
      */
     int nprimitive() const             { return nprimitive_; }
+    /** Number of ECP primitives.
+     *  @return The total number of ECP primitives in all shells.
+     */
+    int n_ecp_primitive() const        { return n_ecp_primitive_; }
     /** Maximum number of primitives in a shell.
      *  Examines each shell and find the shell with the maximum number of primitives returns that
      *  number of primitives.
@@ -176,6 +204,10 @@ public:
      *  @return Number of shells.
      */
     int nshell() const                 { return n_shells_;  }
+    /** Number of ECP shells.
+     *  @return Number of ECP shells.
+     */
+    int n_ecp_shell() const                 { return n_ecp_shells_;  }
     /** Number of atomic orbitals (Cartesian).
      * @return The number of atomic orbitals (Cartesian orbitals, always).
      */
@@ -184,10 +216,18 @@ public:
      *  @return The number of basis functions (Spherical, if has_puream() == true).
      */
     int nbf() const                    { return nbf_;         }
+    /** Has ECP
+     *  @return Whether this basis set object has an ECP associated with it
+     */
+    bool has_ECP() const               { return n_ecp_shells_ > 0; }
     /** Maximum angular momentum used in the basis set.
      *  @return Maximum angular momentum.
      */
     int max_am() const                 { return max_am_;      }
+    /** Maximum angular momentum used in the ECPs in this.
+     *  @return Maximum ECP angular momentum.
+     */
+    int max_ecp_am() const             { return max_ecp_am_;      }
     /** Spherical harmonics?
      *  @return true if using spherical harmonics
      */
@@ -233,12 +273,30 @@ public:
      */
     const GaussianShell& shell(int si) const;
 
+    /** Return the si'th ECP  shell
+     *  @param si Shell number
+     *  @return A shared pointer to the GaussianShell object for the i'th shell.
+     */
+    const GaussianShell& ecp_shell(int si) const;
+
     /** Return the i'th Gaussian shell on center
      *  @param center atomic center
      *  @param si Shell number
      *  @return A shared pointer to the GaussianShell object for the i'th shell.
      */
     const GaussianShell& shell(int center, int si) const;
+
+    /// Return the number of core electrons associated with this (ECP) basisset, for the specified label.
+    int n_ecp_core(const std::string &label) const { return ncore_.count(label) ? ncore_.at(label) : 0; }
+
+    /// Return the total number of core electrons assocated with this (ECP) basisset.
+    int n_ecp_core() const;
+
+    /// Set the number of electrons associated with the given atom label, for an ECP basis set.
+    void set_n_ecp_core(const std::string &label, int n) { ncore_[std::string(label)] = n; }
+
+    /// Number of frozen core for molecule given freezing state, less any ECP present
+    int n_frozen_core(const std::string& depth = "", SharedMolecule mol=nullptr);
 
     /** @{
      *  Print the basis set.
@@ -254,7 +312,9 @@ public:
 
     /// Return the construction key and target information
     const std::string & key() const { return key_; }
+    void set_key(const std::string str) {key_ = str;}
     const std::string & target() const { return target_; }
+    void set_target(const std::string str) {target_ = str;}
 
     /** Print basis set information according to the level of detail in print_level
      *  @param out The file stream to use for printing. Defaults to outfile.
@@ -289,8 +349,12 @@ public:
 
     /// Return the number of shells on a given center.
     int nshell_on_center(int i) const { return center_to_nshell_[i]; }
-    /// Return the overall shell number
-    int shell_on_center(int center, int shell) const { return center_to_shell_[center] + shell; }
+    /// Return the number of ECP shells on a given center.
+    int n_ecp_shell_on_center(int i) const { return center_to_ecp_nshell_[i]; }
+    /// Return the overall shell number of the n'th shell on the c'th center
+    int shell_on_center(int c, int n) const { return center_to_shell_[c] + n; }
+    /// Return the overall ECP shell number of the n'th ECP shell on the c'th center
+    int ecp_shell_on_center(int c, int n) const { return center_to_ecp_shell_[c] + n; }
 
 
     /** Returns an empty basis set object.
@@ -318,16 +382,6 @@ public:
      */
     static std::pair<std::vector<std::string>, std::shared_ptr<BasisSet> > test_basis_set(int max_am);
 
-
-    /** Returns a new basis set object
-     * Constructs a basis set from the parsed information
-     *
-     * @param mol           Psi4 molecule
-     * @param py::dict      Python dictionary containing the basis information
-     * @param forced_puream Force puream or not
-    **/
-    static std::shared_ptr<BasisSet> construct_from_pydict(const std::shared_ptr <Molecule> &mol, py::dict pybs, const int forced_puream);
-
     /** Converts basis set name to a compatible filename.
      * @param basisname Basis name
      * @return Compatible file name.
@@ -342,11 +396,10 @@ public:
     //! Returns the vector of sorted shell list.
     std::vector<int> get_ao_sorted_list() { return sorted_ao_shell_list_; }
 
+    // Translate a given atom by a given amount.  Used for debugging/finite difference purposes.  Does NOT modify the underlying molecule object.
+    void move_atom(int atom, const Vector3 &trans);
     // Returns the values of the basis functions at a point
     void compute_phi(double *phi_ao, double x, double y, double z);
-
-    // BasisSet friends
-    friend class Gaussian94BasisSetParser;
 };
 
 }

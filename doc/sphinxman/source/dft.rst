@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -44,6 +45,12 @@ DFT: Density Functional Theory
 Both density functional theory and Hartree--Fock theory are controlled
 through the SCF module, and the :ref:`SCF Introduction <sec:scfintro>`
 section is also relevant here.
+
+.. note:: After May 2017 (anytime after the v1.1 release), |PSIfour|
+   switched from hand- (+Matlab) coded functionals to Libxc. Thus
+   many DFT results will be slightly different. Functionals more than
+   slightly different are B97-D, wB97X (note, *not* wB97X-D), SOGGA,
+   DFDL, and M05.
 
 Theory
 ~~~~~~
@@ -358,11 +365,19 @@ Note that if you are running an unrestricted computation, you should set the
     set reference uks
     energy('b3lyp')
 
-The functional may also be manually specified by the |scf__dft_functional|
-option::
+The functional may also be manually specified by calling ``energy`` (or any other keyword) 
+with a ``dft_functional`` argument::
 
-    set dft_functional b3lyp
-    energy('scf') 
+    energy('scf', dft_functional = 'b3lyp') 
+
+Another alternative is providing a specially crafted `dict`-ionary to the ``dft_functional``
+argument::
+
+    custom_functional = { "name": "my_unique_name", ... }
+    energy('scf', dft_functional = custom_functional)
+
+For further details about this so called `dict_func` syntax, see 
+:ref: Advanced Functional Use and Manipulation.
 
 For hybrid functionals, the fraction of exact exchange is controlled by the
 |scf__dft_alpha| option. For the LRC functionals, the fraction of long-range
@@ -588,25 +603,23 @@ perform IP fitting, one simply calls the :py:func:`~frac.ip_fitting` Python macr
 setting up a standard LRC UKS computation. A representative example is::
 
     memory 512 MB
-    from frac import *
 
     molecule h2o {
-    0 1
-    O   
-    H 1 1.0 
+    0 1  # must be neutral
+    O
+    H 1 1.0
     H 1 1.0 2 104.5
-    symmetry c1  # IP fitting must be run in C1 symmetry
+    # IP fitting runs in C1 symmetry
     }
 
     set {
     reference uks  # UKS, as we need to do neutral/cation
     basis cc-pvdz
     scf_type df
-    dft_functional wb97
     }
 
-    # Arguments are molecule object, minimum omega, maximum omega 
-    ip_fitting(h2o, 0.4, 2.0)
+    # Optional arguments are minimum omega, maximum omega, molecule object
+    omega = ip_fitting('wb97', 0.4, 2.0, molecule=h2o)
 
 This performs IP fitting on water for wB97/cc-pVDZ with density fitting. A
 number of neutral and cation single-point computations are run at various values
@@ -633,48 +646,43 @@ Two python macros exist for this code. The first is :py:func:`~frac.frac_travers
 used to investigate the fractional occupation behavior within one electron above
 and below the neutral. An example is::
 
-    memory 512 MB
-    from frac import *
-
     molecule h2o {
-    0 1
-    O   
-    H 1 1.0 
+    0 1  # must be neutral
+    O
+    H 1 1.0
     H 1 1.0 2 104.5
-    symmetry c1  # FRAC jobs must be run in C1 symmetry
+    # FRAC jobs will be be run in C1 symmetry
     }
 
     set {
     reference uks  # UKS, as we need to do all kinds of weird stuff
     basis aug-cc-pvdz  # Augmented functions are very important on the anion side
     scf_type df
-    dft_functional wb97
     }
 
-    # Argument is the molecule object. 
+    # Argument is functional.
     # Many optional arguments are available, see the python file
-    frac_traverse(h2o)
+    frac_traverse('wb97', molecule=h2o)
 
 The other macro is :py:func:`~frac.frac_nuke`, which strips several electrons out of the
 system to gather information on the MSIE over a range of orbitals. The input is
 identical to the above, except that the :py:func:`~frac.frac_traverse` call is substituted
 for something like::
 
-    # Argument is the molecule object. 
+    # Argument is the functional.
     # A useful optional argument is nmax, the total number of electrons to
     # strip out of the molecule, in this case, 2.
     # Many optional arguments are available, see the python file
-    frac_nuke(h2o, nmax = 2)
-
-Note: this feature is new/powerful enough that we have several papers pending on
-it, and are interested in expanding this work. If you would like to publish
-results using this code, please contact Rob Parrish to make arrangements for
-collaboration. 
+    frac.frac_nuke('wb97', molecule=h2o, nmax = 2)
 
 Dispersion Corrections
 ~~~~~~~~~~~~~~~~~~~~~~
 
-:ref:`Dispersion corrections are discussed here. <sec:dftd3>`
+:ref:`DFT-D dispersion corrections are discussed here. <sec:dftd3>`
+
+:ref:`HF-3c and PBEh-3c dispersion and BSSE corrections are discussed here. <sec:gcp>`
+
+:ref:`DFT-NL dispersion corrections are discussed here. <sec:dftnl>`
 
 Recommendations
 ~~~~~~~~~~~~~~~
@@ -714,3 +722,105 @@ The "best-practice" input file for KS-DFT is::
     }
 
     energy('b3lyp')
+
+
+Advanced Functional Use and Manipulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Using the ``dft_functional`` keyword argument in the energy procedure call, one is able to use the orbitals generated by DFT for correlated wavefunction methods::
+
+    # MP2 with a PBE0 reference computation
+    
+    molecule h2o {
+    0 1
+    O
+    H 1 1.0
+    H 1 1.0 2 104.5
+    }
+    
+    set {
+    basis 6-31G
+    dft_spherical_points 302
+    dft_radial_points 99
+    reference rks
+    }
+    
+    mp2_dft = energy("MP2", dft_functional="PBE0")
+
+
+Note that this would only update the generic Psi variables (e.g., "CURRENT ENERGY") and not the MP2 or DFT variables.
+Psi4 also supports easy customization and manipulation of DFT functionals.  The values of `\alpha` and `\omega` can be adjusted with the |scf__dft_alpha|
+and |scf__dft_omega| keywords. For example, for LRC functionals, one can control the fraction of long-range Hartree-Fock and short-range DFA by changing |scf__dft_omega|::
+    molecule ch2 {
+      0 3
+      C
+      H 1 R
+      H 1 R 2 A
+    
+      R = 1.075
+      A = 133.93
+    }
+    
+    set reference uhf
+    set guess gwh
+    set basis cc-pvdz
+    set e_convergence 8
+    
+    # Override the default value of omega
+    set dft_omega 2.0
+    
+    E = energy('wb97x')
+    
+    # Revoke the change for later computations if needed
+    revoke_global_option_changed('DFT_OMEGA') 
+
+This feature would be useful after finishing IP fitting procedure, for example. 
+Furthermore, new DFT functionals can be created from scratch from within the input file::
+
+    # DFT Custom Functional 
+
+    molecule h2o {
+    0 1
+    O
+    H 1 1.0
+    H 1 1.0 2 104.5
+    }
+    
+    set {
+    basis sto-3g
+    dft_spherical_points 302
+    dft_radial_points 99
+    reference rks
+    }
+    
+    pbe0 = {
+        "name": "my_PBE0",
+        "x_functionals": {"GGA_X_PBE": {"alpha": 0.75}},
+        "x_hf": {"alpha": 0.25},
+        "c_functionals": {"GGA_C_PBE": {}}
+    }
+
+    func_call = energy('SCF', dft_functional=pbe0)
+    
+    # as PBE0 is a pre-defined functional, the call above is equivalent to both below:
+    func_call = energy('SCF', dft_functional="PBE0")
+    func_call = energy('PBE0')
+
+Supported keywords include:
+
+ - `name`: string, name of the functional, for custom defined functionals used for printing only.
+ - `xc_functionals`: dict, definition of a complete (X + C) functional based in LibXC name
+ - `x_functionals`: dict, definition of exchange functionals using LibXC names
+ - `c_functionals`: dict, definition of correlation functionals using LibXC names
+ - `x_hf`: dict, parameters dealing with exact (HF) exchange settings for hybrid DFT
+ - `c_mp2`: dict, parameters dealing with MP2 correlation for double hybrid DFT
+ - `dispersion`: dict, definition of dispersion corrections
+ - `citation`: string, citation for the method, for printing purposes
+ - `description`: string, description of the method, for printing purposes
+
+The full interface is defined in :ref:driver/procrouting/dft_funcs/dict_builder.py, all standard
+functionals provided in Psi4 are implemented in the `dict_*_funcs.py` files in the same folder.
+ 
+ 
+ 

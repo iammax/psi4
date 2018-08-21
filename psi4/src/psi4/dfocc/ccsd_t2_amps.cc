@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,14 +32,10 @@
 #include "psi4/libmints/matrix.h"
 #include "psi4/libdiis/diismanager.h"
 
-using namespace std;
+namespace psi {
+namespace dfoccwave {
 
-
-namespace psi{ namespace dfoccwave{
-
-void DFOCC::ccsd_t2_amps()
-{
-
+void DFOCC::ccsd_t2_amps() {
     // defs
     SharedTensor2d K, I, T, Tnew, U, Tau, W, X, Y;
 
@@ -90,24 +87,24 @@ void DFOCC::ccsd_t2_amps()
     ccsd_WmbejT2();
 
     // WijamT2
-    //if (itr_occ > 1) ccsd_WijamT2();
+    // if (itr_occ > 1) ccsd_WijamT2();
 
     // WabefT2
     if (Wabef_type_ == "AUTO") {
-	if (!do_ppl_hm) ccsd_Wabef2T2();
-	else {
-	    ccsd_WijamT2_high_mem();
-	    ccsd_WabefT2_high_mem();
-	}
-    }
-    else if (Wabef_type_ == "LOW_MEM") ccsd_Wabef2T2();
+        if (!do_ppl_hm)
+            ccsd_Wabef2T2();
+        else {
+            ccsd_WijamT2_high_mem();
+            ccsd_WabefT2_high_mem();
+        }
+    } else if (Wabef_type_ == "LOW_MEM")
+        ccsd_Wabef2T2();
     else if (Wabef_type_ == "HIGH_MEM") {
-	ccsd_WijamT2_high_mem();
-	ccsd_WabefT2_high_mem();
-    }
-    else if (Wabef_type_ == "CD") {
-	ccsd_WijamT2();
-	ccsd_WabefT2_cd();
+        ccsd_WijamT2_high_mem();
+        ccsd_WabefT2_high_mem();
+    } else if (Wabef_type_ == "CD") {
+        ccsd_WijamT2();
+        ccsd_WabefT2_cd();
     }
 
     // Denom
@@ -132,10 +129,10 @@ void DFOCC::ccsd_t2_amps()
     Tnew.reset();
 
     // DIIS
-    std::shared_ptr<Matrix> RT2(new Matrix("RT2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> RT2(new Matrix("RT2", naoccA * navirA, naoccA * navirA));
     Tau->to_matrix(RT2);
     Tau.reset();
-    std::shared_ptr<Matrix> T2(new Matrix("T2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> T2(new Matrix("T2", naoccA * navirA, naoccA * navirA));
     t2->to_matrix(T2);
     std::shared_ptr<Matrix> RT1(new Matrix("RT1", naoccA, navirA));
     Rt1A->to_matrix(RT1);
@@ -159,7 +156,7 @@ void DFOCC::ccsd_t2_amps()
 
     // Form Tau(ia,jb) = T(ia,jb) + t(ia) * t(jb)
     Tau = SharedTensor2d(new Tensor2d("Tau (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsd_tau_amps(Tau,t2);
+    ccsd_tau_amps(Tau, t2);
 
     // Energy
     U = SharedTensor2d(new Tensor2d("2*Tau(ia,jb) - Tau(ib,ja)", naoccA, navirA, naoccA, navirA));
@@ -174,61 +171,55 @@ void DFOCC::ccsd_t2_amps()
     K.reset();
     Eccsd = Escf + Ecorr;
 
-}// end ccsd_t2_amps
+}  // end ccsd_t2_amps
 
 //======================================================================
 //    CCSD: u_ij^ab = 2*t_ij^ab - t_ji^ab; T(ia,jb)
 //======================================================================
-void DFOCC::ccsd_u2_amps(SharedTensor2d &U, SharedTensor2d &T)
-{
+void DFOCC::ccsd_u2_amps(SharedTensor2d &U, SharedTensor2d &T) {
     U->sort(1432, T, 1.0, 0.0);
     U->scale(-1.0);
     U->axpy(T, 2.0);
-}// end ccsd_u2_amps
+}  // end ccsd_u2_amps
 
 //======================================================================
 //    CCSD: u_ij^ab = 2*t_ij^ab - t_ji^ab; T(ij,ab)
 //======================================================================
-void DFOCC::ccsd_u2_amps2(SharedTensor2d &U, SharedTensor2d &T)
-{
+void DFOCC::ccsd_u2_amps2(SharedTensor2d &U, SharedTensor2d &T) {
     U->sort(2134, T, 1.0, 0.0);
     U->scale(-1.0);
     U->axpy(T, 2.0);
-}// end ccsd_u2_amps2
+}  // end ccsd_u2_amps2
 
 //======================================================================
 //    CCSD: T'(ib,ja) = t_ij^ab = T(ia,jb)
 //======================================================================
-void DFOCC::ccsd_t2_prime_amps(SharedTensor2d &U, SharedTensor2d &T)
-{
+void DFOCC::ccsd_t2_prime_amps(SharedTensor2d &U, SharedTensor2d &T) {
     U->sort(1432, T, 1.0, 0.0);
-}// end ccsd_t2_prime_amps
+}  // end ccsd_t2_prime_amps
 
 //======================================================================
 //    CCSD: T'(ib,ja) = t_ij^ab = T(ij,ab)
 //======================================================================
-void DFOCC::ccsd_t2_prime_amps2(SharedTensor2d &U, SharedTensor2d &T)
-{
+void DFOCC::ccsd_t2_prime_amps2(SharedTensor2d &U, SharedTensor2d &T) {
     U->sort(1423, T, 1.0, 0.0);
-}// end ccsd_t2_prime_amps2
+}  // end ccsd_t2_prime_amps2
 
 //======================================================================
 //    CCSD: Tau_ij^ab = t_ij^ab + t_i^a t_j^b
 //======================================================================
-void DFOCC::ccsd_tau_amps(SharedTensor2d &U, SharedTensor2d &T)
-{
+void DFOCC::ccsd_tau_amps(SharedTensor2d &U, SharedTensor2d &T) {
     U->dirprd224(t1A, t1A);
     U->add(T);
-}// end ccsd_tau_amps
+}  // end ccsd_tau_amps
 
 //======================================================================
 //    CCSD: \tilde{Tau}_ij^ab = t_ij^ab + 1/2 t_i^a t_j^b
 //======================================================================
-void DFOCC::ccsd_tau_tilde_amps(SharedTensor2d &U, SharedTensor2d &T)
-{
+void DFOCC::ccsd_tau_tilde_amps(SharedTensor2d &U, SharedTensor2d &T) {
     U->dirprd224(t1A, t1A, 0.5, 0.0);
     U->add(T);
-}// end ccsd_tau_tilde_amps
+}  // end ccsd_tau_tilde_amps
 
-}} // End Namespaces
-
+}  // namespace dfoccwave
+}  // namespace psi

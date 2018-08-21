@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -31,13 +32,17 @@ import re
 import struct
 from collections import defaultdict
 from decimal import Decimal
+
+import numpy as np
+
 from .pdict import PreservingDict
 from .periodictable import *
 from .physconst import *
 from .exceptions import *
 from .molecule import Molecule
-from .orient import OrientMols
 from .options import conv_float2negexp
+from .hessparse import load_hessian
+from .align import B787
 
 
 def harvest_output(outtext):
@@ -49,7 +54,8 @@ def harvest_output(outtext):
     pass_coord = []
     pass_grad = []
 
-    for outpass in re.split(r'--invoking executable xjoda', outtext, re.MULTILINE):
+    #for outpass in re.split(r'--invoking executable xjoda', outtext, re.MULTILINE):
+    for outpass in re.split(r'JODA beginning optimization cycle', outtext, re.MULTILINE):
         psivar, c4coord, c4grad = harvest_outfile_pass(outpass)
         pass_psivar.append(psivar)
         pass_coord.append(c4coord)
@@ -115,13 +121,22 @@ def harvest_outfile_pass(outtext):
         print('matched scf2')
         psivar['SCF TOTAL ENERGY'] = mobj.group(1)
 
+    if 'SCF TOTAL ENERGY' not in psivar:
+        # can be too greedy and match across scf cycles
+        mobj = re.search(
+            r'^\s+' + r'(?:SCF has converged.)' + r'\s*$' +
+            r'(?:.*?)' +
+            r'^\s+' + r'(?:\d+)' + r'\s+' + NUMBER + r'\s+' + NUMBER + r'\s*$',
+            outtext, re.MULTILINE | re.DOTALL)
+        if mobj:
+            print('matched scf3')
+            psivar['SCF TOTAL ENERGY'] = mobj.group(1)
+
     mobj = re.search(
-        r'^\s+' + r'(?:SCF has converged.)' + r'\s*$' +
-        r'(?:.*?)' +
-        r'^\s+' + r'(?:\d+)' + r'\s+' + NUMBER + r'\s+' + NUMBER + r'\s*$',
-        outtext, re.MULTILINE | re.DOTALL)
+        r'^\s+' + r'(?:E\(ROHF\)=)' + r'\s+' + NUMBER + r'\s+' + NUMBER + r'\s*$',
+        outtext, re.MULTILINE)
     if mobj:
-        print('matched scf3')
+        print('matched scf4')
         psivar['SCF TOTAL ENERGY'] = mobj.group(1)
 
     # Process MP2
@@ -169,6 +184,19 @@ def harvest_outfile_pass(outtext):
         psivar['MP2 CORRELATION ENERGY'] = Decimal(mobj.group(1)) + \
             Decimal(mobj.group(2)) + Decimal(mobj.group(3)) + Decimal(mobj.group(4))
         psivar['MP2 TOTAL ENERGY'] = mobj.group(6)
+
+    mobj = re.search(
+        r'^\s+' + r'(?:S-MBPT\(2\))' + r'\s+' + r'(?P<sgl>' + NUMBER + r')' + r'\s+' + NUMBER + r'\s*' +
+        r'^\s+' + r'(?:D-MBPT\(2\))' + r'\s+' + r'(?P<dbl>' + NUMBER + r')' + r'\s+' +
+                                                r'(?P<mp2tot>' + NUMBER + r')' + r'\s*$',
+        outtext, re.MULTILINE)
+    if mobj:
+        print('matched mp2ro2')
+        #psivar['MP2 SAME-SPIN CORRELATION ENERGY'] = Decimal(mobj.group(1)) + Decimal(mobj.group(2))
+        #psivar['MP2 OPPOSITE-SPIN CORRELATION ENERGY'] = mobj.group(3)
+        psivar['MP2 SINGLES ENERGY'] = mobj.group('sgl')
+        psivar['MP2 CORRELATION ENERGY'] = Decimal(mobj.group('sgl')) + Decimal(mobj.group('dbl'))
+        psivar['MP2 TOTAL ENERGY'] = mobj.group('mp2tot')
 
     # Process MP3
     mobj = re.search(
@@ -294,6 +322,19 @@ def harvest_outfile_pass(outtext):
         psivar['%s CORRELATION ENERGY' % (mobj.group('iterCC'))] = mobj.group(3)
         psivar['%s TOTAL ENERGY' % (mobj.group('iterCC'))] = mobj.group(4)
 
+    mobj = re.search(
+        r'^\s+' + r'(?:\d+)' + r'\s+' + r'(?P<corl>' + NUMBER + r')\s+' +
+                  NUMBER + r'\s+' + NUMBER + r'\s+' + NUMBER + r'\s+' + NUMBER + r'\s*' +
+        r'^\s*' +
+        r'^\s*' + r'(?:\w+ iterations converged .*?)' +
+        r'^\s*' +
+        r'^\s*' + r'(?:Total (?P<iterCC>\w+) energy:)' + r'\s+' + r'(?P<tot>' + NUMBER + ')\s*$',
+        outtext, re.MULTILINE | re.DOTALL)
+    if mobj:
+        print('matched ncc cc iter')
+        psivar['{} CORRELATION ENERGY'.format(mobj.group('iterCC'))] = mobj.group('corl')
+        psivar['{} TOTAL ENERGY'.format(mobj.group('iterCC'))] = mobj.group('tot')
+
     # Process CC(T)
     mobj = re.search(
         r'^\s+' + r'(?:E\(SCF\))' + r'\s+=\s+' + NUMBER + r'\s+a\.u\.\s*' +
@@ -309,6 +350,17 @@ def harvest_outfile_pass(outtext):
         psivar['(T) CORRECTION ENERGY'] = Decimal(mobj.group(3)) - Decimal(mobj.group(2))
         psivar['CCSD(T) CORRELATION ENERGY'] = Decimal(mobj.group(3)) - Decimal(mobj.group(1))
         psivar['CCSD(T) TOTAL ENERGY'] = mobj.group(3)
+
+    mobj = re.search(
+        r'^\s+' + r'(?:E\(CCSD\))' + r'\s+=\s+' + NUMBER + r'\s*' +
+        r'(?:.*?)' +
+        r'^\s+' + r'(?:E\(CCSD\(T\)\))' + r'\s+=\s+' + NUMBER + r'\s*$',
+        outtext, re.MULTILINE | re.DOTALL)
+    if mobj:
+        print('matched ccsd(t) vcc v2')
+        psivar['CCSD TOTAL ENERGY'] = mobj.group(1)
+        psivar['(T) CORRECTION ENERGY'] = Decimal(mobj.group(2)) - Decimal(mobj.group(1))
+        psivar['CCSD(T) TOTAL ENERGY'] = mobj.group(2)
 
     mobj = re.search(
         r'^\s+' + r'(?:E\(SCF\))' + r'\s+=\s*' + NUMBER + r'\s+a\.u\.\s*' +
@@ -328,6 +380,24 @@ def harvest_outfile_pass(outtext):
         psivar['CCSD(T) TOTAL ENERGY'] = mobj.group(4)
 
     mobj = re.search(
+        r'^\s+' + r'(?:HF-SCF energy)' + r'\s+' + NUMBER + r'\s*' +
+        r'(?:.*?)' +
+        r'^\s+' + r'(?:CCSD energy)' + r'\s+' + NUMBER + r'\s*' +
+        r'(?:.*?)' +
+        r'^\s+' + r'(?:E4T \+ E5ST)' + r'\s+' + NUMBER + r'\s*' +
+        r'(?:.*?)' +
+        r'^\s*(?:-+)\s*' +
+        r'^\s+' + r'(?:CCSD\(T\) energy)' + r'\s+' + NUMBER + r'\s*$',
+        outtext, re.MULTILINE | re.DOTALL)
+    if mobj:
+        print('matched ccsd(t) ecc v2')
+        psivar['SCF TOTAL ENERGY'] = mobj.group(1)
+        psivar['CCSD TOTAL ENERGY'] = mobj.group(2)
+        psivar['(T) CORRECTION ENERGY'] = mobj.group(3)
+        psivar['CCSD(T) CORRELATION ENERGY'] = Decimal(mobj.group(4)) - Decimal(mobj.group(1))
+        psivar['CCSD(T) TOTAL ENERGY'] = mobj.group(4)
+
+    mobj = re.search(
         r'^\s+' + r'(?:CCSD energy)' + r'\s+' + NUMBER + r'\s*' +
         r'^\s*(?:-+)\s*' +
         r'^\s+' + r'(?:CCSD\(T\) energy)' + r'\s+' + NUMBER + r'\s*$',
@@ -338,6 +408,17 @@ def harvest_outfile_pass(outtext):
         psivar['(T) CORRECTION ENERGY'] = Decimal(mobj.group(2)) - Decimal(mobj.group(1))
         psivar['CCSD(T) CORRELATION ENERGY'] = Decimal(mobj.group(2)) - psivar['SCF TOTAL ENERGY']
         psivar['CCSD(T) TOTAL ENERGY'] = mobj.group(2)
+
+    mobj = re.search(
+        r'^\s+' + r'(?:CCSD\(T\) contribution:)\s+' + r'(?P<tcorr>' + NUMBER + ')' + r'\s*'
+        r'^\s*' + r'(?:CCSD\[T\] contribution:)\s+' + r'(?P<bkttcorr>' + NUMBER + ')' + r'\s*'
+        r'^\s*' + r'(?:Total CCSD\(T\) energy:)\s+' + r'(?P<ttot>' + NUMBER + ')' + r'\s*$',
+        outtext, re.MULTILINE | re.DOTALL)
+    if mobj:
+        print('matched ccsd(t) ncc')
+        psivar['(T) CORRECTION ENERGY'] = mobj.group('tcorr')
+        psivar['[T] CORRECTION ENERGY'] = mobj.group('bkttcorr')
+        psivar['CCSD(T) TOTAL ENERGY'] = mobj.group('ttot')
 
     # Process SCS-CC
     mobj = re.search(
@@ -357,7 +438,8 @@ def harvest_outfile_pass(outtext):
     mobj = re.search(
         r'^\s+' + r'(?P<fullCC>(?P<iterCC>CC(?:\w+))(?:\(T\))?)' + r'\s+(?:energy will be calculated.)\s*' +
         r'(?:.*?)' +
-        r'^\s+' + r'Amplitude equations converged in' + r'\s*\d+\s*' + r'iterations.\s*' +
+        r'^\s+' + r'Amplitude equations converged in' + r'\s*\d+\s*' + r'iterations.' +
+        r'(?:.*?)' +
         r'^\s+' + r'The AA contribution to the correlation energy is:\s+' + NUMBER + r'\s+a.u.\s*' +
         r'^\s+' + r'The BB contribution to the correlation energy is:\s+' + NUMBER + r'\s+a.u.\s*' +
         r'^\s+' + r'The AB contribution to the correlation energy is:\s+' + NUMBER + r'\s+a.u.\s*' +
@@ -409,7 +491,7 @@ def harvest_outfile_pass(outtext):
             lline = line.split()
             molxyz += '%s %16s %16s %16s\n' % (lline[0], lline[-3], lline[-2], lline[-1])
         # Rather a dinky Molecule as no ghost, charge, or multiplicity
-        psivar_coord = Molecule.init_with_xyz(molxyz, no_com=True, no_reorient=True, contentsNotFilename=True)
+        psivar_coord = Molecule.from_string(molxyz, dtype='xyz+', fix_com=True, fix_orientation=True)
 
     # Process atom geometry
     mobj = re.search(
@@ -420,7 +502,7 @@ def harvest_outfile_pass(outtext):
         print('matched atom')
         # Dinky Molecule
         molxyz = '1 bohr\n\n%s 0.0 0.0 0.0\n' % (mobj.group(1))
-        psivar_coord = Molecule.init_with_xyz(molxyz, no_com=True, no_reorient=True, contentsNotFilename=True)
+        psivar_coord = Molecule.from_string(molxyz, dtype='xyz+', fix_com=True, fix_orientation=True)
 
     # Process error codes
     mobj = re.search(
@@ -434,6 +516,7 @@ def harvest_outfile_pass(outtext):
     if 'SCF TOTAL ENERGY' in psivar:
         psivar['CURRENT REFERENCE ENERGY'] = psivar['SCF TOTAL ENERGY']
         psivar['CURRENT ENERGY'] = psivar['SCF TOTAL ENERGY']
+        psivar['HF TOTAL ENERGY'] = psivar['SCF TOTAL ENERGY']
 
     if 'MP2 TOTAL ENERGY' in psivar and 'MP2 CORRELATION ENERGY' in psivar:
         psivar['CURRENT CORRELATION ENERGY'] = psivar['MP2 CORRELATION ENERGY']
@@ -493,7 +576,9 @@ def harvest(p4Mol, c4out, **largs):
         grdMol, grdGrad = None, None
 
     if 'FCMFINAL' in largs:
-        fcmHess = harvest_FCM(largs['FCMFINAL'])
+        fcmHess = load_hessian(largs['FCMFINAL'], dtype='fcmfinal')
+        if np.count_nonzero(fcmHess) == 0:
+            fcmHess = None
     else:
         fcmHess = None
 
@@ -533,19 +618,41 @@ def harvest(p4Mol, c4out, **largs):
 
     # Set up array reorientation object
     if p4Mol and grdMol:
-        p4c4 = OrientMols(p4Mol, grdMol)
-        oriCoord = p4c4.transform_coordinates2(grdMol)
-        oriGrad = p4c4.transform_gradient(grdGrad)
-        oriDip = None if dipolDip is None else p4c4.transform_vector(dipolDip)
+        rgeom, _, _, _, runiq = p4Mol.to_arrays(dummy=True, ghost_as_dummy=True)
+        cgeom, _, _, _, cuniq = grdMol.to_arrays(dummy=True, ghost_as_dummy=True)
+        rmsd, mill = B787(cgeom=cgeom, rgeom=rgeom, cuniq=cuniq, runiq=runiq, atoms_map=False, mols_align=True, verbose=0)
+
+        oriCoord = mill.align_coordinates(grdMol.full_geometry(np_out=True))
+        oriGrad = mill.align_gradient(np.array(grdGrad))
+        if dipolDip is None:
+            oriDip = None
+        else:
+            oriDip = mill.align_vector(np.array(dipolDip))
+
+        if fcmHess is None:
+            oriHess = None
+        else:
+            oriHess = mill.align_hessian(np.array(fcmHess))
+
     elif p4Mol and outMol:
-        p4c4 = OrientMols(p4Mol, outMol)
-        oriCoord = p4c4.transform_coordinates2(outMol)
+        # TODO watch out - haven't seen atom_map=False yet
+        rgeom, _, _, _, runiq = p4Mol.to_arrays(dummy=True, ghost_as_dummy=True)
+        cgeom, _, _, _, cuniq = outMol.to_arrays(dummy=True, ghost_as_dummy=True)
+        rmsd, mill = B787(cgeom=cgeom, rgeom=rgeom, cuniq=cuniq, runiq=runiq, atoms_map=True, mols_align=True, verbose=0)
+
+        oriCoord = mill.align_coordinates(outMol.full_geometry(np_out=True))
         oriGrad = None
-        oriDip = None if dipolDip is None else p4c4.transform_vector(dipolDip)
+        oriHess = None  # I don't think we ever get FCMFINAL w/o GRAD
+        if dipolDip is None:
+            oriDip = None
+        else:
+            oriDip = mill.align_vector(np.array(dipolDip))
+
     elif outMol:
         oriCoord = None
         oriGrad = None
         oriDip = None if dipolDip is None else dipolDip
+        oriHess = None
 
 #    print p4c4
 #    print '    <<<   [4] C4-ORI-MOL   >>>'
@@ -564,17 +671,22 @@ def harvest(p4Mol, c4out, **largs):
 
     retMol = None if p4Mol else grdMol
 
-    if oriDip:
+    if oriDip is not None:
         outPsivar['CURRENT DIPOLE X'] = str(oriDip[0] * psi_dipmom_au2debye)
         outPsivar['CURRENT DIPOLE Y'] = str(oriDip[1] * psi_dipmom_au2debye)
         outPsivar['CURRENT DIPOLE Z'] = str(oriDip[2] * psi_dipmom_au2debye)
 
-    if oriGrad:
+    if oriGrad is not None:
         retGrad = oriGrad
-    elif grdGrad:
+    elif grdGrad is not None:
         retGrad = grdGrad
     else:
         retGrad = None
+
+    if oriHess is not None:
+        retHess = oriHess
+    else:
+        retHess = None
 
     return outPsivar, retGrad, retMol
 
@@ -598,7 +710,7 @@ def harvest_GRD(grd):
         molxyz += '%s %16s %16s %16s\n' % (el, mline[-3], mline[-2], mline[-1])
         lline = grd[at + 1 + Nat].split()
         grad.append([float(lline[-3]), float(lline[-2]), float(lline[-1])])
-    mol = Molecule.init_with_xyz(molxyz, no_com=True, no_reorient=True, contentsNotFilename=True)
+    mol = Molecule.from_string(molxyz, dtype='xyz+', fix_com=True, fix_orientation=True)
 
     return mol, grad
 
@@ -645,7 +757,7 @@ def harvest_zmat(zmat):
                 isBohr = ' bohr'
 
     molxyz = '%d%s\n%d %d\n' % (Nat, isBohr, charge, mult) + molxyz
-    mol = Molecule.init_with_xyz(molxyz, no_com=True, no_reorient=True, contentsNotFilename=True)
+    mol = Molecule.from_string(molxyz, dtype='xyz+', fix_com=True, fix_orientation=True)
 
     return mol
 
@@ -808,7 +920,7 @@ def muster_modelchem(name, dertype):
 
     if lowername == 'cfour':
         pass
-    elif lowername == 'c4-scf':
+    elif lowername in ['c4-scf', 'c4-hf']:
         options['CFOUR']['CFOUR_CALC_LEVEL']['value'] = 'SCF'
 
     elif lowername == 'c4-mp2':
@@ -843,6 +955,14 @@ def muster_modelchem(name, dertype):
         options['CFOUR']['CFOUR_CALC_LEVEL']['value'] = 'CCSDT'
         options['CFOUR']['CFOUR_CC_PROGRAM']['value'] = 'ECC'
 
+    elif lowername == 'c4-ccsdt(q)':
+        options['CFOUR']['CFOUR_CALC_LEVEL']['value'] = 'CCSDT(Q)'
+        options['CFOUR']['CFOUR_CC_PROGRAM']['value'] = 'NCC'
+
+    elif lowername == 'c4-ccsdtq':
+        options['CFOUR']['CFOUR_CALC_LEVEL']['value'] = 'CCSDTQ'
+        options['CFOUR']['CFOUR_CC_PROGRAM']['value'] = 'NCC'
+
     else:
         raise ValidationError("""Requested Cfour computational methods %d is not available.""" % (lowername))
 
@@ -867,6 +987,7 @@ def cfour_list():
     val = []
     val.append('cfour')
     val.append('c4-scf')
+    val.append('c4-hf')
     val.append('c4-mp2')
     val.append('c4-mp3')
     val.append('c4-mp4(sdq)')
@@ -876,6 +997,8 @@ def cfour_list():
     val.append('c4-cc3')
     val.append('c4-ccsd(t)')
     val.append('c4-ccsdt')
+    val.append('c4-ccsdt(q)')
+    val.append('c4-ccsdtq')
     return val
 
 
@@ -887,6 +1010,7 @@ def cfour_gradient_list():
     val = []
     val.append('cfour')
     val.append('c4-scf')
+    val.append('c4-hf')
     val.append('c4-mp2')
     val.append('c4-mp3')
     val.append('c4-mp4(sdq)')
@@ -908,50 +1032,52 @@ def cfour_psivar_list():
     """
     VARH = {}
     VARH['c4-scf'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY'}
+                         'c4-scf': 'SCF TOTAL ENERGY'}
+    VARH['c4-hf'] = {
+                          'c4-hf': 'HF TOTAL ENERGY'}
     VARH['c4-mp2'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY'}
     VARH['c4-mp3'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                      'c4-mp2.5corl': 'MP2.5 CORRELATION ENERGY',
-                        'c4-mp3corl': 'MP3 CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                       'c4-mp2.5': 'MP2.5 TOTAL ENERGY',
+                         'c4-mp3': 'MP3 TOTAL ENERGY'}
     VARH['c4-mp4(sdq)'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                      'c4-mp2.5corl': 'MP2.5 CORRELATION ENERGY',
-                        'c4-mp3corl': 'MP3 CORRELATION ENERGY',
-                   'c4-mp4(sdq)corl': 'MP4(SDQ) CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                       'c4-mp2.5': 'MP2.5 TOTAL ENERGY',
+                         'c4-mp3': 'MP3 TOTAL ENERGY',
+                    'c4-mp4(sdq)': 'MP4(SDQ) TOTAL ENERGY'}
     VARH['c4-mp4'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                      'c4-mp2.5corl': 'MP2.5 CORRELATION ENERGY',
-                        'c4-mp3corl': 'MP3 CORRELATION ENERGY',
-                   'c4-mp4(sdq)corl': 'MP4(SDQ) CORRELATION ENERGY',
-                        'c4-mp4corl': 'MP4(SDTQ) CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                       'c4-mp2.5': 'MP2.5 TOTAL ENERGY',
+                         'c4-mp3': 'MP3 TOTAL ENERGY',
+                    'c4-mp4(sdq)': 'MP4(SDQ) TOTAL ENERGY',
+                         'c4-mp4': 'MP4(SDTQ) TOTAL ENERGY'}
     VARH['c4-cc2'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                        'c4-cc2corl': 'CC2 CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                         'c4-cc2': 'CC2 TOTAL ENERGY'}
     VARH['c4-ccsd'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                       'c4-ccsdcorl': 'CCSD CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                        'c4-ccsd': 'CCSD TOTAL ENERGY'}
     VARH['c4-cc3'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                        'c4-cc3corl': 'CC3 CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                         'c4-cc3': 'CC3 TOTAL ENERGY'}
     VARH['c4-ccsd(t)'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                       'c4-ccsdcorl': 'CCSD CORRELATION ENERGY',
-                    'c4-ccsd(t)corl': 'CCSD(T) CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                        'c4-ccsd': 'CCSD TOTAL ENERGY',
+                     'c4-ccsd(t)': 'CCSD(T) TOTAL ENERGY'}
     VARH['c4-ccsdt'] = {
-                         'c4-scftot': 'SCF TOTAL ENERGY',
-                        'c4-mp2corl': 'MP2 CORRELATION ENERGY',
-                       'c4-ccsdcorl': 'CCSD CORRELATION ENERGY',
-                      'c4-ccsdtcorl': 'CCSDT CORRELATION ENERGY'}
+                          'c4-hf': 'HF TOTAL ENERGY',
+                         'c4-mp2': 'MP2 TOTAL ENERGY',
+                        'c4-ccsd': 'CCSD TOTAL ENERGY',
+                       'c4-ccsdt': 'CCSDT TOTAL ENERGY'}
 
     return VARH
 
@@ -1005,17 +1131,21 @@ def backtransform(chgeMol, permMol, chgeGrad=None, chgeDip=None):
     orientation embodied by *permMol*. Currently for vpt2.
 
     """
-    # Set up array reorientation object
-    p4c4 = OrientMols(permMol, chgeMol)  # opposite than usual
-    oriCoord = p4c4.transform_coordinates2(chgeMol)
+    # Set up array reorientation object -- opposite than usual
+    # OrienMols --> B787 untested, particularly atommap
+    rgeom, _, _, _, runiq = permMol.to_arrays(dummy=True, ghost_as_dummy=True)
+    cgeom, _, _, _, cuniq = chgeMol.to_arrays(dummy=True, ghost_as_dummy=True)
+    rmsd, mill = B787(cgeom=cgeom, rgeom=rgeom, cuniq=cuniq, runiq=runiq, atoms_map=True, mols_align=True, verbose=0)
+
+    oriCoord = mill.align_coordinates(chgeMol.full_geometry(np_out=False))
     p4Elem = []
     for at in range(chgeMol.natom()):
         p4Elem.append(chgeMol.Z(at))
-    oriElem = p4c4.transform_elementlist(p4Elem)
-    oriElemMap = p4c4.Catommap
+    oriElem = mill.align_atoms(np.array(p4Elem))
+    oriElemMap = mill.atommap
 
-    oriGrad = None if chgeGrad is None else p4c4.transform_gradient(chgeGrad)
-    oriDip = None if chgeDip is None else p4c4.transform_vector(chgeDip)
+    oriGrad = None if chgeGrad is None else mill.align_gradient(np.array(chgeGrad))
+    oriDip = None if chgeDip is None else mill.align_vector(np.array(chgeDip))
 
     if chgeGrad and chgeDip:
         return oriElemMap, oriElem, oriCoord, oriGrad, oriDip
@@ -1086,5 +1216,6 @@ def jajo2mol(jajodic):
         posn *= 3
         molxyz += '%s %21.15f %21.15f %21.15f\n' % (el, coord[posn], coord[posn + 1], coord[posn + 2])
     mol = Molecule.init_with_xyz(molxyz, no_com=True, no_reorient=True, contentsNotFilename=True)
+    mol = Molecule.from_string(molxyz, dtype='xyz+', fix_com=True, fix_orientation=True)
 
     return mol

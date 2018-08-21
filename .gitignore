@@ -48,6 +48,10 @@ input.py.dat
 *.clean
 *timer.dat
 *.molden
+*.cube
+dfh.*
+
+*.json
 
 # Special test cases
 tests/*/iter.dat
@@ -64,9 +68,12 @@ tests/*/PEDRA.OUT
 tests/*/cavity.npz
 tests/*/cavity.off
 tests/*/pcmsolver.inp
+tests/fcidump/*.INTDUMP
 tests/*/*.xyz
 tests/*/*.grad
 tests/*/*.hess
+tests/*/*.molden_normal_modes
+tests/*/*.vibrec
 tests/*/grid_esp.dat
 tests/*/grid_field.dat
 tests/*/fsapt/*
@@ -74,16 +81,20 @@ tests/*/plot/*
 
 # Automatically generated files
 share/python/pcm_placeholder.py
-plugins/skeleton*/input.dat
+tests/plugins/skeleton*/input.dat
+metadata.out.py
+metadata.out.cmake
 
 # Compilation directories that people use
 obj*
 *objdir
-build
+build*
 debug
 debug_latest
 *.sh
 TEST
+*/test.py
+*/test.dat
 
 # Other random files people have added.
 svn_source

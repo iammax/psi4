@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -87,7 +88,7 @@ void read_guess_init(void)
         }
         else { /* check consistency of other excitations */
           if (moinfo.occ_sym[i]^moinfo.vir_sym[a] != this_irrep) {
-            outfile->Printf( "\nInconsisent symmetries in components of guess %d.\n", k);
+            outfile->Printf( "\nInconsistent symmetries in components of guess %d.\n", k);
             exit(2);
           }
         }
@@ -105,13 +106,13 @@ void read_guess_init(void)
         else { /* check consistency of other excitations */
           if (spin == 0) {
             if (moinfo.aocc_sym[i]^moinfo.avir_sym[a] != this_irrep) {
-              outfile->Printf( "\nInconsisent symmetries in components of guess %d.\n", k);
+              outfile->Printf( "\nInconsistent symmetries in components of guess %d.\n", k);
               exit(2);
             }
           }
           else {
             if (moinfo.bocc_sym[i]^moinfo.bvir_sym[a] != this_irrep) {
-              outfile->Printf( "\nInconsisent symmetries in components of guess %d.\n", k);
+              outfile->Printf( "\nInconsistent symmetries in components of guess %d.\n", k);
               exit(2);
             }
           }
@@ -181,7 +182,7 @@ void read_guess(int C_irr)
         }
         else{ /* check other excitations for consistency */
           if (moinfo.occ_sym[i]^moinfo.vir_sym[a] != this_irrep) {
-            outfile->Printf( "\nInconsisent symmetries in components of guess %d.\n", k);
+            outfile->Printf( "\nInconsistent symmetries in components of guess %d.\n", k);
             exit(2);
           }
         }
@@ -196,13 +197,13 @@ void read_guess(int C_irr)
         else{ /* check other excitations for consistency */
           if (spin == 0) {
             if (moinfo.aocc_sym[i]^moinfo.avir_sym[a] != this_irrep) {
-              outfile->Printf( "\nInconsisent symmetries in components of guess %d.\n", k);
+              outfile->Printf( "\nInconsistent symmetries in components of guess %d.\n", k);
               exit(2);
             }
           }
           else {
             if (moinfo.bocc_sym[i]^moinfo.bvir_sym[a] != this_irrep) {
-              outfile->Printf( "\nInconsisent symmetries in components of guess %d.\n", k);
+              outfile->Printf( "\nInconsistent symmetries in components of guess %d.\n", k);
               exit(2);
             }
           }

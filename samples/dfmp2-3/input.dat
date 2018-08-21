@@ -1,6 +1,6 @@
 #! DF-MP2 cc-pVDZ frozen core gradient of benzene, computed at the DF-SCF cc-pVDZ geometry
 
-memory 250 mb
+
 molecule {
     C         -0.694303272975    -0.000000000000    -1.202568545351
     C          0.694303272975     0.000000000000    -1.202568545351
@@ -17,7 +17,7 @@ molecule {
 }
 
 set {
-    scf_type      df
+    scf_type      mem_df
     basis         cc-pvdz
     freeze_core   true
     mp2_type      df

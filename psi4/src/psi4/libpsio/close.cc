@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -32,7 +33,15 @@
  ** \ingroup PSIO
  */
 
+#ifdef _MSC_VER
+#include <io.h>
+#define SYSTEM_CLOSE ::_close
+#define SYSTEM_UNLINK ::_unlink
+#else
 #include <unistd.h>
+#define SYSTEM_CLOSE ::close
+#define SYSTEM_UNLINK ::unlink
+#endif
 #include <cstring>
 #include <cstdlib>
 #include "psi4/libpsio/psio.h"
@@ -40,8 +49,8 @@
 #include "psi4/psi4-dec.h"
 namespace psi {
 
-void PSIO::close(unsigned int unit, int keep) {
-  unsigned int i;
+void PSIO::close(size_t unit, int keep) {
+  size_t i;
   psio_ud *this_unit;
   psio_tocentry *this_entry, *next_entry;
 
@@ -66,26 +75,26 @@ void PSIO::close(unsigned int unit, int keep) {
   for (i=0; i < this_unit->numvols; i++) {
     int errcod;
 
-      errcod = ::close(this_unit->vol[i].stream);
+      errcod = SYSTEM_CLOSE(this_unit->vol[i].stream);
 
     if (errcod == -1)
       psio_error(unit,PSIO_ERROR_CLOSE);
     /* Delete the file completely if requested */
-    if(!keep) unlink(this_unit->vol[i].path);
+    if(!keep) SYSTEM_UNLINK(this_unit->vol[i].path);
     PSIOManager::shared_object()->close_file(std::string(this_unit->vol[i].path), unit, (keep ? true : false));
 
     free(this_unit->vol[i].path);
-    this_unit->vol[i].path = NULL;
+    this_unit->vol[i].path = nullptr;
     this_unit->vol[i].stream = -1;
   }
 
   /* Reset the global page stats to zero */
   this_unit->numvols = 0;
   this_unit->toclen = 0;
-  this_unit->toc = NULL;
+  this_unit->toc = nullptr;
 }
 
-int psio_close(unsigned int unit, int keep) {
+int psio_close(size_t unit, int keep) {
   _default_psio_lib_->close(unit, keep);
   return 0;
 }

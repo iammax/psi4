@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,11 +30,12 @@
 #include <cstdlib>
 #include <string>
 #include <regex>
-#include <sys/stat.h>
+#include <sstream>
+#include <ostream>
 
 #include "psi4/psi4-dec.h"
 #include "psi4/libfilesystem/path.h"
-#include "psi4/libpsi4util/libpsi4util.h"
+#include "psi4/libpsi4util/process.h"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -96,12 +98,10 @@ public:
     void process()
     {
         // The location of the plugin templates, in the Psi4 source
-        std::string psiDataDirName = Process::environment("PSIDATADIR");
-        std::string psiDataDirWithPlugin = psiDataDirName + "/plugin";
+        std::string psiDataDirName = Process::environment.get_datadir();
+        std::string psiDataDirWithPlugin = (filesystem::path(psiDataDirName) / filesystem::path("plugin")).str();
 
-        std::string fpath = filesystem::path(psiDataDirWithPlugin).make_absolute().str();
-        struct stat sb;
-        if (::stat(fpath.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode) == false) {
+        if (!filesystem::path(psiDataDirWithPlugin).is_directory()) {
             printf("Unable to read the Psi4 plugin folder - check the PSIDATADIR environmental variable\n"
                            "      Current value of PSIDATADIR is %s\n", psiDataDirName.c_str());
             exit(1);
@@ -130,7 +130,7 @@ public:
 
             // Load in Makefile.template
             FILE *fp = fopen(source_name.c_str(), "r");
-            if (fp == NULL) {
+            if (fp == nullptr) {
                 printf("create_new_plugin: Unable to open %s template.\n", source_name.c_str());
                 exit(1);
             }

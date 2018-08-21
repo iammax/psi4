@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -66,22 +67,22 @@ extern int str_rel2abs(int relidx, int listnum, struct olsen_graph *Graph);
 ** Print the Most Important Determinants in the CI vector
 ** David Sherrill, February 1995
 */
-void CIWavefunction::print_vec(unsigned int nprint, int *Ialist, int *Iblist,
+void CIWavefunction::print_vec(size_t nprint, int *Ialist, int *Iblist,
       int *Iaidx, int *Ibidx, double *coeff)
 {
    int Ia_abs, Ib_abs;
 
    /* print out the list of most important determinants */
    outfile->Printf("\n   The %d most important determinants:\n\n", nprint) ;
-   for (unsigned int i=0; i<nprint; i++) {
-      if (fabs(coeff[i]) < MIN_COEFF) continue;
+   for (size_t i=0; i<nprint; i++) {
+      if (std::fabs(coeff[i]) < MIN_COEFF) continue;
 
       Ia_abs = str_rel2abs(Iaidx[i], Ialist[i], AlphaG_);
       Ib_abs = str_rel2abs(Ibidx[i], Iblist[i], BetaG_);
 
       #ifdef FLAG_NONBLOCKS
       int found_inblock=0;
-      for (unsigned int j=0, found_inblock=0; j<H0block_->size; j++) {
+      for (size_t j=0, found_inblock=0; j<H0block_->size; j++) {
          if (Iaidx[i] == H0block_->alpidx[j] &&
              Ibidx[i] == H0block_->betidx[j] &&
              Ialist[i] == H0block_->alplist[j] &&
@@ -331,8 +332,8 @@ std::string orb2lbl(int orbnum, struct calcinfo *Cinfo, int* orbs_per_irr)
 //      outfile->Printf("Block %3d: Alp=%3d, Bet=%3d  Size = %4d x %4d = %ld\n",
 //              blk, CIblks.Ia_code[blk], CIblks.Ib_code[blk],
 //              CIblks.Ia_size[blk], CIblks.Ib_size[blk],
-//              (unsigned long) CIblks.Ia_size[blk] *
-//              (unsigned long) CIblks.Ib_size[blk]);
+//              (size_t) CIblks.Ia_size[blk] *
+//              (size_t) CIblks.Ib_size[blk]);
 //      }
 //}
 

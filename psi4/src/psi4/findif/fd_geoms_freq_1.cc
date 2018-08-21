@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -36,6 +37,7 @@
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/molecule.h"
 #include "psi4/libmints/cdsalclist.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 namespace psi {
 namespace findif {
@@ -44,34 +46,36 @@ std::vector<SharedMatrix> fd_geoms_freq_1(std::shared_ptr<Molecule> mol, Options
                                           int freq_irrep_only)
 {
 
-    outfile->Printf("\n-------------------------------------------------------------\n\n");
-
-    outfile->Printf("  Using finite-differences of gradients to determine vibrational frequencies and \n");
-    outfile->Printf("  normal modes.  Resulting frequencies are only valid at stationary points.\n");
-
+    int print_lvl = options.get_int("PRINT");
     int pts = options.get_int("POINTS");
-    outfile->Printf("\tGenerating geometries for use with %d-point formula.\n", pts);
+    double disp_size = options.get_double("DISP_SIZE");
+
+    if (print_lvl) {
+        outfile->Printf("\n-------------------------------------------------------------\n\n");
+
+        outfile->Printf("  Using finite-differences of gradients to determine vibrational frequencies and \n");
+        outfile->Printf("  normal modes.  Resulting frequencies are only valid at stationary points.\n");
+        outfile->Printf("\tGenerating geometries for use with %d-point formula.\n", pts);
+        outfile->Printf("\tDisplacement size will be %6.2e.\n", disp_size);
+    }
+
     if (pts != 3 && pts != 5)
         throw PsiException("FINDIF: Invalid number of points!", __FILE__, __LINE__);
 
-    double disp_size = options.get_double("DISP_SIZE");
-    outfile->Printf("\tDisplacement size will be %6.2e.\n", disp_size);
-
     // Get SALCS from libmints: all modes with rotations and translations projected out
-    std::shared_ptr<MatrixFactory> fact;
-    py::object pyExtern = dynamic_cast<PythonDataType *>(options["EXTERN"].get())->to_python();
-//  std::shared_ptr<ExternalPotential> external = pyExtern.cast<std::shared_ptr<ExternalPotential>>();
-    bool noextern = pyExtern ? false : true;
-    CdSalcList salc_list(mol, fact, 0xFF, noextern, noextern);
+    bool t_project = !options.get_bool("EXTERN") && !options.get_bool("PERTURB_H");
+    bool r_project = t_project && options.get_bool("FD_PROJECT");
+    CdSalcList salc_list(mol, 0xFF, t_project, r_project);
 
     int Natom = mol->natom();
-    outfile->Printf("\tNumber of atoms is %d.\n", Natom);
-
     int Nirrep = salc_list.nirrep();
-    outfile->Printf("\tNumber of irreps is %d.\n", Nirrep);
-
     int Nsalc_all = salc_list.ncd();
-    outfile->Printf("\tNumber of SALCS is %d.\n", Nsalc_all);
+    if (print_lvl) {
+        outfile->Printf("\tNumber of atoms is %d.\n", Natom);
+        outfile->Printf("\tNumber of irreps is %d.\n", Nirrep);
+        outfile->Printf("\tNumber of SALCS is %d.\n", Nsalc_all);
+        outfile->Printf("\tTranslations projected? %d. Rotations projected? %d.\n", t_project, r_project);
+    }
 
     // build vectors that list indices of salcs for each irrep
     std::vector<std::vector<int> > salcs_pi;
@@ -80,18 +84,23 @@ std::vector<SharedMatrix> fd_geoms_freq_1(std::shared_ptr<Molecule> mol, Options
     for (int i = 0; i < Nsalc_all; ++i)
         salcs_pi[salc_list[i].irrep()].push_back(i);
 
-    outfile->Printf("\tIndex of salcs per irrep:\n");
-    for (int h = 0; h < Nirrep; ++h) {
-        outfile->Printf("\t %d : ", h + 1);
-        for (int i = 0; i < salcs_pi[h].size(); ++i)
-            outfile->Printf(" %d ", salcs_pi[h][i]);
-        outfile->Printf("\n");
+    if (print_lvl) {
+        outfile->Printf("\tIndex of salcs per irrep:\n");
+        for (int h = 0; h < Nirrep; ++h) {
+            outfile->Printf("\t %d : ", h + 1);
+            for (int i = 0; i < salcs_pi[h].size(); ++i)
+                outfile->Printf(" %d ", salcs_pi[h][i]);
+            outfile->Printf("\n");
+        }
     }
 
     // From now on in code, salcs_pi establishes the canonical order of SALCs and displacements
-    outfile->Printf("\tNumber of SALC's per irrep:\n");
-    for (int h = 0; h < Nirrep; ++h)
-        outfile->Printf("\t\t Irrep %d: %d\n", h + 1, (int) salcs_pi[h].size());
+
+    if (print_lvl) {
+        outfile->Printf("\tNumber of SALC's per irrep:\n");
+        for (int h = 0; h < Nirrep; ++h)
+            outfile->Printf("\t\t Irrep %d: %d\n", h + 1, (int) salcs_pi[h].size());
+    }
 
     // Now remove irreps that are not requested
     if (freq_irrep_only >= Nirrep || freq_irrep_only < -1)
@@ -123,14 +132,19 @@ std::vector<SharedMatrix> fd_geoms_freq_1(std::shared_ptr<Molecule> mol, Options
     for (int h = 0; h < Nirrep; ++h)
         Ndisp_all += Ndisp_pi[h];
 
-    outfile->Printf("\tNumber of geometries (including reference) is %d.\n", Ndisp_all + 1);
-    outfile->Printf("\tNumber of displacements per irrep:\n");
-    for (int h = 0; h < Nirrep; ++h)
-        outfile->Printf("\t  Irrep %d: %d\n", h + 1, Ndisp_pi[h]);
+    if (print_lvl) {
+        outfile->Printf("\tNumber of geometries (including reference) is %d.\n", Ndisp_all + 1);
+        outfile->Printf("\tNumber of displacements per irrep:\n");
+        for (int h = 0; h < Nirrep; ++h) {
+            outfile->Printf("\t  Irrep %d: %d\n", h + 1, Ndisp_pi[h]);
+        }
+    }
 
-    if (options.get_int("PRINT") > 1)
-        for (int i = 0; i < salc_list.ncd(); ++i)
+    if (print_lvl > 1) {
+        for (int i = 0; i < salc_list.ncd(); ++i) {
             salc_list[i].print();
+        }
+    }
 
     // Get reference geometry
     Matrix ref_geom_temp = mol->geometry();
@@ -193,11 +207,15 @@ std::vector<SharedMatrix> fd_geoms_freq_1(std::shared_ptr<Molecule> mol, Options
     // put reference geometry list in list - though we don't need its gradient!
     disp_geoms.push_back(ref_geom);
 
-    if (options.get_int("PRINT") > 2)
-        for (int i = 0; i < disp_geoms.size(); ++i)
+    if (print_lvl > 2) {
+        for (int i = 0; i < disp_geoms.size(); ++i) {
             disp_geoms[i]->print();
+        }
+    }
 
-    outfile->Printf("\n-------------------------------------------------------------\n");
+    if (print_lvl > 1) {
+        outfile->Printf("\n-------------------------------------------------------------\n");
+    }
 
     return disp_geoms;
 }

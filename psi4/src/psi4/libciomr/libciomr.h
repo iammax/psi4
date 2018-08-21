@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -38,6 +39,9 @@
 
 #include <cstdio>
 #include <string>
+
+#include "psi4/pragma.h"
+
 namespace psi {
 
 int psi_start(FILE** infile, FILE** outfile, char** psi_file_prefix, int argc, char *argv[], int overwrite_output);
@@ -46,28 +50,16 @@ char* psi_ifname();
 char* psi_ofname();
 char* psi_fprefix();
 
-void ffile(FILE **fptr, const char *suffix, int code);
-void ffile_noexit(FILE **fptr, char *suffix, int code);
-void ffileb(FILE **fptr, char *suffix, int code);
-void ffileb_noexit(FILE **fptr, char *suffix, int code);
-
-void add_arr(double *a, double *b, double *c, int n);
-void add_mat(double **a,double **b,double **c,int n,int m);
 void balance(double **a, int n);
 
-/* Functions under dot.cc */
-void dot_arr(double *a, double *b, int size, double *value) ;
-double dot_mat(double **a,double **b,int n);
-
-void eigout(double **a,double *b,double *c,int m,int n,FILE *out);
 void eigsort(double *d,double **v,int n);
 void eivout(double **a, double *b, int m, int n, std::string out) ;
 void mosort(double *d, double **v, int *sym, int nso, int nmo);
 
 void flin(double **a,double *b,int in,int im,double *det);
-void free_matrix(double **array, unsigned long int size) ;
-double * init_array(unsigned long int size) ;
-double ** init_matrix(unsigned long int rows, unsigned long int cols) ;
+void free_matrix(double **array, size_t size) ;
+double * init_array(size_t size) ;
+double ** init_matrix(size_t rows, size_t cols) ;
 
 void lubksb(double **a,int n,int *indx,double *b);
 void ludcmp(double **a,int n,int *indx,double *d);
@@ -77,10 +69,8 @@ void mat_to_arr(double **a,double *b, int m, int n);
 void arr_to_mat(double **a,double *b,int m,int n);
 
 
-void mmult(double **AF, int ta, double **BF, int tb, double **CF, int tc,
-           int nr, int nl, int nc, int add) ;
-void mxmb(double **a,int ia,int ja,double **b,int ib,int jb,double **c,
-          int ic,int jc, int nrow, int nlnk, int ncol);
+// void mmult(double **AF, int ta, double **BF, int tb, double **CF, int tc,
+//            int nr, int nl, int nc, int add) ;
 void print_array(double *a, int m, std::string out) ;
 void print_mat(double **a, int rows, int cols, std::string out) ;
 
@@ -105,9 +95,9 @@ void zero_arr(double *a, int size) ;
 void zero_mat(double **a, int rows, int cols) ;
 
 /* Functions in int_array.c */
-int * init_int_array(int size) ;
+PSI_API int * init_int_array(int size) ;
 void zero_int_array(int *a, int size);
-int **init_int_matrix(int rows, int cols);
+PSI_API int ** init_int_matrix(int rows, int cols);
 void free_int_matrix(int **array);
 void zero_int_matrix(int **array, int rows, int cols);
 void print_int_mat(int **a, int m, int n, std::string out);
@@ -121,11 +111,11 @@ void zero_long_int_matrix(long int **array, int rows, int cols);
 void print_long_int_mat(long int **a, int m, int n, std::string out);
 
 /* Functions in block_matrix.c */
-double ** block_matrix(unsigned long int n, unsigned long int m, bool mlock = false);
+PSI_API double ** block_matrix(size_t n, size_t m, bool mlock = false);
 void free_block(double **array);
 
 /* Functions in fndcor */
-void fndcor(long int *maxcrb, std::string OutFileRMR);
+void fndcor(long int *maxcrb, std::string out_fname);
 
 }
 

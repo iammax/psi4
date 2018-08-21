@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -81,7 +82,7 @@
 // The integral files used by libtrans
 #define PSIF_LIBTRANS_DPD      61   /*- libtrans: All transformed integrals in DPD format are sent here by default -*/
 #define PSIF_LIBTRANS_A_HT     62   /*- libtrans: Alpha half-transformed integrals in DPD format -*/
-#define PSIF_LIBTRANS_B_HT     63   /*- libtrans: Beta half-tranformed integrals in DPD format -*/
+#define PSIF_LIBTRANS_B_HT     63   /*- libtrans: Beta half-transformed integrals in DPD format -*/
 
 #define PSIF_LIBDIIS           64   /*- Storage for libdiis -*/
 #define PSIF_DFT_GRID          65   /*- Storage for DFT/pseudospectral grid -*/
@@ -286,7 +287,9 @@
 #define PSIF_DFOCC_AMPS        277  /*- DFOCC Amplitudes -*/
 #define PSIF_DFOCC_DENS        278  /*- DFOCC PDMs -*/
 #define PSIF_DFOCC_IABC        279  /*- DFOCC (IA|BC) -*/ 
-#define PSIF_DFOCC_TEMP        280  /*- DFOCC temporary storage -*/
+#define PSIF_DFOCC_ABIC        280  /*- DFOCC <AB|IC> -*/ 
+#define PSIF_DFOCC_MIABC       281  /*- DFOCC M_iabc -*/ 
+#define PSIF_DFOCC_TEMP        282  /*- DFOCC temporary storage -*/
 
 #define PSIF_SAD               300  /*- A SAD file (File for SAD related quantities -*/
 

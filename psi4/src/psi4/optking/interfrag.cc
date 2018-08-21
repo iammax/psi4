@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,7 +34,7 @@
 #include "frag.h"
 #include "interfrag.h"
 #include "v3d.h" // for H_guess
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include <sstream>
 
 #include "print.h"
@@ -43,7 +44,6 @@
 namespace opt {
 
 using namespace v3d;
-using namespace std;
 
 // constructor for given weight linear combination reference points
 INTERFRAG::INTERFRAG(FRAG *A_in, FRAG *B_in, int A_index_in, int B_index_in,
@@ -75,12 +75,12 @@ INTERFRAG::INTERFRAG(FRAG *A_in, FRAG *B_in, int A_index_in, int B_index_in,
 // adds the coordinates connecting A2-A1-A0-B0-B1-B2
 // sets D_on to indicate which ones (of the 6) are unusued
 void INTERFRAG::add_coordinates_of_reference_pts(void) {
-  STRE *one_stre = NULL;  // RAB
-  BEND *one_bend = NULL;  // theta_A
-  BEND *one_bend2 = NULL; // theta_B
-  TORS *one_tors  = NULL; // tau
-  TORS *one_tors2 = NULL; // phi_A
-  TORS *one_tors3 = NULL; // phi_B
+  STRE *one_stre = nullptr;  // RAB
+  BEND *one_bend = nullptr;  // theta_A
+  BEND *one_bend2 = nullptr; // theta_B
+  TORS *one_tors  = nullptr; // tau
+  TORS *one_tors2 = nullptr; // phi_A
+  TORS *one_tors3 = nullptr; // phi_B
 
   // turn all coordinates on ; turn off unused ones below
   for (int i=0; i<6; ++i) D_on[i] = true;
@@ -205,12 +205,12 @@ void INTERFRAG::add_coordinates_of_reference_pts(void) {
   if (one_stre->is_hbond())
     oprintf_out("Detected H-bonding interfragment coordinate.\n");
 
-  if (one_stre  != NULL) inter_frag->coords.simples.push_back(one_stre);
-  if (one_bend  != NULL) inter_frag->coords.simples.push_back(one_bend);
-  if (one_bend2 != NULL) inter_frag->coords.simples.push_back(one_bend2);
-  if (one_tors  != NULL) inter_frag->coords.simples.push_back(one_tors);
-  if (one_tors2 != NULL) inter_frag->coords.simples.push_back(one_tors2);
-  if (one_tors3 != NULL) inter_frag->coords.simples.push_back(one_tors3);
+  if (one_stre  != nullptr) inter_frag->coords.simples.push_back(one_stre);
+  if (one_bend  != nullptr) inter_frag->coords.simples.push_back(one_bend);
+  if (one_bend2 != nullptr) inter_frag->coords.simples.push_back(one_bend2);
+  if (one_tors  != nullptr) inter_frag->coords.simples.push_back(one_tors);
+  if (one_tors2 != nullptr) inter_frag->coords.simples.push_back(one_tors2);
+  if (one_tors3 != nullptr) inter_frag->coords.simples.push_back(one_tors3);
 }
 
 // update location of reference points using given geometries
@@ -239,7 +239,7 @@ void INTERFRAG::update_reference_points(GeomType new_geom_A, GeomType new_geom_B
     for (int xyz=0; xyz<3; ++xyz)
       inter_frag->geom[2][xyz] = fragment_com[xyz];
 
-    double **axes=NULL, *moi=NULL;
+    double **axes=nullptr, *moi=nullptr;
     int i = A->principal_axes(new_geom_A, axes, moi);
 
     oprintf_out("Number of principal axes returned is %d\n", i);
@@ -712,7 +712,7 @@ void INTERFRAG::print_intco_dat(std::string psi_fp, FILE *qc_fp, int off_A, int 
 
 // TODO - fix this up later
 std::string INTERFRAG::get_coord_definition(int coord_index, int off_A, int off_B) const {
-  ostringstream iss;
+  std::ostringstream iss;
   iss << "Coordinate " << coord_index + 1;
   iss << "\n";
   for (int i=0; i<ndA; ++i) {

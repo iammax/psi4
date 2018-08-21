@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -79,8 +80,19 @@ should be generated only for alpha orbitals 5 (HOMO) and 6 (LUMO) and
 beta orbitals 5 (indicated as -5) and 6.
 If the option |globals__cubeprop_orbitals| is not provided, then cube files are
 generated for all orbitals.
-After running, the above input will generate four files: ``Psi_a_5.cube``,
-``Psi_a_6.cube``, ``Psi_b_5.cube``, and ``Psi_b_6.cube``.
+After running, the above input will generate four files: ``Psi_a_5_1-B1.cube``,
+``Psi_a_6_4-A1.cube``, ``Psi_a_5_1-B1.cube``, and ``Psi_a_6_4-A1.cube``. The subscript ``a`` in
+``Psi_a_5_1-B1.cube`` indicates an alpha orbital. The first number (``5``) is the index of the
+orbital while ``1-B1`` indicates that this is the first orbital that belongs to the B1 irrep.
+The file ``Psi_a_5_1-B1.cube`` begins with two comment lines::
+
+   Psi4 Gaussian Cube File.
+   Property: Psi_a_5_1-B1. Isocontour range for 85% of the density: (0.0787495,-0.0787495)
+
+The second line reports the isocontour values that capture 85% of the probability density using
+the least amount of grid points. This quantity is determined for orbitals and densities. The
+fraction of the density captured by the isocontour values is by default 0.85, but can
+be changed via the option |globals__cubeprop_isocontour_threshold|.
 
 .. note:: If your cube plots are too coarse, try to decrease the grid spacing via
     the option |globals__cubic_grid_spacing|.  If the edges of your plot are cut then
@@ -182,6 +194,8 @@ The desired image in this case is called "AlphaMOs.tga", and looks like	this:
 
 Script Options
 --------------
+
+The help for ``vmd_cube.py`` can be obtained from the console::
 
     >>> ./vmd_cube.py --help
     usage: vmd_cube.py [-h] [--color1 [<integer>]] [--color2 [<integer>]]

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -41,18 +42,18 @@
 #include "psi4/libpsio/psio.hpp"
 namespace psi {
 
-void PSIO::tocclean(unsigned int unit, const char *key) {
+void PSIO::tocclean(size_t unit, const char *key) {
   psio_tocentry *this_entry, *last_entry, *prev_entry;
   psio_ud *this_unit;
 
   this_unit = &(psio_unit[unit]);
 
   this_entry = tocscan(unit, key);
-  if (this_entry == NULL) {
+  if (this_entry == nullptr) {
     if (!strcmp(key, ""))
       this_entry = this_unit->toc;
     else {
-      fprintf(stderr, "PSIO_ERROR: Can't find TOC Entry %s in unit %d\n", key, unit);
+      fprintf(stderr, "PSIO_ERROR: Can't find TOC Entry %s in unit %zu\n", key, unit);
       psio_error(unit, PSIO_ERROR_NOTOCENT);
     }
   } else
@@ -61,7 +62,7 @@ void PSIO::tocclean(unsigned int unit, const char *key) {
   /* Get the end of the TOC and work backwards */
   last_entry = toclast(unit);
 
-  while ((last_entry != this_entry) && (last_entry != NULL)) {
+  while ((last_entry != this_entry) && (last_entry != nullptr)) {
     /* Now free all the remaining members */
     prev_entry = last_entry->last;
     free(last_entry);
@@ -81,7 +82,7 @@ void PSIO::tocclean(unsigned int unit, const char *key) {
    ** \ingroup PSIO
    */
 
-  int psio_tocclean(unsigned int unit, const char *key) {
+  int psio_tocclean(size_t unit, const char *key) {
     _default_psio_lib_->tocclean(unit, key);
     return 0;
   }

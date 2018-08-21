@@ -5,23 +5,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -33,16 +34,6 @@ import re
 import sys
 import argparse
 import subprocess
-
-
-#    with open('../psi4-config.tmp', 'r') as handle:
-#        f = handle.read()
-#    with open('../psi4-config', 'w') as handle:
-#        handle.write(f)
-#        handle.write('    psiver = "%s"\n' % (mmp))
-#        handle.write('    githash = "{%s} %s %s"\n' % (branch, ghash, status))
-#        handle.write('    sys.exit(main(sys.argv))\n\n')
-#    os.chmod('../psi4-config', 0o755)
 
 
 def collect_version_input_from_fallback(meta_file='metadata.py'):
@@ -292,6 +283,20 @@ if __name__ == '__main__':
         handle.write(main_fn)
 
 
+def write_new_cmake_metafile(versdata, outfile='metadata.out.cmake'):
+    main_fn = """
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+        ${{WTO}}/${{PN}}ConfigVersion.cmake
+        VERSION {ver}
+        COMPATIBILITY AnyNewerVersion)
+"""
+
+    with open(os.path.abspath(outfile), 'w') as handle:
+        handle.write(main_fn.format(ver=versdata['__version_cmake']))
+
+
 def version_formatter(versdata, formatstring="""{version}"""):
     """Return version information string with data from *versdata* when
     supplied with *formatstring* suitable for ``formatstring.format()``.
@@ -320,11 +325,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Script to extract Psi4 version from source. Use psi4.version_formatter(fmt_string) after build.')
     parser.add_argument('--metaout', default='metadata.out.py', help='file to which the computed version info written')
+    parser.add_argument('--cmakeout', default='metadata.out.cmake', help='file to which the CMake ConfigVersion generator written')
     parser.add_argument('--format', default='all', help='string like "{version} {githash}" to be filled in and returned')
     parser.add_argument('--formatonly', action='store_true', help='print only the format string, not the detection info')
     args = parser.parse_args()
 
     ans = reconcile_and_compute_version_output(quiet=args.formatonly)
     write_new_metafile(ans, args.metaout)
+    write_new_cmake_metafile(ans, args.cmakeout)
     ans2 = version_formatter(ans, formatstring=args.format)
     print(ans2)

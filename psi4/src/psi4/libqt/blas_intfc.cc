@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -42,7 +43,7 @@
  NOTE: Refactored by Rob Parrish on 1/24/2010
  This file now contains all relevant BLAS1
  routines, with provisions made for >2^31
- elements (ULI sizes).
+ elements (size_t sizes).
 
  All BLAS2 and BLAS3 routines are now wrapped
  and are in blas_inftc23.cc
@@ -53,6 +54,7 @@
 #include <limits.h>
 #include <cmath>
 
+#include "psi4/pragma.h"
 #include "psi4/libqt/blas_intfc_mangle.h"
 
 extern "C" {
@@ -97,13 +99,13 @@ namespace psi {
  *
  * @ingroup QT
  */
-void C_DSWAP(unsigned long int length, double *x, int inc_x, double *y, int inc_y)
+void PSI_API C_DSWAP(size_t length, double *x, int inc_x, double *y, int inc_y)
 {
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
-        double* y_s = &y[block*inc_y*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
+        double* y_s = &y[block*inc_y*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         ::F_DSWAP(&length_s, x_s, &inc_x, y_s, &inc_y);
     }
@@ -123,14 +125,14 @@ void C_DSWAP(unsigned long int length, double *x, int inc_x, double *y, int inc_
  *
  * \ingroup QT
  */
-void C_DAXPY(unsigned long int length, double a, double *x, int inc_x,
+void PSI_API C_DAXPY(size_t length, double a, double *x, int inc_x,
              double *y, int inc_y)
 {
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
-        double* y_s = &y[block*inc_y*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
+        double* y_s = &y[block*inc_y*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         ::F_DAXPY(&length_s, &a, x_s, &inc_x, y_s, &inc_y);
     }
@@ -149,14 +151,14 @@ void C_DAXPY(unsigned long int length, double a, double *x, int inc_x,
  *
  * \ingroup QT
  */
-void C_DCOPY(unsigned long int length, double *x, int inc_x,
+void PSI_API C_DCOPY(size_t length, double *x, int inc_x,
              double *y, int inc_y)
 {
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
-        double* y_s = &y[block*inc_y*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
+        double* y_s = &y[block*inc_y*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         ::F_DCOPY(&length_s, x_s, &inc_x, y_s, &inc_y);
     }
@@ -173,12 +175,12 @@ void C_DCOPY(unsigned long int length, double *x, int inc_x,
  *
  * \ingroup QT
  */
-void C_DSCAL(unsigned long int length, double alpha, double *vec, int inc)
+void PSI_API C_DSCAL(size_t length, double alpha, double *vec, int inc)
 {
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* vec_s = &vec[block*inc*(unsigned long int)INT_MAX];
+        double* vec_s = &vec[block*inc*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         ::F_DSCAL(&length_s, &alpha, vec_s, &inc);
     }
@@ -197,14 +199,14 @@ void C_DSCAL(unsigned long int length, double alpha, double *vec, int inc)
  *
  * \ingroup QT
  */
-void C_DROT(unsigned long int length, double *x, int inc_x, double *y, int inc_y,
+void PSI_API C_DROT(size_t length, double *x, int inc_x, double *y, int inc_y,
             double costheta, double sintheta)
 {
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
-        double* y_s = &y[block*inc_y*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
+        double* y_s = &y[block*inc_y*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         ::F_DROT(&length_s, x_s, &inc_x, y_s, &inc_y, &costheta, &sintheta);
     }
@@ -226,7 +228,7 @@ void C_DROT(unsigned long int length, double *x, int inc_x, double *y, int inc_y
  * \ingroup QT
  */
 
-double C_DDOT(unsigned long int length, double *x, int inc_x, double *y, int inc_y)
+double PSI_API C_DDOT(size_t length, double *x, int inc_x, double *y, int inc_y)
 {
     if(length == 0) return 0.0;
 
@@ -235,8 +237,8 @@ double C_DDOT(unsigned long int length, double *x, int inc_x, double *y, int inc
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
-        double* y_s = &y[block*inc_y*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
+        double* y_s = &y[block*inc_y*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         reg += ::F_DDOT(&length_s, x_s, &inc_x, y_s, &inc_y);
     }
@@ -256,7 +258,7 @@ double C_DDOT(unsigned long int length, double *x, int inc_x, double *y, int inc
  * \ingroup QT
  */
 
-double C_DNRM2(unsigned long int length, double *x, int inc_x)
+double PSI_API C_DNRM2(size_t length, double *x, int inc_x)
 {
     if(length == 0) return 0.0;
 
@@ -265,7 +267,7 @@ double C_DNRM2(unsigned long int length, double *x, int inc_x)
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         reg += ::F_DNRM2(&length_s, x_s, &inc_x);
     }
@@ -285,7 +287,7 @@ double C_DNRM2(unsigned long int length, double *x, int inc_x)
  * \ingroup QT
  */
 
-double C_DASUM(unsigned long int length, double *x, int inc_x)
+double PSI_API C_DASUM(size_t length, double *x, int inc_x)
 {
     if(length == 0) return 0.0;
 
@@ -294,7 +296,7 @@ double C_DASUM(unsigned long int length, double *x, int inc_x)
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
         reg += ::F_DASUM(&length_s, x_s, &inc_x);
     }
@@ -314,20 +316,20 @@ double C_DASUM(unsigned long int length, double *x, int inc_x)
  * \ingroup QT
  */
 
-unsigned long int C_IDAMAX(unsigned long int length, double *x, int inc_x)
+size_t C_IDAMAX(size_t length, double *x, int inc_x)
 {
     if(length == 0) return 0L;
 
-    unsigned long int reg = 0L;
-    unsigned long int reg2 = 0L;
+    size_t reg = 0L;
+    size_t reg2 = 0L;
 
     int big_blocks = (int)(length / INT_MAX);
     int small_size = (int)(length % INT_MAX);
     for (int block = 0; block <= big_blocks; block++) {
-        double* x_s = &x[block*inc_x*(unsigned long int)INT_MAX];
+        double* x_s = &x[block*inc_x*(size_t)INT_MAX];
         signed int length_s = (block == big_blocks) ? small_size : INT_MAX;
-        reg2 = ::F_IDAMAX(&length_s, x_s, &inc_x) + block*inc_x*(unsigned long int)INT_MAX;
-        if (fabs(x[reg]) > fabs(x[reg2]))
+        reg2 = ::F_IDAMAX(&length_s, x_s, &inc_x) + block*inc_x*(size_t)INT_MAX;
+        if (std::fabs(x[reg]) > std::fabs(x[reg2]))
             reg = reg2;
     }
 

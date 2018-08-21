@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -191,7 +192,8 @@ void diis(int iter, int L_irr)
         outfile->Printf("E[%d][%d] = %20.15lf\n",p,i,vector[0][i]);
       */
 
-      dot_arr(vector[0], vector[0], vector_length, &product);
+      // dot_arr(vector[0], vector[0], vector_length, &product);
+      product = C_DDOT(vector_length, vector[0], 1, vector[0], 1);
 
       B[p][p] = product;
 
@@ -202,7 +204,8 @@ void diis(int iter, int L_irr)
         psio_read(PSIF_CC_DIIS_ERR, "DIIS Error Vectors", (char *) vector[1],
                   vector_length*sizeof(double), start, &end);
 
-        dot_arr(vector[1], vector[0], vector_length, &product);
+        // dot_arr(vector[1], vector[0], vector_length, &product);
+        product = C_DDOT(vector_length, vector[1], 1, vector[0], 1);
 
         B[p][q] = B[q][p] = product;
       }
@@ -217,10 +220,10 @@ void diis(int iter, int L_irr)
     B[nvector][nvector] = 0;
 
     /* Find the maximum value in B and scale all its elements */
-    maximum = fabs(B[0][0]);
+    maximum = std::fabs(B[0][0]);
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++)
-        if(fabs(B[p][q]) > maximum) maximum = fabs(B[p][q]);
+        if(std::fabs(B[p][q]) > maximum) maximum = std::fabs(B[p][q]);
 
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++)
@@ -484,7 +487,8 @@ void diis(int iter, int L_irr)
 
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++) {
-        dot_arr(vector[p], vector[q], vector_length, &product);
+        // dot_arr(vector[p], vector[q], vector_length, &product);
+        product = C_DDOT(vector_length, vector[p], 1, vector[q], 1);
         B[p][q] = product;
       }
 
@@ -496,10 +500,10 @@ void diis(int iter, int L_irr)
     B[nvector][nvector] = 0;
 
     /* Find the maximum value in B and scale all its elements */
-    maximum = fabs(B[0][0]);
+    maximum = std::fabs(B[0][0]);
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++)
-        if(fabs(B[p][q]) > maximum) maximum = fabs(B[p][q]);
+        if(std::fabs(B[p][q]) > maximum) maximum = std::fabs(B[p][q]);
 
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++)
@@ -776,7 +780,8 @@ void diis(int iter, int L_irr)
 
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++) {
-        dot_arr(vector[p], vector[q], vector_length, &product);
+        // dot_arr(vector[p], vector[q], vector_length, &product);
+        product = C_DDOT(vector_length, vector[p], 1, vector[q], 1);
         B[p][q] = product;
       }
 
@@ -788,10 +793,10 @@ void diis(int iter, int L_irr)
     B[nvector][nvector] = 0;
 
     /* Find the maximum value in B and scale all its elements */
-    maximum = fabs(B[0][0]);
+    maximum = std::fabs(B[0][0]);
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++)
-        if(fabs(B[p][q]) > maximum) maximum = fabs(B[p][q]);
+        if(std::fabs(B[p][q]) > maximum) maximum = std::fabs(B[p][q]);
 
     for(p=0; p < nvector; p++)
       for(q=0; q < nvector; q++)

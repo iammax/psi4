@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -38,7 +39,7 @@
 #include "Params.h"
 #define EXTERN
 #include "globals.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 namespace psi { namespace cctriples {
 
 double ET_UHF_BBB(void)
@@ -121,7 +122,7 @@ double ET_UHF_BBB(void)
 	    }
 	  }
 	}
-  std::shared_ptr<OutFile> printer(new OutFile("ijk.dat",TRUNCATE));
+  auto printer = std::make_shared<PsiOutStream>("ijk.dat",std::ostream::trunc);
   //ffile(&ijkfile,"ijk.dat",0);
   printer->Printf("Spin Case: BBB\n");
   printer->Printf("Number of IJK combintions: %d\n", nijk);
@@ -750,7 +751,7 @@ double ET_UHF_BBB(void)
 		      }
 
 		      /*
-		      if(fabs(VABC[Gab][ab][c]) > 1e-7)
+		      if(std::fabs(VABC[Gab][ab][c]) > 1e-7)
 			outfile->Printf( "%d %d %d %d %d %d %20.15f\n", I,J,K,A,B,C,VABC[Gab][ab][c]);
 		      */
 

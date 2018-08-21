@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -76,9 +77,19 @@ approximations. JKFIT sets are appropriate for fitting :math:`(oo|`\ -type produ
 such as encountered in SCF theory and the electrostatics/exchange terms of SAPT.
 RI sets are appropriate for fitting :math:`(ov|`\ -type products, such as encountered in
 MP2 and most SAPT terms.  Citations for basis sets can be found in their
-definition files at :source:`share/basis` in the source.  For basis set availability by
+definition files at :source:`psi4/share/psi4/basis` in the source.  For basis set availability by
 element and the default value for keyword |globals__puream|, consult
 Appendix :ref:`apdx:basisElement`.
+
+|PSIfour| uses the angular momentum convention below that, consistent
+with EMSL, skips the letter ``J``. Note that Gaussian94 convention is
+*not* to skip this letter. Another portion of the G94 format, labeling
+angular momentum with :samp:`L={l}` syntax is not presently implemented,
+though this is coming. ::
+
+    L:    0123456789...
+    Psi4: SPDFGHIKLM...
+    G94:  SPDFGHIJKL...
 
 .. index:: basis set; multiple within molecule
 .. _`sec:psithonBasissets`:
@@ -88,7 +99,7 @@ Mixing Basis Sets
 
 While the above syntax will suffice for specifying basis sets in most cases,
 the user may need to assign basis sets to specific atoms.  To achieve this, a
-``basis`` block can be used.  We use a snippet from the :srcsample:`mints2` sample
+basis "block" can be used.  We use a snippet from the :srcsample:`mints2` sample
 input file, which performs a benzene SCF computation, to demonstrate this
 feature. ::
 
@@ -99,7 +110,7 @@ feature. ::
        assign C1 sto-3g
     }
 
-The first line in this block assigns the DZ basis set to all atoms.  The next
+The first line in this block assigns the DZ basis set to all atoms for the primary/orbital basis. The next
 line then assigns 3-21G to all carbon atoms, leaving the hydrogens with the DZ
 basis set.  On the third line, the hydrogen atoms which have been specifically
 labelled as ``H1`` are given the STO-3G basis set, leaving the unlabelled hydrogen
@@ -109,53 +120,105 @@ constructed to demonstrate the syntax, but the flexibility of the basis set
 specification is advantageous, for example, when selectively omitting diffuse
 functions to make computations more tractable.
 
-.. index:: basis set; auxiliary
-
 In the above example the basis sets have been assigned asymmetrically, reducing
 the effective symmetry from :math:`D_{6h}` to :math:`C_{2v}`; |PSIfour| will detect this
-automatically and run in the appropriate point group.  The same syntax can be
+automatically and run in the appropriate point group.
+
+Basis blocks can also be named, *e.g.*, :samp:`basis
+{optional_basis_name} \\{...\\}` and the basis defined by it later
+applied to another molecule. ::
+
+    # sets basis keyword
+    basis mybas {
+        assign aug-cc-pvtz
+        assign f cc-pvtz
+    }
+
+    # re-sets basis keyword
+    set basis aug-cc-pvtz
+
+    molecule hf {
+        H
+        F 1 1.0
+    }
+
+    molecule h2o {
+        O
+        H 1 1.0
+        H 1 1.0 2 90.0
+    }
+
+    # runs HF and H2O with aug-cc-pvtz
+    energy('hf', molecule=hf)
+    energy('hf', molecule=h2o)
+
+    # re-re-sets basis keyword
+    set basis mybas
+
+    # runs HF with cc-pvtz on F and aug-cc-pvtz on H
+    energy('hf', molecule=hf)
+
+    # runs H2O with aug-cc-pvtz, effectively
+    energy('hf', molecule=h2o)
+
+Finally, we note that the ``basis {...}`` block may also be used
+for defining basis sets, as detailed in :ref:`sec:basisUserDefined`.
+
+.. index:: basis set; auxiliary
+
+Calculations requesting density fitting (on by default for many methods)
+require auxiliary fitting basis set(s) in addition to the primary
+orbital one associated with the |mints__basis| keyword.
+When most popular basis sets are being used, including Dunning and
+Pople-style, the SCF, DF-MP2, and SAPT codes will chose the appropriate
+auxiliary basis set automatically according to :ref:`apdx:basisFamily`,
+unless instructed otherwise by setting the auxiliary basis set in the
+input.
+Should needed elements be missing from the best
+auxiliary basis or should the orbital basis be unknown to |PSIfour|,
+the auxiliary basis will fall back on `def2 quad-zeta fitting bases
+<https://github.com/psi4/psi4/blob/master/psi4/driver/qcdb/libmintsbasisset.py#L690-L691>`_.
+Note that if |mints__basis| is known to be larger than quad-zeta,
+|PSIfour| *will not* attempt to fall back on the def2 fitting bases.
+
+The same basis "block" syntax can be
 used to specify basis sets other than that used to define orbitals.  For
 example, ::
 
     set df_basis_mp2 cc-pvdz-ri
-    
+
      or
-    
-    basis {
-       assign cc-pVDZ-RI df_basis_mp2
+
+    df_basis_mp2 {
+       assign cc-pVDZ-RI
     }
 
 are both equivalent ways to set the auxiliary basis set for density fitted MP2
 computations.  To assign the aug-cc-pVDZ-RI to carbon atoms, the following
 command is used::
 
-    basis {
-       assign C aug-cc-pVDZ-RI df_basis_mp2
+    df_basis_mp2 {
+       assign C aug-cc-pVDZ-RI
     }
-
-When most popular basis sets are being used, including Dunning and
-Pople-style, the SCF, DF-MP2, and SAPT codes will chose the appropriate
-auxiliary basis set automatically according to :ref:`apdx:basisFamily`,
-unless instructed otherwise by setting the auxiliary basis set in the
-input.  Finally, we note that the ``basis {...}`` block may also be used
-for defining basis sets, as detailed in :ref:`sec:basisUserDefined`.
-
-.. index::
-   pair: basis set; adding new
 
 .. _`sec:basisDecontracted`:
 
 Decontracted Basis Sets
 =======================
-Decontraction of the basis set can be useful in certain situations. In order to 
-decontract a given basis set, simply add "-decontract" to the name of the primary basis set. ::
+
+Decontraction of the basis set can be useful in certain situations. In
+order to decontract a given basis set, simply add "-decon" to the name
+of the primary basis set (*e.g.* :srcsample:`decontract`). ::
 
 
-	set basis cc-pvdz-decontract
+	set basis cc-pvdz-decon
 
 Obviously this will add significantly to the computational cost of any given calculation, however it can
 be useful when checking the basis set dependence of a particular calculated property or in certain situations
 where a large basis set is critical. Currently it is recommended that a decontracted basis is always used when performing relativistic calculations using the :ref:`X2C Hamiltonian <sec:relativistic>`.
+
+.. index::
+   pair: basis set; adding new
 
 .. _`sec:basisUserDefined`: 
 
@@ -201,10 +264,10 @@ after applying the following transformations.
 * Replace all ``+`` with ``p``
 * Replace all ``(`` ``)`` ``,`` with ``_`` (underscores replace parentheses and commas)
 
-For example, basis 6-31++G** is stored in :source:`share/basis/6-31ppgss.gbs`, 
-and cc-pV(D+d)Z is stored in :source:`share/basis/cc-pv_dpd_z.gbs`.
+For example, basis 6-31++G** is stored in :source:`psi4/share/psi4/basis/6-31ppgss.gbs`,
+and cc-pV(D+d)Z is stored in :source:`psi4/share/psi4/basis/cc-pv_dpd_z.gbs`.
 Only one basis set may be specified per file.
-Copy the new basis set file into :source:`share/basis`.
+Copy the new basis set file into :source:`psi4/share/psi4/basis`.
 Request the new basis set in an input file in the usual manner. ::
 
    set basis new_basis_name
@@ -251,8 +314,13 @@ brackets. ::
 Copy the section into a |PSIfour| input file and surround it with the
 command ``basis {...}``, as shown below.  Multiple basis sets can be
 specified by adding additional sections within the surrounding brackets.
-Use ``assign`` statements to actually request the basis set. (See
-:srcsample:`mints2` for an example.) ::
+Use ``assign`` statements to actually request the basis set.  This
+``basis {...}`` section replaces the usual ``set basis XXX`` line.
+In a more complex input, if the user needs to call the user-defined
+basis by name, this can be achieved using the syntax ``basis mybas {...}``,
+and then the basis can be recalled later as ``set basis mybas``.
+To use a custom basis set as described in this section, it must be 
+defined prior to its use in a function that performs a computation. ::
 
    basis {
 
@@ -268,3 +336,21 @@ Use ``assign`` statements to actually request the basis set. (See
    [addl]
    ...
    }
+
+The test case :srcsample:`mints2` provides a complete example of 
+user-specified basis sets.
+
+.. _`sec:basissets-ecps`:
+
+Inputting effective core potentials (ECPs)
+==========================================
+
+For ECP containing basis sets, all of the above mechanisms may still be used to
+input the basis set; simply place the ECP definitions (in G94 format) in the
+same file or input section as the orbital basis definition.  Because the ECP
+appears in the same section as the orbital basis, it will be parsed
+automatically and the number of core electrons the ECP represents will be
+detected, so no further input is required to use a core potential. See
+:ref:`sec:scf-ecps` for more information about using ECPs and the
+:source:`Def2-TZVP <psi4/share/psi4/basis/def2-tzvp.gbs>` basis set definition
+for an example of their input syntax.

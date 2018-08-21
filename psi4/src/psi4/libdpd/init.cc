@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -39,9 +40,9 @@
 
 namespace psi {
 
-DPD *global_dpd_ = NULL;
+DPD *global_dpd_ = nullptr;
 int dpd_default = 0;
-DPD* dpd_list[2] = {NULL, NULL};
+DPD* dpd_list[2] = {nullptr, nullptr};
 dpd_gbl dpd_main;
 
 struct dpdpair{
@@ -67,7 +68,7 @@ extern int dpd_init(int dpd_num, int nirreps, long int memory, int cachetype,
             int num_subspaces, std::vector<int*> &spaceArrays)
 {
     if(dpd_list[dpd_num])
-        throw PSIEXCEPTION("Attempting to initilize new DPD instance before the old one was freed.");
+        throw PSIEXCEPTION("Attempting to initialize new DPD instance before the old one was freed.");
     dpd_list[dpd_num] = new DPD(dpd_num, nirreps, memory, cachetype, cachefiles, cachelist,
                                 priority, num_subspaces, spaceArrays);
     dpd_default = dpd_num;
@@ -379,7 +380,7 @@ int DPD::init(int dpd_num_in, int nirreps_in, long int memory_in, int cachetype_
             pairorb[5*i+l] = (int ***) malloc(nirreps * sizeof(int **));
             for(j=0; j < nirreps; j++) {
                 pairorb[5*i+l][j] =
-                        pairtot[5*i+l][j] ? init_int_matrix(pairtot[5*i+l][j],2) : NULL;
+                        pairtot[5*i+l][j] ? init_int_matrix(pairtot[5*i+l][j],2) : nullptr;
                 for(k=0; k < pairtot[5*i+l][j]; k++) {
                     pairorb[5*i+l][j][k][0] = -1;
                     pairorb[5*i+l][j][k][1] = -1;
@@ -529,9 +530,9 @@ int DPD::init(int dpd_num_in, int nirreps_in, long int memory_in, int cachetype_
             pairorb[cnt+1] = (int ***) malloc(nirreps * sizeof(int **));
             for(k=0; k < nirreps; k++) {
                 pairorb[cnt][k] =
-                        pairtot[cnt][k] ? init_int_matrix(pairtot[cnt][k],2) : NULL;
+                        pairtot[cnt][k] ? init_int_matrix(pairtot[cnt][k],2) : nullptr;
                 pairorb[cnt+1][k] =
-                        pairtot[cnt+1][k] ? init_int_matrix(pairtot[cnt+1][k],2) : NULL;
+                        pairtot[cnt+1][k] ? init_int_matrix(pairtot[cnt+1][k],2) : nullptr;
                 for(l=0; l < pairtot[cnt][k]; l++) {
                     pairorb[cnt][k][l][0] = -1;
                     pairorb[cnt][k][l][1] = -1;
@@ -661,7 +662,7 @@ int DPD::init(int dpd_num_in, int nirreps_in, long int memory_in, int cachetype_
     for(i=0;i < num_subspaces; i++) {
         orbs2[i] = (int **) malloc(nirreps*sizeof(int *));
         for(j=0; j < nirreps; j++) {
-            orbs2[i][j] = orbspi[i][j] ? init_int_array(orbspi[i][j]) : NULL;
+            orbs2[i][j] = orbspi[i][j] ? init_int_array(orbspi[i][j]) : nullptr;
             for(k=0; k < orbspi[i][j]; k++)
                 orbs2[i][j][k] = -1;
         }

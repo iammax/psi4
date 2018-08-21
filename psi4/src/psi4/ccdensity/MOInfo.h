@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,6 +30,9 @@
     \ingroup CCDENSITY
     \brief Enter brief description of file here 
 */
+
+#include <string>
+#include <vector>
 
 namespace psi { namespace ccdensity {
 
@@ -43,7 +47,7 @@ struct MOInfo {
     int *uoccpi;        /* no. of unoccupied orbitals per irrep excl. fruocc */
     int *frdocc;        /* no. of frozen core orbitals per irrep */
     int *fruocc;        /* no. of frozen unoccupied orbitals per irrep */
-    char **labels;      /* irrep labels */
+    std::vector<std::string> labels;      /* irrep labels */
     int nfzc;           /* total no. of frozen core orbitals */
     int nfzv;           /* total no. of frozen virtual orbitals */
     int nclsd;          /* total no. of closd shells excl. frdocc */

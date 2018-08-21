@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -63,13 +64,13 @@ The following is a simple input that will perform a Hartree--Fock calculation
 using the X2C Hamiltonian. ::
 
     molecule {
-    H
-    F 1 0.92
+      H
+      F 1 0.92
     }
 
     set {
         scf_type pk
-        basis cc-pvdz-decontract
+        basis cc-pvdz
         relativistic x2c
     }
 
@@ -77,25 +78,25 @@ using the X2C Hamiltonian. ::
 
 This computation yields the following result::
 
-  @RHF Final Energy:  -100.10545426415609
+  @RHF Final Energy:  -100.10007984692388
 
    => Energetics <=
 
     Nuclear Repulsion Energy =              5.1767335622934780
-    One-Electron Energy =                -150.7826788086396448
-    Two-Electron Energy =                  45.5004909821901009
-    Total Energy =                       -100.1054542641560516
+    One-Electron Energy =                -150.7611816259664579
+    Two-Electron Energy =                  45.4843682167491039
+    Total Energy =                       -100.1000798469238902
 
 while a non-relativistic calculation yields the following energy::
 
-  @RHF Final Energy:  -100.01041683847258
+  @RHF Final Energy:  -100.01928891411315
 
    => Energetics <=
 
     Nuclear Repulsion Energy =              5.1767335622934780
-    One-Electron Energy =                -150.6714586298456027
-    Two-Electron Energy =                  45.4843082290795309
-    Total Energy =                       -100.0104168384725796
+    One-Electron Energy =                -150.6645256529074572
+    Two-Electron Energy =                  45.4685031765008461
+    Total Energy =                       -100.0192889141131474
 
 Basis sets options
 ^^^^^^^^^^^^^^^^^^
@@ -114,7 +115,7 @@ basis set to solve the modified Dirac equation. ::
     }
 
 It is recommended that when employing the X2C relativistic Hamiltonian, that you use a fully
-decontracted basis set. This can be done simply in the input by adding "-decontract" to the 
+decontracted basis set. This can be done simply in the input by adding "-decon" to the 
 name of the primary basis you want to use for the calculation as detailed in 
 :ref:`Decontracted Basis Sets <sec:basisDecontracted>`. Publications resulting from the use 
 of X2C should cite the following publication: [Verma:2015]_

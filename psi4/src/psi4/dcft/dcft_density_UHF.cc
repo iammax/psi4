@@ -3,28 +3,35 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
+#include "dcft.h"
+#include "defines.h"
+
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/liboptions/liboptions.h"
+#include "psi4/libpsi4util/process.h"
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libqt/qt.h"
@@ -34,8 +41,6 @@
 #include "psi4/libmints/oeprop.h"
 #include "psi4/libmints/writer.h"
 #include "psi4/libmints/writer_file_prefix.h"
-#include "dcft.h"
-#include "defines.h"
 
 namespace psi{ namespace dcft{
 
@@ -95,7 +100,7 @@ DCFTSolver::compute_unrelaxed_density_OOOO() {
         global_dpd_->buf4_mat_irrep_rd(&Gaa, h);
 
         #pragma omp parallel for
-        for(long int ij = 0; ij < Gaa.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < Gaa.params->rowtot[h]; ++ij){
             size_t i = Gaa.params->roworb[h][ij][0];
             int Gi = Gaa.params->psym[i];
             i -= Gaa.params->poff[Gi];
@@ -139,7 +144,7 @@ DCFTSolver::compute_unrelaxed_density_OOOO() {
         global_dpd_->buf4_mat_irrep_rd(&Gab, h);
 
         #pragma omp parallel for
-        for(long int ij = 0; ij < Gab.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < Gab.params->rowtot[h]; ++ij){
             size_t i = Gab.params->roworb[h][ij][0];
             int Gi = Gab.params->psym[i];
             i -= Gab.params->poff[Gi];
@@ -178,7 +183,7 @@ DCFTSolver::compute_unrelaxed_density_OOOO() {
         global_dpd_->buf4_mat_irrep_rd(&Gbb, h);
 
         #pragma omp parallel for
-        for(long int ij = 0; ij < Gbb.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < Gbb.params->rowtot[h]; ++ij){
             size_t i = Gbb.params->roworb[h][ij][0];
             int Gi = Gbb.params->psym[i];
             i -= Gbb.params->poff[Gi];
@@ -819,7 +824,7 @@ DCFTSolver::compute_unrelaxed_density_OVOV() {
         global_dpd_->buf4_mat_irrep_rd(&Gaa, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gaa.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gaa.params->rowtot[h]; ++ia){
             size_t i = Gaa.params->roworb[h][ia][0];
             int Gi = Gaa.params->psym[i];
             i -= Gaa.params->poff[Gi];
@@ -874,7 +879,7 @@ DCFTSolver::compute_unrelaxed_density_OVOV() {
         global_dpd_->buf4_mat_irrep_rd(&Gab, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gab.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gab.params->rowtot[h]; ++ia){
             size_t i = Gab.params->roworb[h][ia][0];
             int Gi = Gab.params->psym[i];
             i -= Gab.params->poff[Gi];
@@ -906,7 +911,7 @@ DCFTSolver::compute_unrelaxed_density_OVOV() {
         global_dpd_->buf4_mat_irrep_rd(&Gba, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gba.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gba.params->rowtot[h]; ++ia){
             size_t i = Gba.params->roworb[h][ia][0];
             int Gi = Gba.params->psym[i];
             i -= Gba.params->poff[Gi];
@@ -974,7 +979,7 @@ DCFTSolver::compute_unrelaxed_density_OVOV() {
         global_dpd_->buf4_mat_irrep_rd(&Gbb, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gbb.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gbb.params->rowtot[h]; ++ia){
             size_t i = Gbb.params->roworb[h][ia][0];
             int Gi = Gbb.params->psym[i];
             i -= Gbb.params->poff[Gi];
@@ -1055,7 +1060,7 @@ DCFTSolver::compute_unrelaxed_density_VVVV()
         global_dpd_->buf4_mat_irrep_rd(&Gaa, h);
 
         #pragma omp parallel for
-        for(long int ab = 0; ab < Gaa.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < Gaa.params->rowtot[h]; ++ab){
             size_t a = Gaa.params->roworb[h][ab][0];
             int Ga = Gaa.params->psym[a];
             a -= Gaa.params->poff[Ga];
@@ -1089,7 +1094,7 @@ DCFTSolver::compute_unrelaxed_density_VVVV()
         global_dpd_->buf4_mat_irrep_rd(&Gab, h);
 
         #pragma omp parallel for
-        for(long int ab = 0; ab < Gab.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < Gab.params->rowtot[h]; ++ab){
             size_t a = Gab.params->roworb[h][ab][0];
             int Ga = Gab.params->psym[a];
             a -= Gab.params->poff[Ga];
@@ -1121,7 +1126,7 @@ DCFTSolver::compute_unrelaxed_density_VVVV()
         global_dpd_->buf4_mat_irrep_rd(&Gbb, h);
 
         #pragma omp parallel for
-        for(long int ab = 0; ab < Gbb.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < Gbb.params->rowtot[h]; ++ab){
             size_t a = Gbb.params->roworb[h][ab][0];
             int Ga = Gbb.params->psym[a];
             a -= Gbb.params->poff[Ga];
@@ -1207,7 +1212,7 @@ DCFTSolver::compute_relaxed_density_OOOO()
         global_dpd_->buf4_mat_irrep_rd(&Gaa, h);
 
         #pragma omp parallel for
-        for(long int ij = 0; ij < Gaa.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < Gaa.params->rowtot[h]; ++ij){
             size_t i = Gaa.params->roworb[h][ij][0];
             int Gi = Gaa.params->psym[i];
             i -= Gaa.params->poff[Gi];
@@ -1251,7 +1256,7 @@ DCFTSolver::compute_relaxed_density_OOOO()
         global_dpd_->buf4_mat_irrep_rd(&Gab, h);
 
         #pragma omp parallel for
-        for(long int ij = 0; ij < Gab.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < Gab.params->rowtot[h]; ++ij){
             size_t i = Gab.params->roworb[h][ij][0];
             int Gi = Gab.params->psym[i];
             i -= Gab.params->poff[Gi];
@@ -1290,7 +1295,7 @@ DCFTSolver::compute_relaxed_density_OOOO()
         global_dpd_->buf4_mat_irrep_rd(&Gbb, h);
 
         #pragma omp parallel for
-        for(long int ij = 0; ij < Gbb.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < Gbb.params->rowtot[h]; ++ij){
             size_t i = Gbb.params->roworb[h][ij][0];
             int Gi = Gbb.params->psym[i];
             i -= Gbb.params->poff[Gi];
@@ -1471,7 +1476,7 @@ DCFTSolver::compute_relaxed_density_OVOV()
         global_dpd_->buf4_mat_irrep_rd(&Gaa, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gaa.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gaa.params->rowtot[h]; ++ia){
             size_t i = Gaa.params->roworb[h][ia][0];
             int Gi = Gaa.params->psym[i];
             i -= Gaa.params->poff[Gi];
@@ -1529,7 +1534,7 @@ DCFTSolver::compute_relaxed_density_OVOV()
         global_dpd_->buf4_mat_irrep_rd(&Gab, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gab.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gab.params->rowtot[h]; ++ia){
             size_t i = Gab.params->roworb[h][ia][0];
             int Gi = Gab.params->psym[i];
             i -= Gab.params->poff[Gi];
@@ -1562,7 +1567,7 @@ DCFTSolver::compute_relaxed_density_OVOV()
         global_dpd_->buf4_mat_irrep_rd(&Gba, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gba.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gba.params->rowtot[h]; ++ia){
             size_t i = Gba.params->roworb[h][ia][0];
             int Gi = Gba.params->psym[i];
             i -= Gba.params->poff[Gi];
@@ -1663,7 +1668,7 @@ DCFTSolver::compute_relaxed_density_OVOV()
         global_dpd_->buf4_mat_irrep_rd(&Gbb, h);
 
         #pragma omp parallel for
-        for(long int ia = 0; ia < Gbb.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < Gbb.params->rowtot[h]; ++ia){
             size_t i = Gbb.params->roworb[h][ia][0];
             int Gi = Gbb.params->psym[i];
             i -= Gbb.params->poff[Gi];
@@ -1748,7 +1753,7 @@ DCFTSolver::compute_relaxed_density_VVVV()
         global_dpd_->buf4_mat_irrep_rd(&Gaa, h);
 
         #pragma omp parallel for
-        for(long int ab = 0; ab < Gaa.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < Gaa.params->rowtot[h]; ++ab){
             size_t a = Gaa.params->roworb[h][ab][0];
             int Ga = Gaa.params->psym[a];
             a -= Gaa.params->poff[Ga];
@@ -1787,7 +1792,7 @@ DCFTSolver::compute_relaxed_density_VVVV()
         global_dpd_->buf4_mat_irrep_rd(&Gab, h);
 
         #pragma omp parallel for
-        for(long int ab = 0; ab < Gab.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < Gab.params->rowtot[h]; ++ab){
             size_t a = Gab.params->roworb[h][ab][0];
             int Ga = Gab.params->psym[a];
             a -= Gab.params->poff[Ga];
@@ -1822,7 +1827,7 @@ DCFTSolver::compute_relaxed_density_VVVV()
         global_dpd_->buf4_mat_irrep_rd(&Gbb, h);
 
         #pragma omp parallel for
-        for(long int ab = 0; ab < Gbb.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < Gbb.params->rowtot[h]; ++ab){
             size_t a = Gbb.params->roworb[h][ab][0];
             int Ga = Gbb.params->psym[a];
             a -= Gbb.params->poff[Ga];
@@ -1872,7 +1877,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ij = 0; ij < G.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < G.params->rowtot[h]; ++ij){
             tpdm_trace += 8.0 * G.matrix[h][ij][ij];
         }
 
@@ -1887,7 +1892,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ij = 0; ij < G.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < G.params->rowtot[h]; ++ij){
             tpdm_trace += 8.0 * G.matrix[h][ij][ij];
         }
 
@@ -1903,7 +1908,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ij = 0; ij < G.params->rowtot[h]; ++ij){
+        for(size_t ij = 0; ij < G.params->rowtot[h]; ++ij){
             tpdm_trace += 8.0 * G.matrix[h][ij][ij];
         }
 
@@ -1920,7 +1925,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ab = 0; ab < G.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < G.params->rowtot[h]; ++ab){
             tpdm_trace += 8.0 * G.matrix[h][ab][ab];
         }
         global_dpd_->buf4_mat_irrep_wrt(&G, h);
@@ -1935,7 +1940,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ab = 0; ab < G.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < G.params->rowtot[h]; ++ab){
             tpdm_trace += 8.0 * G.matrix[h][ab][ab];
         }
         global_dpd_->buf4_mat_irrep_wrt(&G, h);
@@ -1950,7 +1955,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ab = 0; ab < G.params->rowtot[h]; ++ab){
+        for(size_t ab = 0; ab < G.params->rowtot[h]; ++ab){
             tpdm_trace += 8.0 * G.matrix[h][ab][ab];
         }
         global_dpd_->buf4_mat_irrep_wrt(&G, h);
@@ -1966,7 +1971,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ia = 0; ia < G.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < G.params->rowtot[h]; ++ia){
             tpdm_trace += 2.0 * G.matrix[h][ia][ia];
         }
         global_dpd_->buf4_mat_irrep_wrt(&G, h);
@@ -1981,7 +1986,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ia = 0; ia < G.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < G.params->rowtot[h]; ++ia){
             tpdm_trace += 2.0 * G.matrix[h][ia][ia];
         }
         global_dpd_->buf4_mat_irrep_wrt(&G, h);
@@ -1996,7 +2001,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ia = 0; ia < G.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < G.params->rowtot[h]; ++ia){
             tpdm_trace += 2.0 * G.matrix[h][ia][ia];
         }
         global_dpd_->buf4_mat_irrep_wrt(&G, h);
@@ -2012,7 +2017,7 @@ DCFTSolver::compute_TPDM_trace() {
         global_dpd_->buf4_mat_irrep_init(&G, h);
         global_dpd_->buf4_mat_irrep_rd(&G, h);
 
-        for(long int ia = 0; ia < G.params->rowtot[h]; ++ia){
+        for(size_t ia = 0; ia < G.params->rowtot[h]; ++ia){
             tpdm_trace += 2.0 * G.matrix[h][ia][ia];
         }
         global_dpd_->buf4_mat_irrep_wrt(&G, h);
@@ -2041,8 +2046,8 @@ void
 DCFTSolver::compute_oe_properties() {
 
     // Form one-particle density matrix
-    SharedMatrix a_opdm (new Matrix("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix b_opdm (new Matrix("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_));
+    auto a_opdm = std::make_shared<Matrix>("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto b_opdm = std::make_shared<Matrix>("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_);
 
     // Alpha spin
     for(int h = 0; h < nirrep_; ++h){
@@ -2082,7 +2087,7 @@ DCFTSolver::compute_oe_properties() {
 
     // Compute one-electron properties
 
-    std::shared_ptr<OEProp> oe(new OEProp(shared_from_this()));
+    auto oe = std::make_shared<OEProp>(shared_from_this());
     oe->set_title(options_.get_str("DCFT_FUNCTIONAL").c_str());
 
     oe->set_Da_mo(a_opdm);
@@ -2105,8 +2110,8 @@ DCFTSolver::write_molden_file() {
     // Compute natural orbitals
 
     // Form one-particle density matrix
-    SharedMatrix a_opdm (new Matrix("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix b_opdm (new Matrix("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_));
+    auto a_opdm = std::make_shared<Matrix>("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto b_opdm = std::make_shared<Matrix>("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_);
 
     // Alpha spin
     for(int h = 0; h < nirrep_; ++h){
@@ -2145,27 +2150,27 @@ DCFTSolver::write_molden_file() {
     }
 
     // Diagonalize OPDM to obtain NOs
-    SharedMatrix aevecs(new Matrix("Eigenvectors (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix bevecs(new Matrix("Eigenvectors (Beta)", nirrep_, nmopi_, nmopi_));
-    SharedVector aevals(new Vector("Eigenvalues (Alpha)", nirrep_, nmopi_));
-    SharedVector bevals(new Vector("Eigenvalues (Beta)", nirrep_, nmopi_));
+    auto aevecs = std::make_shared<Matrix>("Eigenvectors (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto bevecs = std::make_shared<Matrix>("Eigenvectors (Beta)", nirrep_, nmopi_, nmopi_);
+    auto aevals = std::make_shared<Vector>("Eigenvalues (Alpha)", nirrep_, nmopi_);
+    auto bevals = std::make_shared<Vector>("Eigenvalues (Beta)", nirrep_, nmopi_);
 
     a_opdm->diagonalize(aevecs, aevals, descending);
     b_opdm->diagonalize(bevecs, bevals, descending);
 
     // Form transformation matrix from AO to NO
-    SharedMatrix aAONO (new Matrix("NOs (Alpha)", nirrep_, nsopi_, nmopi_));
-    SharedMatrix bAONO (new Matrix("NOs (Beta)", nirrep_, nsopi_, nmopi_));
+    auto aAONO = std::make_shared<Matrix>("NOs (Alpha)", nirrep_, nsopi_, nmopi_);
+    auto bAONO = std::make_shared<Matrix>("NOs (Beta)", nirrep_, nsopi_, nmopi_);
     aAONO->gemm(false, false, 1.0, Ca_, aevecs, 0.0);
     bAONO->gemm(false, false, 1.0, Cb_, bevecs, 0.0);
 
     // Write to MOLDEN file
-    std::shared_ptr<MoldenWriter> molden(new MoldenWriter(shared_from_this()));
+    auto molden = std::make_shared<MoldenWriter>(shared_from_this());
     std::string filename = get_writer_file_prefix(molecule_->name()) + ".molden";
 
     // For now use zeros instead of energies, and DCFT NO occupation numbers as occupation numbers
-    SharedVector dummy_a(new Vector("Dummy Vector Alpha", nirrep_, nmopi_));
-    SharedVector dummy_b(new Vector("Dummy Vector Beta", nirrep_, nmopi_));
+    auto dummy_a = std::make_shared<Vector>("Dummy Vector Alpha", nirrep_, nmopi_);
+    auto dummy_b = std::make_shared<Vector>("Dummy Vector Beta", nirrep_, nmopi_);
 
     molden->write(filename, aAONO, bAONO, dummy_a, dummy_b, aevals, bevals, true);
 

@@ -3,35 +3,41 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
+
+#include "dcft.h"
+#include "defines.h"
 
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libqt/qt.h"
 #include "psi4/libiwl/iwl.h"
 #include "psi4/libdiis/diismanager.h"
-#include "dcft.h"
-#include "defines.h"
+#include "psi4/liboptions/liboptions.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+
+#include <cmath>
 
 namespace psi{ namespace dcft{
 
@@ -259,10 +265,10 @@ DCFTSolver::gradient_init()
 {
 
     // Allocate memory for the global objects
-    aocc_ptau_ = SharedMatrix(new Matrix("MO basis Perturbed Tau (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_));
-    bocc_ptau_ = SharedMatrix(new Matrix("MO basis Perturbed Tau (Beta Occupied)", nirrep_, nboccpi_, nboccpi_));
-    avir_ptau_ = SharedMatrix(new Matrix("MO basis Perturbed Tau (Alpha Virtual)", nirrep_, navirpi_, navirpi_));
-    bvir_ptau_ = SharedMatrix(new Matrix("MO basis Perturbed Tau (Beta Virtual)", nirrep_, nbvirpi_, nbvirpi_));
+    aocc_ptau_ = std::make_shared<Matrix>("MO basis Perturbed Tau (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_);
+    bocc_ptau_ = std::make_shared<Matrix>("MO basis Perturbed Tau (Beta Occupied)", nirrep_, nboccpi_, nboccpi_);
+    avir_ptau_ = std::make_shared<Matrix>("MO basis Perturbed Tau (Alpha Virtual)", nirrep_, navirpi_, navirpi_);
+    bvir_ptau_ = std::make_shared<Matrix>("MO basis Perturbed Tau (Beta Virtual)", nirrep_, nbvirpi_, nbvirpi_);
 
     dpdbuf4 I;
 
@@ -1197,7 +1203,7 @@ DCFTSolver::iterate_orbital_response()
         }
 
         // Check convergence
-        converged = (fabs(orbital_response_rms_) < fabs(orbitals_threshold_));
+        converged = (std::fabs(orbital_response_rms_) < std::fabs(orbitals_threshold_));
 
         // Print iterative trace
         outfile->Printf( "\t*%4d    %11.3E       %11.3E       %-4s *\n", cycle,
@@ -1408,8 +1414,8 @@ DCFTSolver::update_orbital_response()
 {
 
     dpdfile2 X_ia, X_ai, z_ia, zI_ai, zI_ia, r_ia;
-    SharedMatrix a_ria (new Matrix("MO basis Orbital Response Residual (Alpha)", nirrep_, naoccpi_, navirpi_));
-    SharedMatrix b_ria (new Matrix("MO basis Orbital Response Residual (Beta)", nirrep_, nboccpi_, nbvirpi_));
+    auto a_ria = std::make_shared<Matrix>("MO basis Orbital Response Residual (Alpha)", nirrep_, naoccpi_, navirpi_);
+    auto b_ria = std::make_shared<Matrix>("MO basis Orbital Response Residual (Beta)", nirrep_, nboccpi_, nbvirpi_);
 
     // Alpha spin
     global_dpd_->file2_init(&zI_ia, PSIF_DCFT_DPD, 0, ID('O'), ID('V'), "zI <O|V>");
@@ -1958,7 +1964,7 @@ DCFTSolver::compute_response_coupling()
     global_dpd_->buf4_close(&T);
 
     // Compute RMS of dC
-    return sqrt(sumSQ / nElements);
+    return std::sqrt(sumSQ / nElements);
 
 }
 
@@ -2041,7 +2047,7 @@ DCFTSolver::iterate_cumulant_response()
         }
 
         // Check the convergence
-        converged = (fabs(cumulant_response_rms_) < fabs(cumulant_threshold_));
+        converged = (std::fabs(cumulant_response_rms_) < std::fabs(cumulant_threshold_));
 
         // Print iterative trace
         outfile->Printf( "\t*%4d    %11.3E       %11.3E       %-4s *\n", cycle, orbital_response_rms_, cumulant_response_rms_, diisString.c_str());
@@ -3185,7 +3191,7 @@ DCFTSolver::compute_cumulant_response_residual()
     sumSQ += global_dpd_->buf4_dot_self(&R);
     global_dpd_->buf4_close(&R);
 
-    return sqrt(sumSQ / nElements);
+    return std::sqrt(sumSQ / nElements);
 }
 
 void
@@ -3800,10 +3806,10 @@ DCFTSolver::compute_ewdm_dc()
     Matrix aW ("Energy-weighted density matrix (Alpha)", nirrep_, nmopi_, nmopi_);
     Matrix bW ("Energy-weighted density matrix (Beta)", nirrep_, nmopi_, nmopi_);
 
-    SharedMatrix a_opdm (new Matrix("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix b_opdm (new Matrix("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix a_zia (new Matrix("MO basis Orbital Response (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix b_zia (new Matrix("MO basis Orbital Response (Beta)", nirrep_, nmopi_, nmopi_));
+    auto a_opdm = std::make_shared<Matrix>("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto b_opdm = std::make_shared<Matrix>("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_);
+    auto a_zia = std::make_shared<Matrix>("MO basis Orbital Response (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto b_zia = std::make_shared<Matrix>("MO basis Orbital Response (Beta)", nirrep_, nmopi_, nmopi_);
 
     const int *alpha_corr_to_pitzer = _ints->alpha_corr_to_pitzer();
     int *alpha_pitzer_to_corr = new int[nmo_];
@@ -4373,7 +4379,7 @@ DCFTSolver::compute_ewdm_dc()
                 int C = avir_qt[c];
                 int D = bvir_qt[d];
                 double value = 4.0 * G.matrix[h][ab][cd];
-                iwl_buf_wrt_val(&AB, A, C, B, D, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, A, C, B, D, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4408,7 +4414,7 @@ DCFTSolver::compute_ewdm_dc()
                 int K = aocc_qt[k];
                 int L = bocc_qt[l];
                 double value = 4.0 * G.matrix[h][ij][kl];
-                iwl_buf_wrt_val(&AB, I, K, J, L, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, K, J, L, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4442,7 +4448,7 @@ DCFTSolver::compute_ewdm_dc()
                 int A = avir_qt[a];
                 int B = bvir_qt[b];
                 double value = 4.0 * G.matrix[h][ij][ab];
-                iwl_buf_wrt_val(&AB, I, A, J, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, A, J, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4473,7 +4479,7 @@ DCFTSolver::compute_ewdm_dc()
                 int J = aocc_qt[j];
                 int B = avir_qt[b];
                 double value = 0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AA, I, J, A, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AA, I, J, A, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4497,7 +4503,7 @@ DCFTSolver::compute_ewdm_dc()
                 int J = aocc_qt[j];
                 int B = avir_qt[b];
                 double value = -0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AA, I, B, A, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AA, I, B, A, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4525,7 +4531,7 @@ DCFTSolver::compute_ewdm_dc()
                 int J = bocc_qt[j];
                 int B = avir_qt[b];
                 double value = G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AB, A, B, I, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, A, B, I, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4549,7 +4555,7 @@ DCFTSolver::compute_ewdm_dc()
                 int J = bocc_qt[j];
                 int B = avir_qt[b];
                 double value = (-2.0) * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AB, I, B, J, A, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, B, J, A, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4574,7 +4580,7 @@ DCFTSolver::compute_ewdm_dc()
                 int J = bocc_qt[j];
                 int B = bvir_qt[b];
                 double value = 0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&BB, I, J, A, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&BB, I, J, A, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4598,7 +4604,7 @@ DCFTSolver::compute_ewdm_dc()
                 int J = bocc_qt[j];
                 int B = bvir_qt[b];
                 double value = -0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&BB, I, B, A, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&BB, I, B, A, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4627,8 +4633,8 @@ DCFTSolver::compute_ewdm_dc()
                 int K = aocc_qt[k];
                 int A = bvir_qt[a];
                 double value = G.matrix[h][ij][ka];
-                iwl_buf_wrt_val(&AB, I, K, J, A, value, 0, "NULL", 0);
-                iwl_buf_wrt_val(&AB, I, K, A, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, K, J, A, value, 0, "outfile", 0);
+                iwl_buf_wrt_val(&AB, I, K, A, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4651,8 +4657,8 @@ DCFTSolver::compute_ewdm_dc()
                 int K = bocc_qt[k];
                 int A = avir_qt[a];
                 double value = G.matrix[h][ij][ka];
-                iwl_buf_wrt_val(&AB, A, J, K, I, value, 0, "NULL", 0);
-                iwl_buf_wrt_val(&AB, J, A, K, I, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, A, J, K, I, value, 0, "outfile", 0);
+                iwl_buf_wrt_val(&AB, J, A, K, I, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4686,8 +4692,8 @@ DCFTSolver::compute_ewdm_dc()
                 int B = avir_qt[b];
                 int C = bvir_qt[c];
                 double value = G.matrix[h][ia][bc];
-                iwl_buf_wrt_val(&AB, I, B, A, C, value, 0, "NULL", 0);
-                iwl_buf_wrt_val(&AB, B, I, A, C, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, B, A, C, value, 0, "outfile", 0);
+                iwl_buf_wrt_val(&AB, B, I, A, C, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4710,8 +4716,8 @@ DCFTSolver::compute_ewdm_dc()
                 int B = bvir_qt[b];
                 int C = avir_qt[c];
                 double value = G.matrix[h][ia][bc];
-                iwl_buf_wrt_val(&AB, C, A, B, I, value, 0, "NULL", 0);
-                iwl_buf_wrt_val(&AB, C, A, I, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, C, A, B, I, value, 0, "outfile", 0);
+                iwl_buf_wrt_val(&AB, C, A, I, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -4745,8 +4751,8 @@ DCFTSolver::compute_ewdm_odc()
     Matrix aW ("Energy-weighted density matrix (Alpha)", nirrep_, nmopi_, nmopi_);
     Matrix bW ("Energy-weighted density matrix (Beta)", nirrep_, nmopi_, nmopi_);
 
-    SharedMatrix a_opdm (new Matrix("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix b_opdm (new Matrix("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_));
+    auto a_opdm = std::make_shared<Matrix>("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto b_opdm = std::make_shared<Matrix>("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_);
 
     const int *alpha_corr_to_pitzer = _ints->alpha_corr_to_pitzer();
     int *alpha_pitzer_to_corr = new int[nmo_];
@@ -5007,7 +5013,7 @@ DCFTSolver::compute_ewdm_odc()
                 int C = avir_qt[c];
                 int D = bvir_qt[d];
                 double value = 4.0 * G.matrix[h][ab][cd];
-                iwl_buf_wrt_val(&AB, A, C, B, D, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, A, C, B, D, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5042,7 +5048,7 @@ DCFTSolver::compute_ewdm_odc()
                 int K = aocc_qt[k];
                 int L = bocc_qt[l];
                 double value = 4.0 * G.matrix[h][ij][kl];
-                iwl_buf_wrt_val(&AB, I, K, J, L, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, K, J, L, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5076,7 +5082,7 @@ DCFTSolver::compute_ewdm_odc()
                 int A = avir_qt[a];
                 int B = bvir_qt[b];
                 double value = 4.0 * G.matrix[h][ij][ab];
-                iwl_buf_wrt_val(&AB, I, A, J, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, A, J, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5107,7 +5113,7 @@ DCFTSolver::compute_ewdm_odc()
                 int J = aocc_qt[j];
                 int B = avir_qt[b];
                 double value = 0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AA, I, J, A, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AA, I, J, A, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5131,7 +5137,7 @@ DCFTSolver::compute_ewdm_odc()
                 int J = aocc_qt[j];
                 int B = avir_qt[b];
                 double value = -0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AA, I, B, A, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AA, I, B, A, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5159,7 +5165,7 @@ DCFTSolver::compute_ewdm_odc()
                 int J = bocc_qt[j];
                 int B = avir_qt[b];
                 double value = G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AB, A, B, I, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, A, B, I, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5183,7 +5189,7 @@ DCFTSolver::compute_ewdm_odc()
                 int J = bocc_qt[j];
                 int B = avir_qt[b];
                 double value = (-2.0) * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AB, I, B, J, A, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, B, J, A, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5208,7 +5214,7 @@ DCFTSolver::compute_ewdm_odc()
                 int J = bocc_qt[j];
                 int B = bvir_qt[b];
                 double value = 0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&BB, I, J, A, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&BB, I, J, A, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -5232,7 +5238,7 @@ DCFTSolver::compute_ewdm_odc()
                 int J = bocc_qt[j];
                 int B = bvir_qt[b];
                 double value = -0.5 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&BB, I, B, A, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&BB, I, B, A, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);

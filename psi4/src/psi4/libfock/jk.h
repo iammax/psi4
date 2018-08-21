@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,25 +30,23 @@
 #define JK_H
 
 #include <vector>
- #include "psi4/pragma.h"
- PRAGMA_WARNING_PUSH
- PRAGMA_WARNING_IGNORE_DEPRECATED_DECLARATIONS
- #include <memory>
- PRAGMA_WARNING_POP
+#include "psi4/pragma.h"
+PRAGMA_WARNING_PUSH
+PRAGMA_WARNING_IGNORE_DEPRECATED_DECLARATIONS
+#include <memory>
+PRAGMA_WARNING_POP
 #include "psi4/libmints/typedefs.h"
 #include "psi4/libmints/dimension.h"
 
 namespace psi {
 class MinimalInterface;
-class GPUDFJKHelper;
 class BasisSet;
 class Matrix;
-class IntegralFactory;
 class ERISieve;
 class TwoBodyAOInt;
 class Options;
-class FittingMetric;
 class PSIO;
+class DFHelper;
 
 namespace pk {
 class PKManager;
@@ -72,7 +71,7 @@ class PKManager;
  *
  * This class is abstract, specific instances must be obtained
  * by constructing an object corresponding to the desired
- * algorithm's subclass of JK, e.g., DFJK or DirectJK.
+ * algorithm's subclass of JK, e.g., DiskDFJK or DirectJK.
  *
  * This class is available for symmetric or nonsymmetric C
  * (this refers to C^left = C^right or not). Symmetric or
@@ -225,10 +224,8 @@ class PKManager;
  *
  *
  */
-class JK {
-
-protected:
-
+class PSI_API JK {
+   protected:
     // => Utility Variables <= //
 
     /// Print flag, defaults to 1
@@ -238,13 +235,13 @@ protected:
     /// Bench flag, defaults to 0
     int bench_;
     /// Memory available, in doubles, defaults to 256 MB (32 M doubles)
-    unsigned long int memory_;
-    /// Number of OpenMP threads (defaults to 1 in no OpenMP, omp_get_max_thread() otherwise)
+    size_t memory_;
+    /// Number of OpenMP threads (defaults to 1 in no OpenMP, Process::environment.get_n_threads() otherwise)
     int omp_nthread_;
     /// Integral cutoff (defaults to 0.0)
     double cutoff_;
     /// Whether to all desymmetrization, for cases when it's already been performed elsewhere
-    bool allow_desymmetrization_;
+    std::vector<bool> input_symmetry_cast_map_;
 
     // => Tasks <= //
 
@@ -264,17 +261,17 @@ protected:
     // => Architecture-Level State Variables (Spatial Symmetry) <= //
 
     /// Pseudo-occupied C matrices, left side
-    std::vector<SharedMatrix > C_left_;
+    std::vector<SharedMatrix> C_left_;
     /// Pseudo-occupied C matrices, right side
-    std::vector<SharedMatrix > C_right_;
+    std::vector<SharedMatrix> C_right_;
     /// Pseudo-density matrices \f$D_{ls}=C_{li}^{left}C_{si}^{right}\f$
-    std::vector<SharedMatrix > D_;
+    std::vector<SharedMatrix> D_;
     /// J matrices: \f$J_{mn}=(mn|ls)C_{li}^{left}C_{si}^{right}\f$
-    std::vector<SharedMatrix > J_;
+    std::vector<SharedMatrix> J_;
     /// K matrices: \f$K_{mn}=(ml|ns)C_{li}^{left}C_{si}^{right}\f$
-    std::vector<SharedMatrix > K_;
+    std::vector<SharedMatrix> K_;
     /// wK matrices: \f$K_{mn}(\omega)=(ml|\omega|ns)C_{li}^{left}C_{si}^{right}\f$
-    std::vector<SharedMatrix > wK_;
+    std::vector<SharedMatrix> wK_;
 
     // => Microarchitecture-Level State Variables (No Spatial Symmetry) <= //
 
@@ -283,17 +280,17 @@ protected:
     /// AO2USO transformation matrix
     SharedMatrix AO2USO_;
     /// Pseudo-occupied C matrices, left side
-    std::vector<SharedMatrix > C_left_ao_;
+    std::vector<SharedMatrix> C_left_ao_;
     /// Pseudo-occupied C matrices, right side
-    std::vector<SharedMatrix > C_right_ao_;
+    std::vector<SharedMatrix> C_right_ao_;
     /// Pseudo-density matrices
-    std::vector<SharedMatrix > D_ao_;
+    std::vector<SharedMatrix> D_ao_;
     /// J matrices: J_mn = (mn|ls) C_li^left C_si^right
-    std::vector<SharedMatrix > J_ao_;
+    std::vector<SharedMatrix> J_ao_;
     /// K matrices: K_mn = (ml|ns) C_li^left C_si^right
-    std::vector<SharedMatrix > K_ao_;
+    std::vector<SharedMatrix> K_ao_;
     /// wK matrices: wK_mn = (ml|w|ns) C_li^left C_si^right
-    std::vector<SharedMatrix > wK_ao_;
+    std::vector<SharedMatrix> wK_ao_;
 
     // => Per-Iteration Setup/Finalize Routines <= //
 
@@ -330,9 +327,9 @@ protected:
     // => Helper Routines <= //
 
     /// Memory (doubles) used to hold J/K/wK/C/D and ao versions, at current moment
-    unsigned long int memory_overhead() const;
+    size_t memory_overhead() const;
 
-public:
+   public:
     // => Constructors <= //
 
     /**
@@ -353,32 +350,25 @@ public:
     /// Destructor
     virtual ~JK();
 
-
     /**
-    * Static instance constructor, used to get prebuilt DFJK/DirectJK objects
+    * Static instance constructor, used to get prebuilt DiskDFJK/DirectJK objects
     * using knobs in options.
     * Nmat and sym are options for GTFock
     * sym means that all density matrices will be symmetric
     * @return abstract JK object, tuned in with preset options
     */
     static std::shared_ptr<JK> build_JK(std::shared_ptr<BasisSet> primary, std::shared_ptr<BasisSet> auxiliary,
-                                          Options& options);
+                                        Options& options);
     static std::shared_ptr<JK> build_JK(std::shared_ptr<BasisSet> primary, std::shared_ptr<BasisSet> auxiliary,
-                                          Options& options, std::string jk_type);
-
+                                        Options& options, std::string jk_type);
+    static std::shared_ptr<JK> build_JK(std::shared_ptr<BasisSet> primary, std::shared_ptr<BasisSet> auxiliary,
+                                 Options& options, bool do_wK, size_t doubles);
 
     /// Do we need to backtransform to C1 under the hood?
     virtual bool C1() const = 0;
 
-
     // => Knobs <= //
 
-    /**
-     * Certain codes operate in C1 under the hood, so they backtransform matrices
-     * to C1.  This method allows us to override the desymmetrization, in case it's
-     * already been done elsewhere.
-     */
-    void set_allow_desymmetrization(bool t_f) { allow_desymmetrization_ = t_f; }
     /**
      * Cutoff for individual contributions to the J/K matrices
      * Eventually we hope to use Schwarz/MBIE/Density cutoffs,
@@ -392,7 +382,7 @@ public:
      * integral generation objects typically ignore this)
      * @param memory maximum number of doubles to allocate
      */
-    void set_memory(unsigned long int memory) { memory_ = memory; }
+    void set_memory(size_t memory) { memory_ = memory; }
     /**
      * Maximum number of OpenMP threads to use. It may be necessary
      * to clamp this to some value smaller than the total number of
@@ -468,16 +458,21 @@ public:
     // => Accessors <= //
 
     /**
+     * Returns the internal primary basis set.
+     */
+    std::shared_ptr<BasisSet> basisset() { return primary_; }
+
+    /**
      * Reference to C_left queue. It is YOUR job to
      * allocate and fill this object out
      */
-    std::vector<SharedMatrix >& C_left() { return C_left_; }
+    std::vector<SharedMatrix>& C_left() { return C_left_; }
     /**
      * Reference to C_right queue. It is YOUR job to
      * allocate and fill this object out. Only fill
      * C_left if symmetric.
      */
-    std::vector<SharedMatrix >& C_right() { return C_right_; }
+    std::vector<SharedMatrix>& C_right() { return C_right_; }
 
     /**
      * Reference to J results. The reference to the
@@ -487,7 +482,7 @@ public:
      * may be changed in each call of compute();
      * @return J vector of J matrices
      */
-    const std::vector<SharedMatrix >& J() const { return J_; }
+    const std::vector<SharedMatrix>& J() const { return J_; }
     /**
      * Reference to K results. The reference to the
      * std::vector<SharedMatrix > is valid
@@ -496,7 +491,7 @@ public:
      * may be changed in each call of compute();
      * @return K vector of K matrices
      */
-    const std::vector<SharedMatrix >& K() const { return K_; }
+    const std::vector<SharedMatrix>& K() const { return K_; }
     /**
      * Reference to wK results. The reference to the
      * std::vector<SharedMatrix > is valid
@@ -505,7 +500,7 @@ public:
      * may be changed in each call of compute();
      * @return wK vector of wK matrices
      */
-    const std::vector<SharedMatrix >& wK() const { return wK_; }
+    const std::vector<SharedMatrix>& wK() const { return wK_; }
     /**
      * Reference to D results. The reference to the
      * std::vector<SharedMatrix > is valid
@@ -514,7 +509,7 @@ public:
      * may be changed in each call of compute();
      * @return D vector of D matrices
      */
-    const std::vector<SharedMatrix >& D() const { return D_; }
+    const std::vector<SharedMatrix>& D() const { return D_; }
 
     /**
     * Print header information regarding JK
@@ -532,7 +527,6 @@ public:
  * integral technology
  */
 class DiskJK : public JK {
-
     /// Absolute AO index to relative SO index
     int* so2index_;
     /// Absolute AO index to irrep
@@ -553,7 +547,7 @@ class DiskJK : public JK {
     /// Common initialization
     void common_init();
 
-public:
+   public:
     // => Constructors < = //
 
     /**
@@ -582,8 +576,7 @@ public:
  * JK implementation using disk-based
  * integral technology
  */
-class PKJK : public JK {
-
+class PSI_API PKJK : public JK {
     /// The PSIO instance to use for I/O
     std::shared_ptr<PSIO> psio_;
 
@@ -618,7 +611,7 @@ class PKJK : public JK {
     /// Number of so per irrep
     Dimension nsopi_;
 
-public:
+   public:
     // => Constructors < = //
 
     /**
@@ -654,9 +647,7 @@ public:
  * DF_INTS_NUM_THREADS value if this fate befalls you.
  */
 class DirectJK : public JK {
-
-protected:
-
+   protected:
     /// Number of threads for DF integrals TODO: DF_INTS_NUM_THREADS
     int df_ints_num_threads_;
     /// ERI Sieve
@@ -674,15 +665,13 @@ protected:
     virtual void postiterations();
 
     /// Build the J and K matrices for this integral class
-    void build_JK(std::vector<std::shared_ptr<TwoBodyAOInt> >& ints,
-        std::vector<std::shared_ptr<Matrix> >& D,
-        std::vector<std::shared_ptr<Matrix> >& J,
-        std::vector<std::shared_ptr<Matrix> >& K);
+    void build_JK(std::vector<std::shared_ptr<TwoBodyAOInt> >& ints, std::vector<std::shared_ptr<Matrix> >& D,
+                  std::vector<std::shared_ptr<Matrix> >& J, std::vector<std::shared_ptr<Matrix> >& K);
 
     /// Common initialization
     void common_init();
 
-public:
+   public:
     // => Constructors < = //
 
     /**
@@ -726,57 +715,54 @@ public:
  *   the Hartree-Fock code in HF.cc
  *
  */
-class GTFockJK: public JK{
+class GTFockJK : public JK {
    private:
-      ///The actual instance that does the implementing
-      std::shared_ptr<MinimalInterface> Impl_;
-      int NMats_ = 0;
-      
+    /// The actual instance that does the implementing
+    std::shared_ptr<MinimalInterface> Impl_;
+    int NMats_ = 0;
+
    protected:
-      /// Do we need to backtransform to C1 under the hood?
-      virtual bool C1() const { return true; }
-      /// Setup integrals, files, etc
-      virtual void preiterations(){}
-      /// Compute J/K for current C/D
-      virtual void compute_JK();
-      /// Delete integrals, files, etc
-      virtual void postiterations(){}
-      ///I don't fell the need to further clutter the output...
-      virtual void print_header() const{}
+    /// Do we need to backtransform to C1 under the hood?
+    virtual bool C1() const { return true; }
+    /// Setup integrals, files, etc
+    virtual void preiterations() {}
+    /// Compute J/K for current C/D
+    virtual void compute_JK();
+    /// Delete integrals, files, etc
+    virtual void postiterations() {}
+    /// I don't fell the need to further clutter the output...
+    virtual void print_header() const {}
+
    public:
-      /** \brief Your public interface to GTFock
-       *
-       *  \param[in] Primary used by the base JK object, but not
-       *         by GTFock.  Long term, this should be changed,
-       *         but the reality is GTFock under the hood gets
-       *         its basis in the same way as JK::build_JK gets
-       *         Primary, so this shouldn't be an issue
-       *  \param[in] NMats The number of density matrices you are
-       *         passing in and consequently the number of Js and Ks
-       *         you'll be getting back
-       *  \param[in] AreSymm A flag specifying whether the density
-       *         matrices you'll be passing in are symmetric.
-       */
-      GTFockJK(std::shared_ptr<psi::BasisSet> Primary,
-            size_t NMats,
-            bool AreSymm);
-      /** \brief Your interface to GTFock that works well with libfock
-      *   GTFock needs number of densities and symmetric at initialization
-      *   This code calls GTFock once the number of densities was read from jk object
-      */
-      GTFockJK(std::shared_ptr<psi::BasisSet> Primary);
+    /** \brief Your public interface to GTFock
+     *
+     *  \param[in] Primary used by the base JK object, but not
+     *         by GTFock.  Long term, this should be changed,
+     *         but the reality is GTFock under the hood gets
+     *         its basis in the same way as JK::build_JK gets
+     *         Primary, so this shouldn't be an issue
+     *  \param[in] NMats The number of density matrices you are
+     *         passing in and consequently the number of Js and Ks
+     *         you'll be getting back
+     *  \param[in] AreSymm A flag specifying whether the density
+     *         matrices you'll be passing in are symmetric.
+     */
+    GTFockJK(std::shared_ptr<psi::BasisSet> Primary, size_t NMats, bool AreSymm);
+    /** \brief Your interface to GTFock that works well with libfock
+    *   GTFock needs number of densities and symmetric at initialization
+    *   This code calls GTFock once the number of densities was read from jk object
+    */
+    GTFockJK(std::shared_ptr<psi::BasisSet> Primary);
 };
 
 /**
- * Class DFJK
+ * Class DiskDFJK
  *
  * JK implementation using sieved, threaded
  * density-fitted technology
  */
-class DFJK : public JK {
-
-protected:
-
+class PSI_API DiskDFJK : public JK {
+   protected:
     // => DF-Specific stuff <= //
 
     /// Auxiliary basis set
@@ -790,7 +776,7 @@ protected:
     /// Condition cutoff in fitting metric, defaults to 1.0E-12
     double condition_;
     /// File number for (Q|mn) tensor
-    unsigned int unit_;
+    size_t unit_;
     /// Core or disk?
     bool is_core_;
     /// Maximum number of rows to handle at a time
@@ -814,8 +800,8 @@ protected:
 
     SharedMatrix E_left_;
     SharedMatrix E_right_;
-    std::vector<SharedMatrix > C_temp_;
-    std::vector<SharedMatrix > Q_temp_;
+    std::vector<SharedMatrix> C_temp_;
+    std::vector<SharedMatrix> Q_temp_;
 
     // => Required Algorithm-Specific Methods <= //
 
@@ -832,7 +818,7 @@ protected:
     void common_init();
 
     bool is_core() const;
-    unsigned long int memory_temp() const;
+    size_t memory_temp() const;
     int max_rows() const;
     int max_nocc() const;
     void initialize_temps();
@@ -856,7 +842,7 @@ protected:
     virtual void block_wK(double** Qlmnp, double** Qrmnp, int naux);
     virtual void rebuild_wK_disk();
 
-public:
+   public:
     // => Constructors < = //
 
     /**
@@ -867,11 +853,10 @@ public:
      *        structure as this molecule
      * @param auxiliary auxiliary basis set for this system.
      */
-    DFJK( std::shared_ptr<BasisSet> primary,
-       std::shared_ptr<BasisSet> auxiliary);
+    DiskDFJK(std::shared_ptr<BasisSet> primary, std::shared_ptr<BasisSet> auxiliary);
 
     /// Destructor
-    virtual ~DFJK();
+    virtual ~DiskDFJK();
 
     /**
      * Method to provide (ia|ia) integrals for
@@ -895,7 +880,7 @@ public:
      * Which file number should the (Q|mn) integrals go in
      * @param unit Unit number
      */
-    void set_unit(unsigned int unit) { unit_ = unit; }
+    void set_unit(size_t unit) { unit_ = unit; }
     /**
      * What action to take for caching three-index integrals
      * @param val One of NONE, LOAD, or SAVE
@@ -921,9 +906,8 @@ public:
  * JK implementation using
  * cholesky decomposition technology
  */
-class CDJK : public DFJK {
-
-protected:
+class CDJK : public DiskDFJK {
+   protected:
     // the number of cholesky vectors
     long int ncholesky_;
 
@@ -946,7 +930,7 @@ protected:
     */
     virtual void print_header() const;
 
-public:
+   public:
     // => Constructors < = //
 
     /**
@@ -957,57 +941,42 @@ public:
      *        structure as this molecule
      * @param cholesky_tolerance tolerance for cholesky decomposition.
      */
-    CDJK( std::shared_ptr<BasisSet> primary, double cholesky_tolerance);
+    CDJK(std::shared_ptr<BasisSet> primary, double cholesky_tolerance);
 
     /// Destructor
     virtual ~CDJK();
-
 };
 
 /**
- * Class FastDFJK
+ * Class MemDFJK
  *
  * JK implementation using sieved, threaded
  * density-fitted technology
+ * under slightly different paradigm than DiskDFJK
+ * wraps lib3index/DFHelper class
  */
-class FastDFJK : public JK {
+class MemDFJK : public JK {
 
-protected:
-
+   protected:
     // => DF-Specific stuff <= //
+
+    /// This class wraps a DFHelper object
+    std::shared_ptr<DFHelper> dfh_;
 
     /// Auxiliary basis set
     std::shared_ptr<BasisSet> auxiliary_;
-    /// PSIO object
-    std::shared_ptr<PSIO> psio_;
-    /// Cache action for three-index integrals
-    std::string df_ints_io_;
     /// Number of threads for DF integrals
     int df_ints_num_threads_;
     /// Condition cutoff in fitting metric, defaults to 1.0E-12
-    double condition_;
-    /// File number for (Q|mn) tensor
-    unsigned int unit_;
-    /// Core or disk?
-    bool is_core_;
-    /// Sieve, must be static throughout the life of the object
-    std::shared_ptr<ERISieve> sieve_;
-    /// Fitting metric (COULOMB or EWALD) [EWALD is SR]
-    std::string metric_;
-    /// Ewald metric range parameter
-    double theta_;
-    /// Geometric atom domain selection algorithm
-    std::string domains_;
-    /// Flat radius in MHG bump function
-    double bump_R0_;
-    /// Annihilation radius in MHG bump function
-    double bump_R1_;
+    double condition_ = 1.0E-12;
 
     // => Required Algorithm-Specific Methods <= //
 
+    int max_nocc() const;
     /// Do we need to backtransform to C1 under the hood?
     virtual bool C1() const { return true; }
     /// Setup integrals, files, etc
+    /// calls initialize(), JK_blocking
     virtual void preiterations();
     /// Compute J/K for current C/D
     virtual void compute_JK();
@@ -1017,57 +986,20 @@ protected:
     /// Common initialization
     void common_init();
 
-    // => Local three-center integrals <= //
 
-    /// Significant atom pairs (reduced triangular indexing A >= B)
-    std::vector<std::pair<int, int> > atom_pairs_;
-    /// Significant shell pairs (reduced triangular indexing P >= Q)
-    std::vector<std::vector<std::pair<int, int> > > shell_pairs_;
-    /// Auxiliary basis centers for each atom pair
-    std::vector<std::vector<int> > auxiliary_atoms_;
-    /// Modified MHG bump function, by atom pair and auxiliary basis center
-    std::vector<std::vector<double> > bump_atoms_;
-    /// Three-index tensors (pq|A)(A|B)^-1 for each atom pair
-    std::vector<std::shared_ptr<Matrix> > Bpq_;
-
-    /// The DF Z operator
-    std::shared_ptr<Matrix> Z_;
-    /// The DF long-range Z operator
-    std::shared_ptr<Matrix> Z_LR_;
-
-    std::shared_ptr<Matrix> build_Z(double omega);
-    void build_atom_pairs();
-    void build_shell_pairs();
-    void build_auxiliary_partition();
-    void build_Bpq();
-    void bump(std::shared_ptr<Matrix> J,
-              const std::vector<double>& bump_atoms,
-              const std::vector<int>& auxiliary_atoms,
-              bool bump_diagonal);
-    void build_J(std::shared_ptr<Matrix> Z,
-                 const std::vector<std::shared_ptr<Matrix> >& D,
-                 const std::vector<std::shared_ptr<Matrix> >& J);
-    void build_K(std::shared_ptr<Matrix> Z,
-                 const std::vector<std::shared_ptr<Matrix> >& D,
-                 const std::vector<std::shared_ptr<Matrix> >& K);
-
-public:
+  public:
     // => Constructors < = //
 
     /**
      * @param primary primary basis set for this system.
-     *        AO2USO transforms will be built with the molecule
-     *        contained in this basis object, so the incoming
-     *        C matrices must have the same spatial symmetry
-     *        structure as this molecule
      * @param auxiliary auxiliary basis set for this system.
      */
-    FastDFJK( std::shared_ptr<BasisSet> primary,
-       std::shared_ptr<BasisSet> auxiliary);
+    MemDFJK(std::shared_ptr<BasisSet> primary, std::shared_ptr<BasisSet> auxiliary);
 
     /// Destructor
-    virtual ~FastDFJK();
-
+    virtual ~MemDFJK();
+    
+    
     // => Knobs <= //
 
     /**
@@ -1078,236 +1010,14 @@ public:
      *        defaults to 1.0E-12
      */
     void set_condition(double condition) { condition_ = condition; }
-    /**
-     * Metric for FastDF fitting
-     * @param metric COULOMB or EWALD,
-     *       defaults to COULOMB
-     */
-    void set_df_metric(const std::string& metric) { metric_ = metric; }
-    /**
-     * Fitting domain selection algorithm
-     * @param domains DIATOMIC, SPHERES
-     *       defaults to DIATOMIC
-     */
-    void set_df_domains(const std::string domains) { domains_ = domains; }
-    /**
-     * Bump function R0 parameter in a.u. (should be <= R1)
-     * @param R0 defaults to 0.0
-     */
-    void set_df_bump_R0(double R0) { bump_R0_ = R0; }
-    /**
-     * Bump function R1 parameter in a.u. (should be <= R1)
-     * @param R1 defaults to 0.0
-     */
-    void set_df_bump_R1(double R1) { bump_R1_ = R1; }
-    /**
-     * Range-Separation parameter for EWALD metric fitting
-     * @param theta theta ~ 0 is COULOMB, theta ~ INF is OVERLAP,
-     *       defaults to 1.0
-     */
-    void set_df_theta(double theta) { theta_ = theta; }
-    /**
-     * Which file number should the (Q|mn) integrals go in
-     * @param unit Unit number
-     */
-    void set_unit(unsigned int unit) { unit_ = unit; }
-    /**
-     * What action to take for caching three-index integrals
-     * @param val One of NONE, LOAD, or SAVE
-     */
-    void set_df_ints_io(const std::string& val) { df_ints_io_ = val; }
+    
     /**
      * What number of threads to compute integrals on
      * @param val a positive integer
      */
     void set_df_ints_num_threads(int val) { df_ints_num_threads_ = val; }
-
-    // => Accessors <= //
-
-    /**
-    * Print header information regarding JK
-    * type on output file
-    */
-    virtual void print_header() const;
-};
-
-#if 0
-
- // ==> Deprecated codes <== //
-
-/**
- * Class DirectJK
- *
- * JK implementation using sieved, threaded
- * integral-direct technology
- *
- * Note: This class builds a TwoBodyAOInt for each OpenMP
- * thread, for thread safety. This might be a bad idea if
- * you have a high core-to-memory ratio. Clamp the
- * openmp_nthread value if this fate befalls you.
- */
-class DirectJK : public JK {
-
-protected:
-
-    /// Integral objects
-    std::vector<std::shared_ptr<TwoBodyAOInt> > eri_;
-    /// Integral factory (must be retained for Spherical Transforms)
-    std::shared_ptr<IntegralFactory> factory_;
-    /// ERI Sieve
-    std::shared_ptr<ERISieve> sieve_;
-
-    // => Required Algorithm-Specific Methods <= //
-
-    /// Do we need to backtransform to C1 under the hood?
-    virtual bool C1() const { return allow_desymmetrization_; }
-    /// Setup integrals, files, etc
-    virtual void preiterations();
-    /// Compute J/K for current C/D
-    virtual void compute_JK();
-    /// Delete integrals, files, etc
-    virtual void postiterations();
-
-    /// Common initialization
-    void common_init();
-
-public:
-    // => Constructors < = //
-
-    /**
-     * @param primary primary basis set for this system.
-     *        AO2USO transforms will be built with the molecule
-     *        contained in this basis object, so the incoming
-     *        C matrices must have the same spatial symmetry
-     *        structure as this molecule
-     */
-    DirectJK(std::shared_ptr<BasisSet> primary);
-    /// Destructor
-    virtual ~DirectJK();
-
-    // => Accessors <= //
-
-    /**
-    * Print header information regarding JK
-    * type on output file
-    */
-    virtual void print_header() const;
-};
-/**
- * Class PSJK
- *
- * JK implementation using sieved, threaded,
- * range-separated PS technology
- */
-class PSJK : public JK {
-
-protected:
-
-    /// Options reference (needed to build grid)
-    Options& options_;
-    /// Dealiasing basis (if needed)
-    std::shared_ptr<BasisSet> dealias_;
-    /// Number of threads for three-center integrals
-    int df_ints_num_threads_;
-    /// File number for (Q|mn) tensor
-    unsigned int unit_;
-    /// Range separation for integrand smoothing
-    double theta_;
-    /// QUADRATURE, RENORMALIZATION, or DEALIASING
-    std::string dealiasing_;
-    /// PSIO object
-    std::shared_ptr<PSIO> psio_;
-    /// Sieve, must be static throughout the life of the object
-    std::shared_ptr<ERISieve> sieve_;
-    /// Q_m^P matrix
-    SharedMatrix Q_;
-    /// R_m^P matrix
-    SharedMatrix R_;
-    /// Grid definition [P x [x y z w]]
-    SharedMatrix grid_;
-    /// 4-center integrators
-    std::vector<std::shared_ptr<TwoBodyAOInt> > ints_4c_;
-    /// Q R D (for J)
-    SharedVector d_;
-    /// R D (for K)
-    SharedMatrix V_;
-    /// V A (for K)
-    SharedMatrix W_;
-    /// Temporary triangular J
-    SharedVector J_temp_;
-
-    // => Required Algorithm-Specific Methods <= //
-
-    /// Do we need to backtransform to C1 under the hood?
-    virtual bool C1() const { return true; }
-    /// Setup integrals, files, etc
-    virtual void preiterations();
-    /// Compute J/K for current C/D
-    virtual void compute_JK();
-    /// Delete integrals, files, etc
-    virtual void postiterations();
-
-    /// Common initialization
-    void common_init();
-
-    // => Magic <= //
-    void build_QR();
-    void build_Amn_disk(double theta, const std::string& entry);
-    void block_J(double** Qmnp, int Pstart, int nP, const std::vector<SharedMatrix>& J);
-    void block_K(double** Qmnp, int Pstart, int nP, const std::vector<SharedMatrix>& K);
-    void build_JK_SR();
-    void build_JK_LR();
-
-    void build_JK_debug(const std::string& op = "", double theta = 0.0);
-
-    int max_rows();
-
-public:
-
-    // => Constructors < = //
-
-    /**
-     * @param primary primary basis set for this system.
-     *        AO2USO transforms will be built with the molecule
-     *        contained in this basis object, so the incoming
-     *        C matrices must have the same spatial symmetry
-     *        structure as this molecule
-     * @param options, Options reference used to build grid
-     */
-    PSJK(std::shared_ptr<BasisSet> primary,
-        Options& options);
-
-    /// Destructor
-    virtual ~PSJK();
-
-    // => Knobs <= //
-
-    /**
-     * What number of threads to compute integrals on?
-     * @param val a positive integer
-     */
-    void set_df_ints_num_threads(int val) { df_ints_num_threads_ = val; }
-    /**
-     * What value of range-separation parameter for integral smoothing?
-     * @param theta a positive double
-     */
-    void set_theta(double theta) { theta_ = theta; }
-    /**
-     * How to handle the renormalization or dealiasing?
-     * @param type QUADRATURE, RENORMALIZATION, or DEALIASING
-     */
-    void set_dealiasing(const std::string& dealiasing) { dealiasing_ = dealiasing; }
-    /**
-     * Custom dealias basis
-     * @param dealias, new dealias basis
-     */
-    void set_dealias_basis(std::shared_ptr<BasisSet> dealias) { dealias_ = dealias; }
-    /**
-     * Which file number should the (Q|mn) integrals go in
-     * @param unit Unit number
-     */
-    void set_unit(unsigned int unit) { unit_ = unit; }
-
+    
+    
     // => Accessors <= //
 
     /**
@@ -1316,9 +1026,10 @@ public:
     */
     virtual void print_header() const;
 
+    /**
+     * Returns the DFHelper object
+     */
+    std::shared_ptr<DFHelper> dfh() { return dfh_; }
 };
-
-#endif
-
 }
 #endif

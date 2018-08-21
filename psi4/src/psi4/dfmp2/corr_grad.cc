@@ -3,41 +3,48 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
+#include "corr_grad.h"
 
-#include "psi4/libmints/sieve.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/lib3index/3index.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libpsio/psio.h"
 #include "psi4/psifiles.h"
-#include "corr_grad.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
+#include "psi4/liboptions/liboptions.h"
+
+#include "psi4/libmints/molecule.h"
+#include "psi4/libmints/sieve.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/twobody.h"
 #include "psi4/libmints/integral.h"
 #include "psi4/libmints/vector.h"
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -59,7 +66,7 @@ std::shared_ptr<CorrGrad> CorrGrad::build_CorrGrad(std::shared_ptr<BasisSet> pri
 {
     Options& options = Process::environment.options;
 
-    if (options.get_str("SCF_TYPE") == "DF") {
+    if (options.get_str("SCF_TYPE").find("DF") != std::string::npos) {
 
         DFCorrGrad* jk = new DFCorrGrad(primary,auxiliary);
 
@@ -89,9 +96,9 @@ void CorrGrad::common_init()
     bench_ = 0;
 
     memory_ = 32000000L;
-    omp_num_threads_ = 1;
+    nthreads_ = 1;
     #ifdef _OPENMP
-        omp_num_threads_ = omp_get_max_threads();
+        nthreads_ = Process::environment.get_n_threads();
     #endif
 
     cutoff_ = 0.0;
@@ -108,7 +115,7 @@ void DFCorrGrad::common_init()
 {
     df_ints_num_threads_ = 1;
     #ifdef _OPENMP
-        df_ints_num_threads_ = omp_get_max_threads();
+        df_ints_num_threads_ = Process::environment.get_n_threads();
     #endif
     condition_ = 1.0E-12;
     unit_a_ = 105;
@@ -121,7 +128,7 @@ void DFCorrGrad::print_header() const
     if (print_) {
         outfile->Printf( "  ==> DFCorrGrad: Density-Fitted Correlated Gradients <==\n\n");
 
-        outfile->Printf( "    OpenMP threads:    %11d\n", omp_num_threads_);
+        outfile->Printf( "    OpenMP threads:    %11d\n", nthreads_);
         outfile->Printf( "    Integrals threads: %11d\n", df_ints_num_threads_);
         outfile->Printf( "    Memory (MB):       %11ld\n", (memory_ *8L) / (1024L * 1024L));
         outfile->Printf( "    Schwarz Cutoff:    %11.0E\n", cutoff_);
@@ -139,11 +146,11 @@ void DFCorrGrad::compute_gradient()
     // => Set up gradients <= //
     int natom = primary_->molecule()->natom();
     gradients_.clear();
-    gradients_["Coulomb"] = SharedMatrix(new Matrix("Coulomb Gradient",natom,3));
-    gradients_["Exchange"] = SharedMatrix(new Matrix("Exchange Gradient",natom,3));
+    gradients_["Coulomb"] = std::make_shared<Matrix>("Coulomb Gradient",natom,3);
+    gradients_["Exchange"] = std::make_shared<Matrix>("Exchange Gradient",natom,3);
 
     // => Build ERI Sieve <= //
-    sieve_ = std::shared_ptr<ERISieve>(new ERISieve(primary_, cutoff_));
+    sieve_ = std::make_shared<ERISieve>(primary_, cutoff_);
 
     // => Open temp files <= //
     psio_->open(unit_a_, PSIO_OPEN_NEW);
@@ -205,11 +212,11 @@ void DFCorrGrad::build_Amn_terms()
 
     int max_rows;
     int maxP = auxiliary_->max_function_per_shell();
-    ULI row_cost = 0L;
-    row_cost += nso * (ULI) nso;
-    row_cost += nso * (ULI) na;
-    row_cost += na * (ULI) nlr;
-    ULI rows = memory_ / row_cost;
+    size_t row_cost = 0L;
+    row_cost += nso * (size_t) nso;
+    row_cost += nso * (size_t) na;
+    row_cost += na * (size_t) nlr;
+    size_t rows = memory_ / row_cost;
     rows = (rows > naux ? naux : rows);
     rows = (rows < maxP ? maxP : rows);
     max_rows = (int) rows;
@@ -231,9 +238,9 @@ void DFCorrGrad::build_Amn_terms()
 
     // => Temporary Buffers <= //
 
-    SharedVector c = SharedVector(new Vector("c", naux));
+    auto c = std::make_shared<Vector>("c", naux);
     double* cp = c->pointer();
-    SharedVector d = SharedVector(new Vector("d", naux));
+    auto d = std::make_shared<Vector>("d", naux);
     double* dp = d->pointer();
 
     SharedMatrix Amn;
@@ -244,11 +251,11 @@ void DFCorrGrad::build_Amn_terms()
     double** Amip;
     double** Aijp;
 
-    Amn = SharedMatrix(new Matrix("Amn", max_rows, nso * (ULI) nso));
+    Amn = std::make_shared<Matrix>("Amn", max_rows, nso * (size_t) nso);
     Amnp = Amn->pointer();
 
-    Ami = SharedMatrix(new Matrix("Ami", max_rows, nso * (ULI) na));
-    Aij = SharedMatrix(new Matrix("Aij", max_rows, na * (ULI) nlr));
+    Ami = std::make_shared<Matrix>("Ami", max_rows, nso * (size_t) na);
+    Aij = std::make_shared<Matrix>("Aij", max_rows, na * (size_t) nlr);
     Amip = Ami->pointer();
     Aijp = Aij->pointer();
 
@@ -300,7 +307,7 @@ void DFCorrGrad::build_Amn_terms()
 
     // => Integrals <= //
 
-    std::shared_ptr<IntegralFactory> rifactory(new IntegralFactory(auxiliary_, BasisSet::zero_ao_basis_set(), primary_, primary_));
+    auto rifactory = std::make_shared<IntegralFactory>(auxiliary_, BasisSet::zero_ao_basis_set(), primary_, primary_);
     std::vector<std::shared_ptr<TwoBodyAOInt> > eri;
     for (int t = 0; t < df_ints_num_threads_; t++) {
         eri.push_back(std::shared_ptr<TwoBodyAOInt>(rifactory->eri()));
@@ -363,20 +370,20 @@ void DFCorrGrad::build_Amn_terms()
         }
 
         // > (A|mn) D_mn -> c_A < //
-        C_DGEMV('N',np,nso*(ULI)nso,1.0,Amnp[0],nso*(ULI)nso,Dtp[0],1,0.0,&cp[pstart],1);
-        C_DGEMV('N',np,nso*(ULI)nso,1.0,Amnp[0],nso*(ULI)nso,Ptp[0],1,0.0,&dp[pstart],1);
+        C_DGEMV('N',np,nso*(size_t)nso,1.0,Amnp[0],nso*(size_t)nso,Dtp[0],1,0.0,&cp[pstart],1);
+        C_DGEMV('N',np,nso*(size_t)nso,1.0,Amnp[0],nso*(size_t)nso,Ptp[0],1,0.0,&dp[pstart],1);
 
         // > Alpha < //
         if (true) {
             // > (A|mn) C_ni -> (A|mi) < //
-            C_DGEMM('N','N',np*(ULI)nso,na,nso,1.0,Amnp[0],nso,Cap[0],na,0.0,Amip[0],na);
+            C_DGEMM('N','N',np*(size_t)nso,na,nso,1.0,Amnp[0],nso,Cap[0],na,0.0,Amip[0],na);
 
             if (la) {
 
                 // > (A|mi) C_mj -> (A|ij) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int p = 0; p < np; p++) {
-                    C_DGEMM('T','N',na,la,nso,1.0,Amip[p],na,Lap[0],la,0.0,&Aijp[0][p * (ULI) na * la],la);
+                    C_DGEMM('T','N',na,la,nso,1.0,Amip[p],na,Lap[0],la,0.0,&Aijp[0][p * (size_t) na * la],la);
                 }
 
                 // > Stripe < //
@@ -387,9 +394,9 @@ void DFCorrGrad::build_Amn_terms()
             if (ra) {
 
                 // > (A|mi) C_mj -> (A|ij) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int p = 0; p < np; p++) {
-                    C_DGEMM('T','N',na,ra,nso,1.0,Amip[p],na,Rap[0],ra,0.0,&Aijp[0][p * (ULI) na * ra],ra);
+                    C_DGEMM('T','N',na,ra,nso,1.0,Amip[p],na,Rap[0],ra,0.0,&Aijp[0][p * (size_t) na * ra],ra);
                 }
 
                 // > Stripe < //
@@ -402,14 +409,14 @@ void DFCorrGrad::build_Amn_terms()
         if (!restricted) {
 
             // > (A|mn) C_ni -> (A|mi) < //
-            C_DGEMM('N','N',np*(ULI)nso,nb,nso,1.0,Amnp[0],nso,Cbp[0],nb,0.0,Amip[0],na);
+            C_DGEMM('N','N',np*(size_t)nso,nb,nso,1.0,Amnp[0],nso,Cbp[0],nb,0.0,Amip[0],na);
 
             if (lb) {
 
                 // > (A|mi) C_mj -> (A|ij) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int p = 0; p < np; p++) {
-                    C_DGEMM('T','N',nb,lb,nso,1.0,Amip[p],na,Lbp[0],lb,0.0,&Aijp[0][p * (ULI) nb * lb],lb);
+                    C_DGEMM('T','N',nb,lb,nso,1.0,Amip[p],na,Lbp[0],lb,0.0,&Aijp[0][p * (size_t) nb * lb],lb);
                 }
 
                 // > Stripe < //
@@ -420,9 +427,9 @@ void DFCorrGrad::build_Amn_terms()
             if (rb) {
 
                 // > (A|mi) C_mj -> (A|ij) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int p = 0; p < np; p++) {
-                    C_DGEMM('T','N',nb,rb,nso,1.0,Amip[p],na,Rbp[0],rb,0.0,&Aijp[0][p * (ULI) nb * rb],rb);
+                    C_DGEMM('T','N',nb,rb,nso,1.0,Amip[p],na,Rbp[0],rb,0.0,&Aijp[0][p * (size_t) nb * rb],rb);
                 }
 
                 // > Stripe < //
@@ -451,14 +458,14 @@ void DFCorrGrad::build_AB_inv_terms()
 
     // => Fitting Metric Full Inverse <= //
 
-    std::shared_ptr<FittingMetric> metric(new FittingMetric(auxiliary_, true));
+    auto metric = std::make_shared<FittingMetric>(auxiliary_, true);
     metric->form_full_eig_inverse();
     SharedMatrix J = metric->get_metric();
     double** Jp = J->pointer();
 
     // => d_A = (A|B)^{-1} c_B <= //
-    SharedVector c(new Vector("c", naux));
-    SharedVector d(new Vector("d", naux));
+    auto c = std::make_shared<Vector>("c", naux);
+    auto d = std::make_shared<Vector>("d", naux);
     double* cp = c->pointer();
     double* dp = d->pointer();
 
@@ -476,34 +483,34 @@ void DFCorrGrad::build_AB_inv_terms()
 
     if (true) {
         if (la) {
-            fitting_helper(J,unit_a_,"(A|il)",naux,na * (ULI) la, memory_);
+            fitting_helper(J,unit_a_,"(A|il)",naux,na * (size_t) la, memory_);
         }
         if (ra) {
-            fitting_helper(J,unit_a_,"(A|ir)",naux,na * (ULI) ra, memory_);
+            fitting_helper(J,unit_a_,"(A|ir)",naux,na * (size_t) ra, memory_);
         }
     }
 
     if (!restricted) {
         if (lb) {
-            fitting_helper(J,unit_b_,"(A|il)",naux,nb * (ULI) lb, memory_);
+            fitting_helper(J,unit_b_,"(A|il)",naux,nb * (size_t) lb, memory_);
         }
         if (rb) {
-            fitting_helper(J,unit_b_,"(A|ir)",naux,nb * (ULI) rb, memory_);
+            fitting_helper(J,unit_b_,"(A|ir)",naux,nb * (size_t) rb, memory_);
         }
     }
 }
-void DFCorrGrad::fitting_helper(SharedMatrix J, unsigned int file, const std::string& label, unsigned long int naux, unsigned long int nij, unsigned long int memory)
+void DFCorrGrad::fitting_helper(SharedMatrix J, size_t file, const std::string& label, size_t naux, size_t nij, size_t memory)
 {
     int max_cols;
-    ULI effective_memory = memory - 1L * naux * naux;
-    ULI col_cost = 2L * naux;
-    ULI cols = effective_memory / col_cost;
+    size_t effective_memory = memory - 1L * naux * naux;
+    size_t col_cost = 2L * naux;
+    size_t cols = effective_memory / col_cost;
     cols = (cols > nij ? nij : cols);
     cols = (cols < 1L ? 1L : cols);
     max_cols = (int) cols;
 
-    SharedMatrix Aij(new Matrix("Aij", naux, max_cols));
-    SharedMatrix Bij(new Matrix("Bij", naux, max_cols));
+    auto Aij = std::make_shared<Matrix>("Aij", naux, max_cols);
+    auto Bij = std::make_shared<Matrix>("Bij", naux, max_cols);
     double** Aijp = Aij->pointer();
     double** Bijp = Bij->pointer();
     double** Jp = J->pointer();
@@ -515,7 +522,7 @@ void DFCorrGrad::fitting_helper(SharedMatrix J, unsigned int file, const std::st
 
         // > Read < //
         for (int Q = 0; Q < naux; Q++) {
-            next_Aijb = psio_get_address(PSIO_ZERO,sizeof(double) * (Q * (ULI) nij + ij));
+            next_Aijb = psio_get_address(PSIO_ZERO,sizeof(double) * (Q * (size_t) nij + ij));
             psio_->read(file,label.c_str(),(char*) Aijp[Q], sizeof(double) * ncols, next_Aijb, &next_Aijb);
         }
 
@@ -524,7 +531,7 @@ void DFCorrGrad::fitting_helper(SharedMatrix J, unsigned int file, const std::st
 
         // > Stripe < //
         for (int Q = 0; Q < naux; Q++) {
-            next_Aijb = psio_get_address(PSIO_ZERO,sizeof(double) * (Q * (ULI) nij + ij));
+            next_Aijb = psio_get_address(PSIO_ZERO,sizeof(double) * (Q * (size_t) nij + ij));
             psio_->write(file,label.c_str(),(char*) Bijp[Q], sizeof(double) * ncols, next_Aijb, &next_Aijb);
         }
     }
@@ -543,7 +550,7 @@ void DFCorrGrad::build_UV_terms()
 
     bool restricted = (Ca_ == Cb_);
 
-    SharedMatrix V = SharedMatrix(new Matrix("W", naux, naux));
+    auto V = std::make_shared<Matrix>("W", naux, naux);
     double** Vp = V->pointer();
 
     // => V < = //
@@ -551,39 +558,39 @@ void DFCorrGrad::build_UV_terms()
     // > Alpha < //
     if (true) {
         if (la) {
-            UV_helper(V, 1.0, unit_a_, "(A|il)", naux, na * (ULI) la, memory_);
+            UV_helper(V, 1.0, unit_a_, "(A|il)", naux, na * (size_t) la, memory_);
         }
         if (ra) {
-            UV_helper(V,-1.0, unit_a_, "(A|ir)", naux, na * (ULI) ra, memory_);
+            UV_helper(V,-1.0, unit_a_, "(A|ir)", naux, na * (size_t) ra, memory_);
         }
     }
 
     if (!restricted) {
         if (lb) {
-            UV_helper(V, 1.0, unit_b_, "(A|il)", naux, nb * (ULI) lb, memory_);
+            UV_helper(V, 1.0, unit_b_, "(A|il)", naux, nb * (size_t) lb, memory_);
         }
         if (rb) {
-            UV_helper(V,-1.0, unit_b_, "(A|ir)", naux, nb * (ULI) rb, memory_);
+            UV_helper(V,-1.0, unit_b_, "(A|ir)", naux, nb * (size_t) rb, memory_);
         }
     } else {
         V->scale(2.0);
     }
     psio_->write_entry(unit_c_,"V",(char*) Vp[0], sizeof(double) * naux * naux);
 }
-void DFCorrGrad::UV_helper(SharedMatrix V, double c, unsigned int file, const std::string& label, unsigned long int naux, unsigned long int nij, unsigned long int memory)
+void DFCorrGrad::UV_helper(SharedMatrix V, double c, size_t file, const std::string& label, size_t naux, size_t nij, size_t memory)
 {
     int max_rows;
-    ULI effective_memory = memory - 1L * naux * naux;
-    ULI row_cost = 2L * nij;
-    ULI rows = memory_ / row_cost;
+    size_t effective_memory = memory - 1L * naux * naux;
+    size_t row_cost = 2L * nij;
+    size_t rows = memory_ / row_cost;
     rows = (rows > naux ? naux : rows);
     rows = (rows < 1L ? 1L : rows);
     max_rows = (int) rows;
 
     // => Temporary Buffers <= //
 
-    SharedMatrix Aij(new Matrix("Aij", max_rows, nij));
-    SharedMatrix Bij(new Matrix("Bij", max_rows, nij));
+    auto Aij = std::make_shared<Matrix>("Aij", max_rows, nij);
+    auto Bij = std::make_shared<Matrix>("Bij", max_rows, nij);
     double** Aijp = Aij->pointer();
     double** Bijp = Bij->pointer();
     double** Vp = V->pointer();
@@ -620,23 +627,23 @@ void DFCorrGrad::build_AB_x_terms()
     double*  cp;
     double*  dp;
 
-    c = SharedVector(new Vector("c", naux));
+    c = std::make_shared<Vector>("c", naux);
     cp = c->pointer();
     psio_->read_entry(unit_c_, "c", (char*) cp, sizeof(double) * naux);
     //c->print();
 
-    d = SharedVector(new Vector("d", naux));
+    d = std::make_shared<Vector>("d", naux);
     dp = d->pointer();
     psio_->read_entry(unit_c_, "d", (char*) dp, sizeof(double) * naux);
     //d->print();
 
-    V = SharedMatrix(new Matrix("V", naux, naux));
+    V = std::make_shared<Matrix>("V", naux, naux);
     Vp = V->pointer();
     psio_->read_entry(unit_c_, "V", (char*) Vp[0], sizeof(double) * naux * naux);
 
     // => Integrals <= //
 
-    std::shared_ptr<IntegralFactory> rifactory(new IntegralFactory(auxiliary_,BasisSet::zero_ao_basis_set(),auxiliary_,BasisSet::zero_ao_basis_set()));
+    auto rifactory = std::make_shared<IntegralFactory>(auxiliary_,BasisSet::zero_ao_basis_set(),auxiliary_,BasisSet::zero_ao_basis_set());
     std::vector<std::shared_ptr<TwoBodyAOInt> > Jint;
     for (int t = 0; t < df_ints_num_threads_; t++) {
         Jint.push_back(std::shared_ptr<TwoBodyAOInt>(rifactory->eri(1)));
@@ -647,8 +654,8 @@ void DFCorrGrad::build_AB_x_terms()
     std::vector<SharedMatrix> Jtemps;
     std::vector<SharedMatrix> Ktemps;
     for (int t = 0; t < df_ints_num_threads_; t++) {
-        Jtemps.push_back(SharedMatrix(new Matrix("Jtemp", natom, 3)));
-        Ktemps.push_back(SharedMatrix(new Matrix("Ktemp", natom, 3)));
+        Jtemps.push_back(std::make_shared<Matrix>("Jtemp", natom, 3));
+        Ktemps.push_back(std::make_shared<Matrix>("Ktemp", natom, 3));
     }
 
     std::vector<std::pair<int,int> > PQ_pairs;
@@ -771,11 +778,11 @@ void DFCorrGrad::build_Amn_x_terms()
 
     int max_rows;
     int maxP = auxiliary_->max_function_per_shell();
-    ULI row_cost = 0L;
-    row_cost += nso * (ULI) nso;
-    row_cost += nso * (ULI) na;
-    row_cost += na * (ULI) nlr;
-    ULI rows = memory_ / row_cost;
+    size_t row_cost = 0L;
+    row_cost += nso * (size_t) nso;
+    row_cost += nso * (size_t) na;
+    row_cost += na * (size_t) nlr;
+    size_t rows = memory_ / row_cost;
     rows = (rows > naux ? naux : rows);
     rows = (rows < maxP ? maxP : rows);
     max_rows = (int) rows;
@@ -802,11 +809,11 @@ void DFCorrGrad::build_Amn_x_terms()
     SharedVector d;
     double* dp;
 
-    c = SharedVector(new Vector("c", naux));
+    c = std::make_shared<Vector>("c", naux);
     cp = c->pointer();
     psio_->read_entry(unit_c_, "c", (char*) cp, sizeof(double) * naux);
 
-    d = SharedVector(new Vector("d", naux));
+    d = std::make_shared<Vector>("d", naux);
     dp = d->pointer();
     psio_->read_entry(unit_c_, "d", (char*) dp, sizeof(double) * naux);
 
@@ -818,9 +825,9 @@ void DFCorrGrad::build_Amn_x_terms()
     double** Amip;
     double** Aijp;
 
-    Jmn = SharedMatrix(new Matrix("Jmn", max_rows, nso * (ULI) nso));
-    Ami = SharedMatrix(new Matrix("Ami", max_rows, nso * (ULI) na));
-    Aij = SharedMatrix(new Matrix("Aij", max_rows, na * (ULI) nlr));
+    Jmn = std::make_shared<Matrix>("Jmn", max_rows, nso * (size_t) nso);
+    Ami = std::make_shared<Matrix>("Ami", max_rows, nso * (size_t) na);
+    Aij = std::make_shared<Matrix>("Aij", max_rows, na * (size_t) nlr);
     Jmnp = Jmn->pointer();
     Amip = Ami->pointer();
     Aijp = Aij->pointer();
@@ -841,7 +848,7 @@ void DFCorrGrad::build_Amn_x_terms()
 
     // => Integrals <= //
 
-    std::shared_ptr<IntegralFactory> rifactory(new IntegralFactory(auxiliary_, BasisSet::zero_ao_basis_set(), primary_, primary_));
+    auto rifactory = std::make_shared<IntegralFactory>(auxiliary_, BasisSet::zero_ao_basis_set(), primary_, primary_);
     std::vector<std::shared_ptr<TwoBodyAOInt> > eri;
     for (int t = 0; t < df_ints_num_threads_; t++) {
         eri.push_back(std::shared_ptr<TwoBodyAOInt>(rifactory->eri(1)));
@@ -852,8 +859,8 @@ void DFCorrGrad::build_Amn_x_terms()
     std::vector<SharedMatrix> Jtemps;
     std::vector<SharedMatrix> Ktemps;
     for (int t = 0; t < df_ints_num_threads_; t++) {
-        Jtemps.push_back(SharedMatrix(new Matrix("Jtemp", natom, 3)));
-        Ktemps.push_back(SharedMatrix(new Matrix("Ktemp", natom, 3)));
+        Jtemps.push_back(std::make_shared<Matrix>("Jtemp", natom, 3));
+        Ktemps.push_back(std::make_shared<Matrix>("Ktemp", natom, 3));
     }
 
     // => R/U doubling factor <= //
@@ -887,9 +894,9 @@ void DFCorrGrad::build_Amn_x_terms()
                 psio_->read(unit_a_, "(A|il)", (char*) Aijp[0], sizeof(double) * np * na * la, next_Aila, &next_Aila);
 
                 // > (A|ij) C_mi -> (A|mj) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int P = 0; P < np; P++) {
-                    C_DGEMM('N','T',nso,na,la,1.0,Lap[0],la,&Aijp[0][P * (ULI) na * la],la,1.0,Amip[P],na);
+                    C_DGEMM('N','T',nso,na,la,1.0,Lap[0],la,&Aijp[0][P * (size_t) na * la],la,1.0,Amip[P],na);
                 }
             }
 
@@ -899,15 +906,15 @@ void DFCorrGrad::build_Amn_x_terms()
                 psio_->read(unit_a_, "(A|ir)", (char*) Aijp[0], sizeof(double) * np * na * ra, next_Aira, &next_Aira);
 
                 // > (A|ij) C_mi -> (A|mj) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int P = 0; P < np; P++) {
-                    C_DGEMM('N','T',nso,na,ra,-1.0,Rap[0],ra,&Aijp[0][P * (ULI) na * ra],ra,1.0,Amip[P],na);
+                    C_DGEMM('N','T',nso,na,ra,-1.0,Rap[0],ra,&Aijp[0][P * (size_t) na * ra],ra,1.0,Amip[P],na);
                 }
 
             }
 
             // > (A|mj) C_nj -> (A|mn) < //
-            C_DGEMM('N','T',np * (ULI) nso, nso, na, factor, Amip[0], na, Cap[0], na, 0.0, Jmnp[0], nso);
+            C_DGEMM('N','T',np * (size_t) nso, nso, na, factor, Amip[0], na, Cap[0], na, 0.0, Jmnp[0], nso);
         }
 
         // > Beta < //
@@ -921,9 +928,9 @@ void DFCorrGrad::build_Amn_x_terms()
                 psio_->read(unit_b_, "(A|il)", (char*) Aijp[0], sizeof(double) * np * nb * lb, next_Ailb, &next_Ailb);
 
                 // > (A|ij) C_mi -> (A|mj) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int P = 0; P < np; P++) {
-                    C_DGEMM('N','T',nso,nb,lb,1.0,Lbp[0],lb,&Aijp[0][P * (ULI) nb * lb],lb,1.0,Amip[P],na);
+                    C_DGEMM('N','T',nso,nb,lb,1.0,Lbp[0],lb,&Aijp[0][P * (size_t) nb * lb],lb,1.0,Amip[P],na);
                 }
 
             }
@@ -934,15 +941,15 @@ void DFCorrGrad::build_Amn_x_terms()
                 psio_->read(unit_b_, "(A|ir)", (char*) Aijp[0], sizeof(double) * np * nb * rb, next_Airb, &next_Airb);
 
                 // > (A|ij) C_mi -> (A|mj) < //
-                #pragma omp parallel for num_threads(omp_num_threads_)
+                #pragma omp parallel for num_threads(nthreads_)
                 for (int P = 0; P < np; P++) {
-                    C_DGEMM('N','T',nso,nb,rb,-1.0,Rbp[0],rb,&Aijp[0][P * (ULI) nb * rb],rb,1.0,Amip[P],na);
+                    C_DGEMM('N','T',nso,nb,rb,-1.0,Rbp[0],rb,&Aijp[0][P * (size_t) nb * rb],rb,1.0,Amip[P],na);
                 }
 
             }
 
             // > (A|mj) C_nj -> (A|mn) < //
-            C_DGEMM('N','T',np * (ULI) nso, nso, nb, factor, Amip[0], na, Cbp[0], nb, 0.0, Jmnp[0], nso);
+            C_DGEMM('N','T',np * (size_t) nso, nso, nb, factor, Amip[0], na, Cbp[0], nb, 0.0, Jmnp[0], nso);
         }
 
         // > Integrals < //

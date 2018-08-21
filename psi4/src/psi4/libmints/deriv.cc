@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -32,20 +33,24 @@
  *      Author: jturney
  */
 
-#include "psi4/libtrans/integraltransform.h"
-#include "psi4/libdpd/dpd.h"
 #include "psi4/libmints/sointegral_twobody.h"
 #include "psi4/libmints/deriv.h"
-#include "psi4/libparallel/mpi_wrapper.h"
-#include "psi4/libparallel/local.h"
+#include "psi4/libmints/basisset.h"
+#include "psi4/libmints/molecule.h"
 #include "psi4/libmints/vector.h"
 #include "psi4/libmints/factory.h"
 #include "psi4/libmints/sointegral_onebody.h"
+#include "psi4/libmints/mintshelper.h"
+#include "psi4/libtrans/integraltransform.h"
+#include "psi4/libdpd/dpd.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <memory>
+#include <array>
 
 namespace psi {
 
@@ -90,8 +95,6 @@ public:
         for (int i=1; i<nthread; ++i) {
             result[0]->add(result[i]);
         }
-        // Do MPI global summation
-        result[0]->sum();
         delete [] tpdm_buffer_;
         delete [] buffer_sizes_;
     }
@@ -172,8 +175,6 @@ public:
         for (int i=1; i<nthread; ++i) {
             result[0]->add(result[i]);
         }
-        // Do MPI global summation
-        result[0]->sum();
     }
 
     void load_tpdm(size_t /*id*/) {}
@@ -261,8 +262,6 @@ public:
         for (int i=1; i<nthread; ++i) {
             result_vec_[0]->add(result_vec_[i]);
         }
-        // Do MPI global summation
-        result_vec_[0]->sum();
     }
 
     void operator()(int salc, int pabs, int qabs, int rabs, int sabs,
@@ -386,8 +385,6 @@ public:
         // Do summation over threads
         for (int i=1; i<nthread; ++i)
             result[0]->add(result[i]);
-        // Do MPI global summation
-        result[0]->sum();
     }
 
     void operator()(int salc, int pabs, int qabs, int rabs, int sabs,
@@ -434,7 +431,6 @@ Deriv::Deriv(const std::shared_ptr<Wavefunction>& wave,
              bool project_out_rotations)
     : wfn_(wave),
       cdsalcs_(wave->molecule(),
-          wave->matrix_factory(),
           needed_irreps,
           project_out_translations,
           project_out_rotations)
@@ -481,30 +477,22 @@ SharedMatrix Deriv::compute()
     so_eri.set_only_totally_symmetric(true);
 
     // Compute one-electron derivatives.
-    std::vector<SharedMatrix> s_deriv = cdsalcs_.create_matrices("S'");
-    std::vector<SharedMatrix> h_deriv = cdsalcs_.create_matrices("H'");
-
+    std::vector<SharedMatrix> s_deriv = cdsalcs_.create_matrices("S'", *factory_);
     std::shared_ptr<OneBodySOInt> s_int(integral_->so_overlap(1));
-    std::shared_ptr<OneBodySOInt> t_int(integral_->so_kinetic(1));
-    std::shared_ptr<OneBodySOInt> v_int(integral_->so_potential(1));
 
     s_int->compute_deriv1(s_deriv, cdsalcs_);
-    t_int->compute_deriv1(h_deriv, cdsalcs_);
-    v_int->compute_deriv1(h_deriv, cdsalcs_);
 
+    auto mints = std::make_shared<MintsHelper>(wfn_->basisset(), wfn_->options());
     int ncd = cdsalcs_.ncd();
-    SharedVector TPDMcont_vector(new Vector(ncd));
-    SharedVector Xcont_vector(new Vector(ncd));
-    SharedVector Dcont_vector(new Vector(ncd));
+    auto TPDMcont_vector = std::make_shared<Vector>(ncd);
+    auto Xcont_vector = std::make_shared<Vector>(ncd);
+    auto Dcont_vector = std::make_shared<Vector>(ncd);
     SharedVector TPDM_ref_cont_vector;
     SharedVector X_ref_cont_vector;
-    SharedVector D_ref_cont_vector;
-    double *Dcont           = Dcont_vector->pointer();
     double *Xcont           = Xcont_vector->pointer();
     double *TPDMcont        = TPDMcont_vector->pointer();
     double *TPDM_ref_cont   = 0;
     double *X_ref_cont      = 0;
-    double *D_ref_cont      = 0;
 
     if (!wfn_)
         throw("In Deriv: The wavefunction passed in is empty!");
@@ -514,7 +502,7 @@ SharedMatrix Deriv::compute()
     SharedMatrix Db = wfn_->Db();
     SharedMatrix X = wfn_->X();
 
-    // The current wavefunction's reference wavefunction, NULL for SCF/DFT
+    // The current wavefunction's reference wavefunction, nullptr for SCF/DFT
     std::shared_ptr<Wavefunction> ref_wfn = wfn_->reference_wavefunction();
     // Whether the SCF contribution is separate from the correlated terms
     bool reference_separate = (X) && ref_wfn;
@@ -550,26 +538,16 @@ SharedMatrix Deriv::compute()
            the correlated part.  The reference contributions must be harvested from the reference_wavefunction
            member.  If density fitting was used, we don't want to compute two electron contributions here*/
         if (wfn_->density_fitted()) {
-            X_ref_cont_vector    = SharedVector(new Vector(ncd));
-            D_ref_cont_vector    = SharedVector(new Vector(ncd));
-            TPDM_ref_cont_vector = SharedVector(new Vector(ncd));
+            X_ref_cont_vector    = std::make_shared<Vector>(ncd);
+            TPDM_ref_cont_vector = std::make_shared<Vector>(ncd);
             X_ref_cont           = X_ref_cont_vector->pointer();
-            D_ref_cont           = D_ref_cont_vector->pointer();
             TPDM_ref_cont        = TPDM_ref_cont_vector->pointer();
             x_ref_contr_         = factory_->create_shared_matrix("Reference Lagrangian contribution to gradient", natom_, 3);
-            opdm_ref_contr_      = factory_->create_shared_matrix("Reference one-electron contribution to gradient", natom_, 3);
             tpdm_ref_contr_      = factory_->create_shared_matrix("Reference two-electron contribution to gradient", natom_, 3);
 
             // Here we need to extract the reference contributions
             SharedMatrix X_ref  = ref_wfn->Lagrangian();
             SharedMatrix Da_ref = ref_wfn->Da();
-            SharedMatrix Db_ref = ref_wfn->Db();
-
-            for (size_t cd=0; cd < cdsalcs_.ncd(); ++cd) {
-                double temp = Da_ref->vector_dot(h_deriv[cd]);
-                temp += Db_ref->vector_dot(h_deriv[cd]);
-                D_ref_cont[cd] = temp;
-            }
 
             for (size_t cd=0; cd < cdsalcs_.ncd(); ++cd) {
                 double temp = -X_ref->vector_dot(s_deriv[cd]);
@@ -579,12 +557,11 @@ SharedMatrix Deriv::compute()
             if (wfn_->same_a_b_orbs()) {
                 // In the restricted case, the alpha D is really the total D.  Undefine the beta one, so
                 // that the one-electron contribution, computed below, is correct.
-                Db = factory_->create_shared_matrix("NULL");
+                Db = factory_->create_shared_matrix("nullptr");
                 ScfRestrictedFunctor scf_functor(TPDM_ref_cont_vector, Da_ref);
                 ScfAndDfCorrelationRestrictedFunctor functor(Dcont_vector, scf_functor, Da, Da_ref);
                 so_eri.compute_integrals_deriv1(functor);
                 functor.finalize();
-                tpdm_contr_ = wfn_->tpdm_gradient_contribution();
             }
             else
                 throw PSIEXCEPTION("Unrestricted DF gradient not implemented yet.");
@@ -598,16 +575,16 @@ SharedMatrix Deriv::compute()
 
             if ( !deriv_density_backtransformed_ ) {
 
-                // Dial up an integral tranformation object to backtransform the OPDM, TPDM and Lagrangian
+                // Dial up an integral transformation object to backtransform the OPDM, TPDM and Lagrangian
                 std::vector<std::shared_ptr<MOSpace> > spaces;
                 spaces.push_back(MOSpace::all);
                 std::shared_ptr<IntegralTransform> ints_transform = std::shared_ptr<IntegralTransform>(
                             new IntegralTransform(wfn_,
                                                   spaces,
-                                                  wfn_->same_a_b_orbs() ? IntegralTransform::Restricted : IntegralTransform::Unrestricted, // Transformation type
-                                                  IntegralTransform::DPDOnly,    // Output buffer
-                                                  IntegralTransform::QTOrder,    // MO ordering
-                                                  IntegralTransform::None));     // Frozen orbitals?
+                                                  wfn_->same_a_b_orbs() ? IntegralTransform::TransformationType::Restricted : IntegralTransform::TransformationType::Unrestricted, // Transformation type
+                                                  IntegralTransform::OutputType::DPDOnly,    // Output buffer
+                                                  IntegralTransform::MOOrdering::QTOrder,    // MO ordering
+                                                  IntegralTransform::FrozenOrbitals::None));     // Frozen orbitals?
                 dpd_set_default(ints_transform->get_dpd_id());
 
                 // Some codes already presort the tpdm, do not follow this as an example
@@ -617,7 +594,7 @@ SharedMatrix Deriv::compute()
                 ints_transform->backtransform_density();
 
                 Da = factory_->create_shared_matrix("SO-basis OPDM");
-                Db = factory_->create_shared_matrix("NULL");
+                Db = factory_->create_shared_matrix("nullptr");
                 Da->load(_default_psio_lib_, PSIF_AO_OPDM);
                 X = factory_->create_shared_matrix("SO-basis Lagrangian");
                 X->load(_default_psio_lib_, PSIF_AO_OPDM);
@@ -641,13 +618,15 @@ SharedMatrix Deriv::compute()
 
 
     // Now, compute the one electron terms
-    for (size_t cd=0; cd < cdsalcs_.ncd(); ++cd) {
-        double temp = Dcont[cd]; // In the df case, the HxP2 terms are already in here
-        temp += Da->vector_dot(h_deriv[cd]);
-        temp += Db->vector_dot(h_deriv[cd]);
-        Dcont[cd] = temp;
+    auto Dtot_AO = std::make_shared<Matrix>("AO basis total D", wfn_->nso(), wfn_->nso());
+    if(wfn_->density_fitted()){
+         Dtot_AO->add(wfn_->Da_subset("AO"));
+         Dtot_AO->add(wfn_->Db_subset("AO"));
     }
-
+    auto Dtot = Da->clone();
+    Dtot->add(Db);
+    Dtot_AO->remove_symmetry(Dtot, wfn_->aotoso()->transpose());
+    opdm_contr_ = mints->core_hamiltonian_grad(Dtot_AO);
     for (size_t cd=0; cd < cdsalcs_.ncd(); ++cd) {
         double temp = X->vector_dot(s_deriv[cd]);
         Xcont[cd] = -temp;
@@ -658,25 +637,6 @@ SharedMatrix Deriv::compute()
     double **B = st->pointer(0);
     double *cart = new double[3*natom_];
 
-    // B^t g_q^t = g_x^t -> g_q B = g_x
-    C_DGEMM('n', 'n', 1, 3*natom_, cdsalcs_.ncd(),
-            1.0, Dcont, cdsalcs_.ncd(), B[0],
-            3*natom_, 0.0, cart, 3*natom_);
-
-    for (int a=0; a<natom_; ++a)
-        for (int xyz=0; xyz<3; ++xyz)
-            opdm_contr_->set(a, xyz, cart[3*a+xyz]);
-
-    if(D_ref_cont){
-        // B^t g_q^t = g_x^t -> g_q B = g_x
-        C_DGEMM('n', 'n', 1, 3*natom_, cdsalcs_.ncd(),
-                1.0, D_ref_cont, cdsalcs_.ncd(), B[0],
-                3*natom_, 0.0, cart, 3*natom_);
-
-        for (int a=0; a<natom_; ++a)
-            for (int xyz=0; xyz<3; ++xyz)
-                opdm_ref_contr_->set(a, xyz, cart[3*a+xyz]);
-    }
 
     if(TPDM_ref_cont){
         // B^t g_q^t = g_x^t -> g_q B = g_x
@@ -719,7 +679,7 @@ SharedMatrix Deriv::compute()
     }
 
     // Obtain nuclear repulsion contribution from the wavefunction
-    SharedMatrix enuc(new Matrix(molecule_->nuclear_repulsion_energy_deriv1()));
+    auto enuc = std::make_shared<Matrix>(molecule_->nuclear_repulsion_energy_deriv1(wfn_->get_dipole_field_strength()));
 
     // Print things out, after making sure that each component is properly symmetrized
     enuc->symmetrize_gradient(molecule_);
@@ -736,24 +696,19 @@ SharedMatrix Deriv::compute()
         x_ref_contr_->symmetrize_gradient(molecule_);
         x_ref_contr_->print_atom_vector();
     }
-    if (opdm_ref_contr_) {
-        opdm_ref_contr_->symmetrize_gradient(molecule_);
-        opdm_ref_contr_->print_atom_vector();
-    }
     if (tpdm_ref_contr_) {
         tpdm_ref_contr_->symmetrize_gradient(molecule_);
         tpdm_ref_contr_->print_atom_vector();
     }
 
     // Add everything up into a temp.
-    SharedMatrix corr(new Matrix("Correlation contribution to gradient", molecule_->natom(), 3));
+    auto corr = std::make_shared<Matrix>("Correlation contribution to gradient", molecule_->natom(), 3);
     gradient_->add(enuc);
     corr->add(opdm_contr_);
     corr->add(x_contr_);
     corr->add(tpdm_contr_);
     if (reference_separate && !ignore_reference_) {
         gradient_->add(x_ref_contr_);
-        gradient_->add(opdm_ref_contr_);
         gradient_->add(tpdm_ref_contr_);
         SharedMatrix scf_gradient(gradient_->clone());
         scf_gradient->set_name("Reference Gradient");

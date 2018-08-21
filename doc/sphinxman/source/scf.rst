@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -525,7 +526,7 @@ ERI Algorithms
 
 The key difficulty in the SCF procedure is treatment of the four-index ERI
 contributions to the Fock Matrix. A number of algorithms are available in
-|PSIfour| for these terms. The algorithm is selected by the |scf__scf_type|
+|PSIfour| for these terms. The algorithm is selected by the |globals__scf_type|
 keyword, which may be one of the following
 
 PK [:ref:`Default <table:conv_scf>`]
@@ -564,7 +565,27 @@ CD
     vectors is not designed for computations with thousands of basis
     functions.
 
+In some cases the above algorithms have multiple implementations that return
+the same result, but are optimal under different molecules sizes and hardware
+configurations. Psi4 will automatically detect the correct algorithm to run and
+only expert users should manually select the below implementations. The DF
+algorithm has the following two implementations
 
+MEM_DF
+    A DF algorithm optimized around memory layout and is optimal as long as
+    there is sufficient memory to hold the three-index DF tensors in memory. This
+    algorithm may be faster for builds that require disk if SSDs are used.
+DISK_DF
+    A DF algorithm (the default DF algorithm before Psi4 1.2) optimized to
+    minimize Disk IO by sacrificing some performance due to memory layout.
+
+Note that these algorithms have both in-memory and on-disk options, but
+performance penalties up to a factor of 2.5 can be found if the incorrect
+algorithm is chosen. It is therefore highly recommended that the keyword "DF"
+be selected in all cases so that the correct implementation can be selected by
+|PSIfours| internal routines. Expert users can manually switch between MEM_DF and
+DISK_DF; however, they may find documented exceptions during use as several
+post SCF algorithms require a specific implementation.
 
 For some of these algorithms, Schwarz and/or density sieving can be used to
 identify negligible integral contributions in extended systems. To activate
@@ -572,7 +593,7 @@ sieving, set the |scf__ints_tolerance| keyword to your desired cutoff
 (1.0E-12 is recommended for most applications).
 
 We have added the automatic capability to use the extremely fast DF
-code for intermediate convergence of the orbitals, for |scf__scf_type| 
+code for intermediate convergence of the orbitals, for |globals__scf_type| 
 ``DIRECT``. At the moment, the code defaults to cc-pVDZ-JKFIT as the
 auxiliary basis, unless the user specifies |scf__df_basis_scf| manually. For
 some atoms, cc-pVDZ-JKFIT is not defined, so a very large fitting basis of last
@@ -666,9 +687,12 @@ if the instability still exists. For more attempts, set |scf__max_attempts|;
 the default value of 1 is recommended. In case the SCF ends up in the same minimum, modification
 of |scf__follow_step_scale| is recommended over increasing |scf__max_attempts|.
 
+.. note:: Setting the option |scf__stability_analysis| to ``FOLLOW`` is only avalible for UHF. When using 
+   RHF and ROHF instabilities can be checked, but not followed. If you want to attempt to find a lower energy solution
+   you should re-run the calculation with |scf__reference| set to ``UHF``.
 
 The main algorithm available in |PSIfour| is the Direct Inversion algorithm. It can *only*
-work with |scf__scf_type| ``PK``, and it explicitly builds the full electronic Hessian
+work with |globals__scf_type| ``PK``, and it explicitly builds the full electronic Hessian
 matrix before explicitly inverting it. As such, this algorithm is very slow and it should
 be avoided whenever possible. Direct Inversion is automatically invoked if the newer algorithm
 is not available.
@@ -683,15 +707,15 @@ analysis. The capabilities of both algorithms are summarized below:
 
 .. table:: Stability analysis methods available in |PSIfour|
 
-    +------------------+------------------+----------------------------------------------+-----------------+
-    |     Algorithm    | |scf__reference| |     Stability checked                        | |scf__scf_type| |
-    +==================+==================+==============================================+=================+
-    |                  |       RHF        | Internal, External (:math:`\rightarrow` UHF) | PK only         |
-    +                  +------------------+----------------------------------------------+-----------------+
-    | Direct Inversion |       ROHF       | Internal                                     | PK only         |
-    +------------------+------------------+----------------------------------------------+-----------------+
-    |   Davidson       |       UHF        | Internal                                     |   Anything      |
-    +------------------+------------------+----------------------------------------------+-----------------+
+    +------------------+------------------+----------------------------------------------+---------------------------+---------------------+
+    |     Algorithm    | |scf__reference| |     Stability checked                        | |scf__stability_analysis| | |globals__scf_type| |
+    +==================+==================+==============================================+===========================+=====================+
+    |                  |       RHF        | Internal, External (:math:`\rightarrow` UHF) | ``CHECK``                 |   PK only           |
+    +                  +------------------+----------------------------------------------+---------------------------+---------------------+
+    | Direct Inversion |       ROHF       | Internal                                     | ``CHECK``                 |   PK only           |
+    +------------------+------------------+----------------------------------------------+---------------------------+---------------------+
+    |   Davidson       |       UHF        | Internal                                     | ``CHECK`` or ``FOLLOW``   |   Anything          |
+    +------------------+------------------+----------------------------------------------+---------------------------+---------------------+
 
 The best algorithm is automatically selected, *i.e.* Davidson for UHF :math:`\rightarrow` UHF and Direct Inversion otherwise.
 
@@ -732,6 +756,24 @@ Otherwise, if the solver is almost converged but reaches the maximum number of i
 |cphf__solver_maxiter|.
 
 
+.. _`sec:scf-ecps`:
+
+Effective core potentials (ECPs)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+|PSIfour| supports the use of effective core potentials to describe the
+innermost electrons in heavy elements.  If a basis set is designed to use an
+effective core potential, the ECP definition should be simply placed alongside
+the orbital basis set definition, *c.f.* :ref:`sec:basissets-ecps`.  All
+information related to the definition and number of core electrons will
+automatically be detected and no further input is required to use the
+ECP-containing basis set.  See :srcsample:`scf-ecp` and :srcsample:`dfmp2-ecp`
+for examples of computations with ECP-containing basis sets.
+
+.. warning:: Analytic derivatives of ECPs are not yet available.  The HF and DFT derivatives are implemented in a semi-numerical scheme, where numerical ECP gradients are added to analytic SCF gradients.  Analytic gradients for (DF)MP2 are not yet available, but the standard numerical gradients will work correctly.  Fully analytic gradients will be implemented soon.
+
+.. warning:: ECPs have not been tested with projected basis set guesses or with FI-SAPT calculations.  If you require this functionality, please contact the developers on GitHub and/or the `forum <http://forum.psicode.org>`_.
+
 External potentials and QM/MM
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -754,6 +796,19 @@ and the coordinates always use the same units as the geometry specification in
 the regular QM region.  Additional MM molecules may be specified by adding
 extra calls to ``addCharge`` to describe the full MM region.
 
+To run a computation in a constant dipole field, the |scf__perturb_h|,
+|scf__perturb_with| and |scf__perturb_dipole| keywords can be used.  As an
+example, to add a dipole field of magnitude 0.05 a.u. in the y direction and
+0.1 a.u. in the z direction, we can use the following keywords::
+
+    set perturb_h true
+    set perturb_with dipole
+    set perturb_dipole [ 0, 0.05, 0.1 ]
+
+Note that if any specified fields do not fall along a symmetry axis, the
+symmetry of the calculation should be reduced accordingly; if in doubt run the
+calculation in C1 symmetry.  For examples of SCF and MP2 calculations in an
+external field, see :srcsample:`scf7` and :srcsample:`dfmp2-grad5`.
 
 Convergence and Algorithm Defaults
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -762,23 +817,23 @@ Convergence and Algorithm Defaults
 
 .. table:: SCF algorithm and convergence criteria defaults by calculation type [#f1]_
 
-    +--------------------+--------------------+----------------------+----------------------+-----------------+
-    | *Ab Initio* Method | Calculation Type   | |scf__e_convergence| | |scf__d_convergence| | |scf__scf_type| |
-    +====================+====================+======================+======================+=================+
-    | SCF of HF or DFT   | energy             | 6                    | 6                    | DF              |
-    +                    +--------------------+----------------------+----------------------+                 +
-    |                    | optimization       | 8                    | 8                    |                 |
-    +                    +--------------------+----------------------+----------------------+                 +
-    |                    | frequency [#f7]_   | 8                    | 8                    |                 |
-    +--------------------+--------------------+----------------------+----------------------+-----------------+
-    | SCF of post-HF     | energy             | 8                    | 8                    | PK [#f3]_       |
-    +                    +--------------------+----------------------+----------------------+                 +
-    |                    | optimization       | 10                   | 10                   |                 |
-    +                    +--------------------+----------------------+----------------------+                 +
-    |                    | frequency [#f7]_   | 10                   | 10                   |                 |
-    +                    +--------------------+----------------------+----------------------+                 +
-    |                    | CC property [#f2]_ | 10                   | 10                   |                 |
-    +--------------------+--------------------+----------------------+----------------------+-----------------+
+    +--------------------+--------------------+----------------------+----------------------+---------------------+
+    | *Ab Initio* Method | Calculation Type   | |scf__e_convergence| | |scf__d_convergence| | |globals__scf_type| |
+    +====================+====================+======================+======================+=====================+
+    | SCF of HF or DFT   | energy             | 6                    | 6                    | DF                  |
+    +                    +--------------------+----------------------+----------------------+                     +
+    |                    | optimization       | 8                    | 8                    |                     |
+    +                    +--------------------+----------------------+----------------------+                     +
+    |                    | frequency [#f7]_   | 8                    | 8                    |                     |
+    +--------------------+--------------------+----------------------+----------------------+---------------------+
+    | SCF of post-HF     | energy             | 8                    | 8                    | PK [#f3]_           |
+    +                    +--------------------+----------------------+----------------------+                     +
+    |                    | optimization       | 10                   | 10                   |                     |
+    +                    +--------------------+----------------------+----------------------+                     +
+    |                    | frequency [#f7]_   | 10                   | 10                   |                     |
+    +                    +--------------------+----------------------+----------------------+                     +
+    |                    | CC property [#f2]_ | 10                   | 10                   |                     |
+    +--------------------+--------------------+----------------------+----------------------+---------------------+
 
 .. _`table:conv_corl`:
 
@@ -806,7 +861,7 @@ Convergence and Algorithm Defaults
 .. [#f2] This applies to properties computed through the :py:func:`~psi4.property` function.
 
 .. [#f3] Post-HF methods that do not rely upon the usual 4-index AO integrals use a
-   density-fitted SCF reference. That is, for DF-MP2 and SAPT, the default |scf__scf_type| is DF.
+   density-fitted SCF reference. That is, for DF-MP2 and SAPT, the default |globals__scf_type| is DF.
 
 .. [#f4] Note that this table applies to the final convergence criteria for 
    all the post-SCF modules that define a |ccenergy__e_convergence| keyword.

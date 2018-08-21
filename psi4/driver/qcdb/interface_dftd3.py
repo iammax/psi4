@@ -3,37 +3,37 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
 #
 
 """Module with functions that interface with Grimme's DFTD3 code."""
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import re
-import sys
-import math
+import uuid
 import shutil
 import socket
-import random
 import subprocess
 
 try:
@@ -47,39 +47,76 @@ from .dashparam import *
 from .molecule import Molecule
 
 
-def run_dftd3(self, func=None, dashlvl=None, dashparam=None, dertype=None, verbose=False):
-    """Function to call Grimme's dftd3 program (http://toc.uni-muenster.de/DFTD3/)
-    to compute the -D correction of level *dashlvl* using parameters for
-    the functional *func*. The dictionary *dashparam* can be used to supply
-    a full set of dispersion parameters in the absense of *func* or to supply
-    individual overrides in the presence of *func*. Returns energy if *dertype* is 0,
-    gradient if *dertype* is 1, else tuple of energy and gradient if *dertype*
-    unspecified. The dftd3 executable must be independently compiled and found in
-    :envvar:`PATH` or :envvar:`PSIPATH`.
-    *self* may be either a qcdb.Molecule (sensibly) or a psi4.Molecule
-    (works b/c psi4.Molecule has been extended by this method py-side and
-    only public interface fns used) or a string that can be instantiated
-    into a qcdb.Molecule.
+def run_dftd3(mol, func=None, dashlvl=None, dashparam=None, dertype=None, verbose=False):
+    """Compute dispersion correction using Grimme's DFTD3 executable.
 
-    func - functional alias or None
-    dashlvl - functional type d2gr/d3zero/d3bj/d3mzero/d3mbj
-    dashparam - dictionary
-    dertype = derivative level
+    Function to call Grimme's dftd3 program to compute the -D correction
+    of level `dashlvl` using parameters for the functional `func`.
+    `dashparam` can supply a full set of dispersion parameters in the
+    absence of `func` or individual overrides in the presence of `func`.
+
+    The DFTD3 executable must be independently compiled and found in
+    :envvar:`PATH` or :envvar:`PSIPATH`.
+
+    Parameters
+    ----------
+    mol : qcdb.Molecule or psi4.core.Molecule or str
+	    Molecule on which to run dispersion calculation. Both qcdb and
+	    psi4.core Molecule classes have been extended by this method, so
+	    either allowed. Alternately, a string that can be instantiated
+	    into a qcdb.Molecule.
+    func : str or None
+	    Density functional (Psi4, not Turbomole, names) for which to
+	    load parameters from dashcoeff[dashlvl][func]. This is not
+	    passed to DFTD3 and thus may be a dummy or `None`. Any or all
+	    parameters initialized can be overwritten via `dashparam`.
+    dashlvl : {'d2p4', 'd2gr', 'd3zero', 'd3bj', 'd3mzero', d3mbj', 'd', 'd2', 'd3', 'd3m'}
+	    Flavor of a posteriori dispersion correction for which to load
+	    parameters and call procedure in DFTD3. Must be a keys in
+	    dashcoeff dict (or a key in dashalias that resolves to one).
+    dashparam : dict, optional
+	    Dictionary of the same keys as dashcoeff[dashlvl] used to
+	    override any or all values initialized by
+	    dashcoeff[dashlvl][func].
+    dertype : {None, 0, 'none', 'energy', 1, 'first', 'gradient'}, optional
+	    Maximum derivative level at which to run DFTD3. For large
+	    `mol`, energy-only calculations can be significantly more
+	    efficient. Also controls return values, see below.
+    verbose : bool, optional
+        When `True`, additionally include DFTD3 output in output.
+
+    Returns
+    -------
+    energy : float, optional
+        When `dertype` is 0, energy [Eh].
+    gradient : list of lists of floats or psi4.core.Matrix, optional
+        When `dertype` is 1, (nat, 3) gradient [Eh/a0].
+    (energy, gradient) : float and list of lists of floats or psi4.core.Matrix, optional
+        When `dertype` is unspecified, both energy [Eh] and (nat, 3) gradient [Eh/a0].
+
+    Notes
+    -----
+    research site: https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/dft-d3
+    Psi4 mode: When `psi4` the python module is importable at `import qcdb`
+               time, Psi4 mode is activated, with the following alterations:
+               * output goes to output file
+               * gradient returned as psi4.core.Matrix, not list o'lists
+               * scratch is written to randomly named subdirectory of psi scratch
+               * psivar "DISPERSION CORRECTION ENERGY" is set
+               * `verbose` triggered when PRINT keywork of SCF module >=3
 
     """
     # Create (if necessary) and update qcdb.Molecule
-    if isinstance(self, Molecule):
-        # called on a qcdb.Molecule
+    if isinstance(mol, (Molecule, core.Molecule)):
+        # 1st: called on a qcdb.Molecule
+        # 2nd: called on a python export of a psi4.Molecule (py-side through Psi4's driver)
         pass
-    elif isinstance(self, core.Molecule):
-        # called on a python export of a psi4.Molecule (py-side through Psi4's driver)
-        self.create_psi4_string_from_molecule()
-    elif isinstance(self, basestring):
+    elif isinstance(mol, basestring):
         # called on a string representation of a psi4.Molecule (c-side through psi4.Dispersion)
-        self = Molecule(self)
+        mol = Molecule(mol)
     else:
         raise ValidationError("""Argument mol must be psi4string or qcdb.Molecule""")
-    self.update_geometry()
+    mol.update_geometry()
 
     # Validate arguments
     if dertype is None:
@@ -89,13 +126,13 @@ def run_dftd3(self, func=None, dashlvl=None, dashparam=None, dertype=None, verbo
     elif der1st.match(str(dertype)):
         dertype = 1
     elif der2nd.match(str(dertype)):
-        raise ValidationError('Requested derivative level \'dertype\' %s not valid for run_dftd3.' % (dertype))
+        raise ValidationError("""Requested derivative level 'dertype' %s not valid for run_dftd3.""" % (dertype))
     else:
-        raise ValidationError('Requested derivative level \'dertype\' %s not valid for run_dftd3.' % (dertype))
+        raise ValidationError("""Requested derivative level 'dertype' %s not valid for run_dftd3.""" % (dertype))
 
     if dashlvl is not None:
         dashlvl = dashlvl.lower()
-        dashlvl = dash_alias['-' + dashlvl][1:] if ('-' + dashlvl) in dash_alias.keys() else dashlvl
+        dashlvl = get_dispersion_aliases()[dashlvl] if dashlvl in get_dispersion_aliases() else dashlvl
         if dashlvl not in dashcoeff.keys():
             raise ValidationError("""-D correction level %s is not available. Choose among %s.""" % (dashlvl, dashcoeff.keys()))
     else:
@@ -140,9 +177,9 @@ def run_dftd3(self, func=None, dashlvl=None, dashparam=None, dertype=None, verbo
         psio = core.IO.shared_object()
         os.chdir(psioh.get_default_path())
         dftd3_tmpdir = 'psi.' + str(os.getpid()) + '.' + psio.get_default_namespace() + \
-            '.dftd3.' + str(random.randint(0, 99999))
+            '.dftd3.' + str(uuid.uuid4())[:8]
     else:
-        dftd3_tmpdir = os.environ['HOME'] + os.sep + 'dftd3_' + str(random.randint(0, 99999))
+        dftd3_tmpdir = os.environ['HOME'] + os.sep + 'dftd3_' + str(uuid.uuid4())[:8]
     if os.path.exists(dftd3_tmpdir) is False:
         os.mkdir(dftd3_tmpdir)
     os.chdir(dftd3_tmpdir)
@@ -157,10 +194,11 @@ def run_dftd3(self, func=None, dashlvl=None, dashparam=None, dertype=None, verbo
         handle.write(paramcontents)
 
     # Write dftd3_geometry file that supplies geometry to dispersion calc
-    numAtoms = self.natom()
+    numAtoms = mol.natom()
 
     # We seem to have a problem with one atom, force the correct result
     if numAtoms == 1:
+        os.chdir(current_directory)
         dashd = 0.0
         dashdderiv = core.Matrix(1, 3)
 
@@ -172,7 +210,7 @@ def run_dftd3(self, func=None, dashlvl=None, dashparam=None, dertype=None, verbo
             return dashdderiv
 
 
-    geom = self.save_string_xyz()
+    geom = mol.save_string_xyz()
     reals = []
     for line in geom.splitlines():
         lline = line.split()
@@ -233,23 +271,22 @@ def run_dftd3(self, func=None, dashlvl=None, dashparam=None, dertype=None, verbo
                 dashdderiv.append([float(x.replace('D', 'E')) for x in dfile.readline().split()])
         dfile.close()
 
-        if len(dashdderiv) != self.natom():
+        if len(dashdderiv) != mol.natom():
             raise ValidationError('Program dftd3 gradient file has %d atoms- %d expected.' % \
-                (len(dashdderiv), self.natom()))
+                (len(dashdderiv), mol.natom()))
 
     # Prepare results for Psi4
     if isP4regime and dertype != 0:
         core.set_variable('DISPERSION CORRECTION ENERGY', dashd)
-        psi_dashdderiv = core.Matrix(self.natom(), 3)
-        psi_dashdderiv.set(dashdderiv)
+        psi_dashdderiv = core.Matrix.from_list(dashdderiv)
 
     # Print program output to file if verbose
-    if isP4regime:
+    if not verbose and isP4regime:
         verbose = True if core.get_option('SCF', 'PRINT') >= 3 else False
     if verbose:
 
         text = '\n  ==> DFTD3 Output <==\n'
-        text += out
+        text += out.decode('utf-8')
         if dertype != 0:
             with open(derivfile, 'r') as handle:
                 text += handle.read().replace('D', 'E')

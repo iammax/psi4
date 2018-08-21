@@ -2,8 +2,6 @@
 
 
 
-memory 200 mb
-
 molecule eneyne {
 C   0.000000  -0.667578  -2.124659
 C   0.000000   0.667578  -2.124659
@@ -101,4 +99,8 @@ mB.run_dftd3('b3lyp', 'd3bj', {'s6': 1.000, 's8':  0.7875, 'a1':  0.4289, 'a2': 
 eneyne.run_dftd3('b3lyp', 'd3', {'s6': 1.0,  's8': 0.722, 'sr6': 1.217, 'alpha6': 14.0})
 eneyne.run_dftd3('b3lyp', 'd', {'s6': 0.75})
 eneyne.run_dftd3('b3lyp', 'd2', {'s6': 0.75})
+
+set basis_guess sto-3g
+energy('b3lyp-d3bj')
+
 

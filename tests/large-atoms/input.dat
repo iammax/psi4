@@ -1,6 +1,19 @@
 #! Sample with post-Argon atoms !nosample
 
-memory 250 mb
+molecule {
+Ba
+Ba 1 2.0
+units bohr
+}
+
+set {
+  basis def2-sv_p_
+  scf_type df
+  DF_BASIS_SCF def2-sv_p_-jkfit
+}
+
+analytic_grad = gradient('mp2')
+clean()
 
 
 molecule {
@@ -15,28 +28,8 @@ set {
   DF_BASIS_SCF def2-sv_p_-jkfit
 }
 
-gradient('mp2')
-analytic_grad = psi4.get_gradient()
+analytic_grad = gradient('scf')
 clean()
-memory 250 mb
-
-
-molecule {
-Ba
-Ba 1 2.0
-units bohr
-}
-
-set {
-  basis def2-sv_p_
-  scf_type df
-  DF_BASIS_SCF def2-sv_p_-jkfit
-}
-
-gradient('scf')
-analytic_grad = psi4.get_gradient()
-clean()
-memory 250 mb
 
 
 molecule {
@@ -52,7 +45,6 @@ set {
 
 thisenergy = energy('mp2')
 clean()
-memory 250 mb
 
 
 molecule {
@@ -68,7 +60,6 @@ set {
 
 thisenergy = energy('scf')
 clean()
-memory 250 mb
 
 
 molecule {
@@ -85,7 +76,6 @@ set {
 
 thisenergy = energy('mp2')
 clean()
-memory 250 mb
 
 
 molecule {
@@ -102,7 +92,6 @@ set {
 
 thisenergy = energy('scf')
 clean()
-memory 250 mb
 
 
 molecule {
@@ -116,10 +105,8 @@ set {
   scf_type pk
 }
 
-gradient('mp2')
-analytic_grad = psi4.get_gradient()
+analytic_grad = gradient('mp2')
 clean()
-memory 250 mb
 
 
 molecule {
@@ -133,6 +120,5 @@ set {
   scf_type pk
 }
 
-gradient('scf')
-analytic_grad = psi4.get_gradient()
+analytic_grad = gradient('scf')
 clean()

@@ -3,35 +3,39 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
+#include "dcft.h"
+#include "defines.h"
+
+#include "psi4/liboptions/liboptions.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libqt/qt.h"
 #include "psi4/libiwl/iwl.h"
 #include "psi4/libdiis/diismanager.h"
-#include "dcft.h"
-#include "defines.h"
 
 namespace psi{ namespace dcft{
 
@@ -52,8 +56,8 @@ void
 DCFTSolver::gradient_init_RHF()
 {
     // Allocate memory for the global objects
-    aocc_ptau_ = SharedMatrix(new Matrix("MO basis Perturbed Tau (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_));
-    avir_ptau_ = SharedMatrix(new Matrix("MO basis Perturbed Tau (Alpha Virtual)", nirrep_, navirpi_, navirpi_));
+    aocc_ptau_ = std::make_shared<Matrix>("MO basis Perturbed Tau (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_);
+    avir_ptau_ = std::make_shared<Matrix>("MO basis Perturbed Tau (Alpha Virtual)", nirrep_, navirpi_, navirpi_);
 
     // Transform the two-electron integrals to the (VO|OO) and (OV|VV) subspaces in chemists' notation
 
@@ -450,7 +454,7 @@ DCFTSolver::compute_ewdm_odc_RHF()
 
     Matrix aW ("Energy-weighted density matrix (Alpha)", nirrep_, nmopi_, nmopi_);
 
-    SharedMatrix a_opdm (new Matrix("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_));
+    auto a_opdm = std::make_shared<Matrix>("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_);
 
     const int *alpha_corr_to_pitzer = _ints->alpha_corr_to_pitzer();
     int *alpha_pitzer_to_corr = new int[nmo_];
@@ -625,7 +629,7 @@ DCFTSolver::compute_ewdm_odc_RHF()
                 int C = avir_qt[c];
                 int D = bvir_qt[d];
                 double value = 4.0 * G.matrix[h][ab][cd] ;
-                iwl_buf_wrt_val(&AB, A, C, B, D, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, A, C, B, D, value, 0, "outfile", 0);
 
             }
         }
@@ -651,7 +655,7 @@ DCFTSolver::compute_ewdm_odc_RHF()
                 int K = aocc_qt[k];
                 int L = bocc_qt[l];
                 double value = 4.0 * G.matrix[h][ij][kl];
-                iwl_buf_wrt_val(&AB, I, K, J, L, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, K, J, L, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -675,7 +679,7 @@ DCFTSolver::compute_ewdm_odc_RHF()
                 int A = avir_qt[a];
                 int B = bvir_qt[b];
                 double value = 4.0 * G.matrix[h][ij][ab];
-                iwl_buf_wrt_val(&AB, I, A, J, B, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, A, J, B, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -707,7 +711,7 @@ DCFTSolver::compute_ewdm_odc_RHF()
                 int J = bocc_qt[j];
                 int B = avir_qt[b];
                 double value = 1.0 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AB, A, B, I, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, A, B, I, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -731,7 +735,7 @@ DCFTSolver::compute_ewdm_odc_RHF()
                 int J = bocc_qt[j];
                 int B = avir_qt[b];
                 double value = (-2.0) * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AB, I, B, J, A, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AB, I, B, J, A, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);
@@ -796,7 +800,7 @@ DCFTSolver::compute_ewdm_odc_RHF()
                 int J = aocc_qt[j];
                 int B = avir_qt[b];
                 double value = -1.0 * G.matrix[h][ia][jb];
-                iwl_buf_wrt_val(&AA, I, B, A, J, value, 0, "NULL", 0);
+                iwl_buf_wrt_val(&AA, I, B, A, J, value, 0, "outfile", 0);
             }
         }
         global_dpd_->buf4_mat_irrep_close(&G, h);

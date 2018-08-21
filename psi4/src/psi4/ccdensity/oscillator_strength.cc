@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -44,8 +45,6 @@
 #include "Frozen.h"
 #define EXTERN
 #include "globals.h"
-
-using namespace std;
 
 namespace psi { namespace ccdensity {
 #include "psi4/physconst.h"
@@ -131,7 +130,7 @@ void oscillator_strength(SharedWavefunction wfn, struct TD_Params *S)
   /*** Transform the SO dipole integrals to the MO basis ***/
 
   MintsHelper mints(wfn->basisset(), Process::environment.options, 0);
-  vector<SharedMatrix> dipole = mints.so_dipole();
+  std::vector<SharedMatrix> dipole = mints.so_dipole();
   MUX_SO = dipole[0]->to_block_matrix();
   MUY_SO = dipole[1]->to_block_matrix();
   MUZ_SO = dipole[2]->to_block_matrix();
@@ -210,7 +209,7 @@ void oscillator_strength(SharedWavefunction wfn, struct TD_Params *S)
   free_block(MUZ_SO);
 
   outfile->Printf("\n\tOscillator Strength for %d%3s\n",S->root+1,
-          moinfo.labels[S->irrep]);
+          moinfo.labels[S->irrep].c_str());
   outfile->Printf("\t                              X    \t       Y    \t       Z\n");
 
   if((params.ref == 0) || (params.ref == 1)) {

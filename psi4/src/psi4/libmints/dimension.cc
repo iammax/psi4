@@ -3,175 +3,179 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-#include <string.h>
 #include "dimension.h"
+
+#include <algorithm>
+#include <numeric>
+#include <string>
+
 #include "psi4/psi4-dec.h"
-#include <string.h>
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/exception.h"
 
 namespace psi {
 
-Dimension::Dimension()
-    : name_("(empty)")
-{
-}
+Dimension::Dimension() : name_("(empty)") {}
 
-Dimension::Dimension(int n, const std::string &name)
-    : name_(name), blocks_(n,0)
-{
-}
+Dimension::Dimension(int n, const std::string& name) : name_(name), blocks_(n, 0) {}
 
-Dimension::Dimension(const std::vector<int> &v)
-    : blocks_(v)
-{
-}
+Dimension::Dimension(const std::vector<int>& v) : blocks_(v) {}
 
-Dimension::Dimension(const Dimension &other)
-    : name_(other.name_), blocks_(other.blocks_)
-{
-}
+Dimension::Dimension(const Dimension& other) : name_(other.name_), blocks_(other.blocks_) {}
 
-Dimension::~Dimension()
-{
-}
+Dimension::~Dimension() {}
 
-void Dimension::init(int n, const std::string& name)
-{
+void Dimension::init(int n, const std::string& name) {
     name_ = name;
     blocks_.assign(n, 0);
 }
 
-int Dimension::sum() const
-{
-    int s = 0;
-    for (int ni : blocks_){
-        s += ni;
+int Dimension::sum() const { return std::accumulate(blocks_.begin(), blocks_.end(), 0); }
+
+int Dimension::max() const { return *(std::max_element(blocks_.begin(), blocks_.end())); }
+
+void Dimension::zero() { std::fill(blocks_.begin(), blocks_.end(), 0); }
+
+void Dimension::fill(int v) { std::fill(blocks_.begin(), blocks_.end(), v); }
+
+void Dimension::print() const {
+    outfile->Printf("  %s (n = %d): ", name_.c_str(), n());
+    for (int ni : blocks_) {
+        outfile->Printf("%d  ", ni);
     }
-    return s;
+    outfile->Printf("\n");
 }
 
-int Dimension::max() const
-{
-    int s = 0;
-    for (int ni : blocks_){
-        s = std::max(ni, s);
-    }
-    return s;
-}
-
-void Dimension::zero()
-{
-    for (int& ni : blocks_){
-        ni = 0;
-    }
-}
-
-void Dimension::print() const
-{
-    outfile->Printf( "  %s (n = %d): ", name_.c_str(), n());
-    for (int ni : blocks_){
-        outfile->Printf( "%d  ", ni);
-    }
-    outfile->Printf( "\n");
-}
-
-Dimension& Dimension::operator =(const Dimension& other)
-{
+Dimension& Dimension::operator=(const Dimension& other) {
     name_ = other.name_;
     blocks_ = other.blocks_;
     return *this;
 }
 
-Dimension& Dimension::operator =(const int* other)
-{
-    for (int i = 0, maxi = n(); i < maxi; ++i)
-        blocks_[i] = other[i];
+Dimension& Dimension::operator=(const int* other) {
+    for (int i = 0, maxi = n(); i < maxi; ++i) blocks_[i] = other[i];
 
     return *this;
 }
 
-Dimension& Dimension::operator+=(const Dimension& b)
-{
-    if (n() == b.n()){
-        for (int i = 0, maxi = n(); i < maxi; ++i)
-            blocks_[i] += b.blocks_[i];
-    }else{
-        std::string msg = "Dimension operator+=: adding operators of different size ("
-                + std::to_string(n()) + " and " + std::to_string(b.n()) + ")";
+Dimension& Dimension::operator+=(const Dimension& b) {
+    if (n() == b.n()) {
+        for (int i = 0, maxi = n(); i < maxi; ++i) blocks_[i] += b.blocks_[i];
+    } else {
+        std::string msg = "Dimension operator+=: adding operators of different size (" + std::to_string(n()) + " and " +
+                          std::to_string(b.n()) + ")";
         throw PSIEXCEPTION(msg);
     }
 
     return *this;
 }
 
-Dimension& Dimension::operator-=(const Dimension& b)
-{
-    if (n() == b.n()){
-        for (int i = 0, maxi = n(); i < maxi; ++i)
-            blocks_[i] -= b.blocks_[i];
-    }else{
-        std::string msg = "Dimension operator-=: subtracting operators of different size ("
-                + std::to_string(n()) + " and " + std::to_string(b.n()) + ")";
+Dimension& Dimension::operator-=(const Dimension& b) {
+    if (n() == b.n()) {
+        for (int i = 0, maxi = n(); i < maxi; ++i) blocks_[i] -= b.blocks_[i];
+    } else {
+        std::string msg = "Dimension operator-=: subtracting operators of different size (" + std::to_string(n()) +
+                          " and " + std::to_string(b.n()) + ")";
         throw PSIEXCEPTION(msg);
     }
 
     return *this;
 }
 
-bool operator==(const Dimension& a, const Dimension& b) {
-    return (a.blocks_ == b.blocks_);
-}
+PSI_API bool operator==(const Dimension& a, const Dimension& b) { return (a.blocks_ == b.blocks_); }
 
-bool operator!=(const Dimension& a, const Dimension& b) {
-    return !operator==(a, b);
-}
+PSI_API bool operator!=(const Dimension& a, const Dimension& b) { return !operator==(a, b); }
 
-Dimension operator+(const Dimension& a, const Dimension& b) {
+PSI_API Dimension operator+(const Dimension& a, const Dimension& b) {
     Dimension result = a;
-    if (a.n() == b.n()){
-        for (int i = 0, maxi = a.n(); i < maxi; ++i)
-            result[i] += b[i];
-    }else{
-        std::string msg = "Dimension operator+: adding operators of different size ("
-                + std::to_string(a.n()) + " and " + std::to_string(b.n()) + ")";
+    if (a.n() == b.n()) {
+        for (int i = 0, maxi = a.n(); i < maxi; ++i) result[i] += b[i];
+    } else {
+        std::string msg = "Dimension operator+: adding operators of different size (" + std::to_string(a.n()) +
+                          " and " + std::to_string(b.n()) + ")";
         throw PSIEXCEPTION(msg);
     }
 
     return result;
 }
 
-Dimension operator-(const Dimension& a, const Dimension& b) {
+PSI_API Dimension operator-(const Dimension& a, const Dimension& b) {
     Dimension result = a;
-    if (a.n() == b.n()){
-        for (int i = 0, maxi = a.n(); i < maxi; ++i)
-            result[i] -= b[i];
-    }else{
-        std::string msg = "Dimension operator-: subtracting operators of different size ("
-                + std::to_string(a.n()) + " and " + std::to_string(b.n()) + ")";
+    if (a.n() == b.n()) {
+        for (int i = 0, maxi = a.n(); i < maxi; ++i) result[i] -= b[i];
+    } else {
+        std::string msg = "Dimension operator-: subtracting operators of different size (" + std::to_string(a.n()) +
+                          " and " + std::to_string(b.n()) + ")";
         throw PSIEXCEPTION(msg);
     }
     return result;
 }
 
+Slice::Slice(const Dimension& begin, const Dimension& end) : begin_(begin), end_(end) { validate_slice(); }
+
+Slice::Slice(const Slice& other) : begin_(other.begin()), end_(other.end()) { validate_slice(); }
+
+Slice& Slice::operator+=(const Dimension& increment) {
+    begin_ += increment;
+    end_ += increment;
+    validate_slice();
+    return *this;
+}
+
+bool Slice::validate_slice() {
+    bool valid = true;
+    std::string msg;
+    if (begin_.n() != end_.n()) {
+        valid = false;
+        msg = "Invalid Slice: begin and end Dimension objects have different size.";
+        begin_.print();
+        end_.print();
+        throw PSIEXCEPTION(msg);
+    }
+
+    // Check that begin[h] >= 0 and end[h] >= begin[h]
+    for (int h = 0, max_h = begin_.n(); h < max_h; h++) {
+        if (begin_[h] < 0) {
+            valid = false;
+            msg = "Invalid Slice: element " + std::to_string(h) +
+                              " of begin Dimension object is less than zero (" + std::to_string(begin_[h]) + ")";
+            break;
+        }
+        if (end_[h] < begin_[h]) {
+            valid = false;
+            msg = "Invalid Slice: element " + std::to_string(h) +
+                  " of (end - begin) Dimension object is less than zero (" + std::to_string(end_[h] - begin_[h]) + ")";
+            break;
+        }
+    }
+    if (!valid) {
+        begin_.print();
+        end_.print();
+        throw PSIEXCEPTION(msg);
+    }
+    return valid;
+}
 }

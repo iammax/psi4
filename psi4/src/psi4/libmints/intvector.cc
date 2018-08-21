@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,18 +31,18 @@
 #include "psi4/libqt/qt.h"
 #include "matrix.h"
 #include "vector.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 using namespace psi;
 
 IntVector::IntVector() {
-    vector_ = NULL;
-    dimpi_ = NULL;
+    vector_ = nullptr;
+    dimpi_ = nullptr;
     nirrep_ = 0;
     name_ = "";
 }
 
 IntVector::IntVector(const IntVector& c) {
-    vector_ = NULL;
+    vector_ = nullptr;
     nirrep_ = c.nirrep_;
     dimpi_ = new int[nirrep_];
     for (int h=0; h<nirrep_; ++h)
@@ -52,7 +53,7 @@ IntVector::IntVector(const IntVector& c) {
 }
 
 IntVector::IntVector(int nirreps, int *dimpi) {
-    vector_ = NULL;
+    vector_ = nullptr;
     nirrep_ = nirreps;
     dimpi_ = new int[nirrep_];
     for (int h=0; h<nirrep_; ++h)
@@ -60,14 +61,14 @@ IntVector::IntVector(int nirreps, int *dimpi) {
     alloc();
 }
 IntVector::IntVector(int dim) {
-    vector_ = NULL;
+    vector_ = nullptr;
     nirrep_ = 1;
     dimpi_ = new int[nirrep_];
     dimpi_[0] = dim;
     alloc();
 }
 IntVector::IntVector(const std::string& name, int nirreps, int *dimpi) {
-    vector_ = NULL;
+    vector_ = nullptr;
     nirrep_ = nirreps;
     dimpi_ = new int[nirrep_];
     for (int h=0; h<nirrep_; ++h)
@@ -76,7 +77,7 @@ IntVector::IntVector(const std::string& name, int nirreps, int *dimpi) {
     name_ = name;
 }
 IntVector::IntVector(const std::string& name, int dim) {
-    vector_ = NULL;
+    vector_ = nullptr;
     nirrep_ = 1;
     dimpi_ = new int[nirrep_];
     dimpi_[0] = dim;
@@ -122,7 +123,7 @@ void IntVector::release() {
             delete[] (vector_[h]);
     }
     free(vector_);
-    vector_ = NULL;
+    vector_ = nullptr;
 }
 
 void IntVector::copy_from(int **c) {
@@ -175,8 +176,8 @@ void IntVector::set(int *vec) {
 void IntVector::print(std::string out, const char* extra) const {
     int h;
     std::shared_ptr<psi::PsiOutStream> printer=(out=="outfile"?outfile:
-          std::shared_ptr<OutFile>(new OutFile(out)));
-    if (extra == NULL) {
+          std::make_shared<PsiOutStream>(out));
+    if (extra == nullptr) {
         printer->Printf( "\n # %s #\n", name_.c_str());
     } else {
         printer->Printf( "\n # %s %s #\n", name_.c_str(), extra);

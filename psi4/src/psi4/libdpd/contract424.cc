@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,6 +35,7 @@
 #include <cmath>
 #include "psi4/libqt/qt.h"
 #include "dpd.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 namespace psi {
 
@@ -93,7 +95,7 @@ int DPD::contract424(dpdbuf4 *X, dpdfile2 *Y, dpdbuf4 *Z, int sum_X,
 
     if(Ztrans) trans4_init(&Zt, Z);
 
-    /*  if(fabs(beta) > 0.0) dpd_buf4_scm(Z, beta); */
+    /*  if(std::fabs(beta) > 0.0) dpd_buf4_scm(Z, beta); */
     buf4_scm(Z, beta);
 
 #ifdef DPD_DEBUG
@@ -160,7 +162,7 @@ int DPD::contract424(dpdbuf4 *X, dpdfile2 *Y, dpdbuf4 *Z, int sum_X,
         if(incore) {
             /*       dpd_buf4_scm(Z, beta); */
             buf4_mat_irrep_init(Z, hzbuf);
-            if(fabs(beta) > 0.0) buf4_mat_irrep_rd(Z, hzbuf);
+            if(std::fabs(beta) > 0.0) buf4_mat_irrep_rd(Z, hzbuf);
             if(Ztrans) {
                 trans4_mat_irrep_init(&Zt, hzbuf);
                 trans4_mat_irrep_rd(&Zt, hzbuf);
@@ -333,7 +335,7 @@ int DPD::contract424(dpdbuf4 *X, dpdfile2 *Y, dpdbuf4 *Z, int sum_X,
 
                 buf4_mat_irrep_row_zero(Z, hzbuf, pq);
 
-                if(fabs(beta) > 0.0)
+                if(std::fabs(beta) > 0.0)
                     buf4_mat_irrep_row_rd(Z, hzbuf, pq);
 
                 xcount = zcount = 0;

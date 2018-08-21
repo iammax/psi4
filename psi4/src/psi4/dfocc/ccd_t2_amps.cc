@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,14 +32,10 @@
 #include "psi4/libdiis/diismanager.h"
 #include "psi4/libmints/matrix.h"
 
-using namespace std;//Do you even have something from the std namespace?
+namespace psi {
+namespace dfoccwave {
 
-
-namespace psi{ namespace dfoccwave{
-
-void DFOCC::ccd_t2_amps()
-{
-
+void DFOCC::ccd_t2_amps() {
     // defs
     SharedTensor2d K, I, T, Tnew, U, Tau, W, X, Y;
 
@@ -46,12 +43,12 @@ void DFOCC::ccd_t2_amps()
     // X(ia,jb) = \sum_{e} t_ij^ae F_be = \sum_{e} T(ia,je) F_be
     X = SharedTensor2d(new Tensor2d("X (IA|JB)", naoccA, navirA, naoccA, navirA));
     X->contract(false, true, naoccA * navirA * naoccA, navirA, navirA, t2, FabA, 1.0, 0.0);
-    //X->cont424("IAJB", "IAJE", "BE", false, t2, FabA, 1.0, 0.0); // it works
+    // X->cont424("IAJB", "IAJE", "BE", false, t2, FabA, 1.0, 0.0); // it works
 
     // t_ij^ab <= X(ia,jb) + X(jb,a) = 2Xt(ia,jb)
     // X(ia,jb) = -\sum_{m} t_mj^ab F_mi = -\sum_{m} F(m,i) T(ma,jb)
     X->contract(true, false, naoccA, naoccA * navirA * navirA, naoccA, FijA, t2, -1.0, 1.0);
-    //X->cont244("IAJB", "MI", "MAJB", false, FijA, t2, -1.0, 1.0); // it works
+    // X->cont244("IAJB", "MI", "MAJB", false, FijA, t2, -1.0, 1.0); // it works
     X->symmetrize();
 
     // t_ij^ab <= <ij|ab>
@@ -74,11 +71,14 @@ void DFOCC::ccd_t2_amps()
 
     // WabefT2
     if (Wabef_type_ == "AUTO") {
-	if (!do_ppl_hm) ccd_WabefT2();
-	else ccd_WabefT2_high_mem();
-    }
-    else if (Wabef_type_ == "LOW_MEM") ccd_WabefT2();
-    else if (Wabef_type_ == "HIGH_MEM") ccd_WabefT2_high_mem();
+        if (!do_ppl_hm)
+            ccd_WabefT2();
+        else
+            ccd_WabefT2_high_mem();
+    } else if (Wabef_type_ == "LOW_MEM")
+        ccd_WabefT2();
+    else if (Wabef_type_ == "HIGH_MEM")
+        ccd_WabefT2_high_mem();
 
     // Denom
     Tnew = SharedTensor2d(new Tensor2d("New T2 (IA|JB)", naoccA, navirA, naoccA, navirA));
@@ -96,10 +96,10 @@ void DFOCC::ccd_t2_amps()
     Tnew.reset();
 
     // DIIS
-    std::shared_ptr<Matrix> RT2(new Matrix("RT2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> RT2(new Matrix("RT2", naoccA * navirA, naoccA * navirA));
     Tau->to_matrix(RT2);
     Tau.reset();
-    std::shared_ptr<Matrix> T2(new Matrix("T2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> T2(new Matrix("T2", naoccA * navirA, naoccA * navirA));
     t2->to_matrix(T2);
 
     // add entry
@@ -115,7 +115,7 @@ void DFOCC::ccd_t2_amps()
 
     // Form U(ia,jb) = 2*T(ia,jb) - T (ib,ja)
     U = SharedTensor2d(new Tensor2d("U2 (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsd_u2_amps(U,t2);
+    ccsd_u2_amps(U, t2);
 
     // Energy
     K = SharedTensor2d(new Tensor2d("DF_BASIS_CC MO Ints (IA|JB)", naoccA, navirA, naoccA, navirA));
@@ -125,6 +125,7 @@ void DFOCC::ccd_t2_amps()
     K.reset();
     Eccd = Escf + Ecorr;
 
-}// end ccd_t2_amps
+}  // end ccd_t2_amps
 
-}} // End Namespaces
+}  // namespace dfoccwave
+}  // namespace psi

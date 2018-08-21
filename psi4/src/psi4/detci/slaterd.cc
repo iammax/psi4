@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,6 +35,7 @@
 #include <cstdlib> /* was libc.h */
 /* gcc 2.7.0 doesn't like #include <cstring> */
 #include "psi4/detci/slaterd.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 #include "psi4/psi4-dec.h"
 
@@ -50,18 +52,18 @@ extern void common_orbs(int *same_alpha, int *same_beta, int cnt_alpha,
    int *cnt_beta_socc);
 
 
-void SlaterDeterminant::set(unsigned int na, unsigned char *alpoccs,
-      unsigned int nb, unsigned char *betoccs)
+void SlaterDeterminant::set(size_t na, unsigned char *alpoccs,
+      size_t nb, unsigned char *betoccs)
 {
    int i;
 
    if (nalp_ != na) {
-      if (Occs_[0] != NULL) free(Occs_[0]);
+      if (Occs_[0] != nullptr) free(Occs_[0]);
       Occs_[0] = (unsigned char *) malloc (sizeof(unsigned char) * na);
       nalp_ = na;
       }
    if (nbet_ != nb) {
-      if (Occs_[1] != NULL) free(Occs_[1]);
+      if (Occs_[1] != nullptr) free(Occs_[1]);
       Occs_[1] = (unsigned char *) malloc (sizeof(unsigned char) * nb);
       nbet_ = nb;
       }
@@ -134,11 +136,11 @@ void SlaterDeterminant::print_config()
 SlaterDeterminant& SlaterDeterminant::operator=(const SlaterDeterminant& s)
 {
    if (nalp_ != s.nalp_) {
-      if (Occs_[0] != NULL) free(Occs_[0]);
+      if (Occs_[0] != nullptr) free(Occs_[0]);
       Occs_[0] = (unsigned char *) malloc (sizeof(unsigned char) * s.nalp_);
       }
    if (nbet_ != s.nbet_) {
-      if (Occs_[1] != NULL) free(Occs_[1]);
+      if (Occs_[1] != nullptr) free(Occs_[1]);
       Occs_[1] = (unsigned char *) malloc (sizeof(unsigned char) * s.nbet_);
       }
    set(s.nalp_, s.Occs_[0], s.nbet_, s.Occs_[1]);

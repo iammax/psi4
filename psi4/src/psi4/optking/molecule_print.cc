@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -38,7 +39,7 @@
 #include "linear_algebra.h"
 #include "atom_data.h"
 #include "psi4/optking/physconst.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "print.h"
 #define EXTERN
 #include "globals.h"
@@ -52,8 +53,6 @@
 #endif
 
 namespace opt {
-
-using namespace std;
 
 void MOLECULE::print_geom_out(void) {
 #if defined(OPTKING_PACKAGE_QCHEM)
@@ -80,7 +79,7 @@ void MOLECULE::print_geom_out_irc(void) {
 // This function is only used for an optional trajectory file.
 // The awkward itershift is to decrement in the initial geometry to "iteration 0"
 void MOLECULE::print_xyz(int iter_shift) {
-  FILE *qc_fp = NULL;
+  FILE *qc_fp = nullptr;
 
 #if defined(OPTKING_PACKAGE_QCHEM)
   qc_fp = fopen("geoms.xyz", "a");
@@ -96,7 +95,7 @@ void MOLECULE::print_xyz(int iter_shift) {
 }
 
 void MOLECULE::print_xyz_irc(int point, bool forward) {
-  FILE *qc_fp = NULL;
+  FILE *qc_fp = nullptr;
 
   if(forward) {
 #if defined(OPTKING_PACKAGE_QCHEM)

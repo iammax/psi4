@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,19 +32,21 @@
 #include "psi4/psi4-dec.h"
 
 #include "psi4/libmints/vector3.h"
+#include "psi4/libmints/typedefs.h"
+
+#include <map>
+#include <vector>
 
 namespace psi {
 
-class PSIO;
 class BasisSet;
 class Matrix;
 class Vector;
-class IntVector;
-class Vector3;
 class BasisExtents;
 class BlockOPoints;
 class RadialGrid;
 class SphericalGrid;
+class Options;
 
 // This is an auxiliary structure used internally by the grid-builder class.
 // Apparently, for performance reasons, it is not good for the final molecular grid
@@ -132,8 +135,8 @@ public:
         const std::vector<std::vector<int> >&    Ls); // Spherical orders, per atom
 
     /// Print information about the grid
-    void print(std::string OutFileRMR = "outfile", int print = 2) const;
-    void print_details(std::string OutFileRMR = "outfile", int print = 2) const;
+    void print(std::string out_fname = "outfile", int print = 2) const;
+    void print_details(std::string out_fname = "outfile", int print = 2) const;
 
     /// Orientation matrix
     std::shared_ptr<Matrix> orientation() const { return orientation_; }
@@ -181,18 +184,12 @@ protected:
 
     /// Master builder methods
     void buildGridFromOptions();
-    void buildGridFromFile();
 
 public:
 
     /// Constructor to use for autogeneration
     PseudospectralGrid(std::shared_ptr<Molecule> molecule,
                        std::shared_ptr<BasisSet> primary,
-                       Options& options);
-    /// Construtor to use for semiautomatic generation with grid file
-    PseudospectralGrid(std::shared_ptr<Molecule> molecule,
-                       std::shared_ptr<BasisSet> primary,
-                       const std::string& filename,
                        Options& options);
     virtual ~PseudospectralGrid();
 
@@ -204,15 +201,17 @@ protected:
     /// The primary basis
     std::shared_ptr<BasisSet> primary_;
     /// Master builder methods
-    void buildGridFromOptions();
+    void buildGridFromOptions(std::map<std::string, int> int_opts_map,
+                              std::map<std::string, std::string> opts_map);
     /// The Options object
     Options& options_;
 
 public:
-    DFTGrid(std::shared_ptr<Molecule> molecule,
-            std::shared_ptr<BasisSet> primary,
-            Options& options);
-    virtual ~DFTGrid();
+    DFTGrid(std::shared_ptr<Molecule> molecule, std::shared_ptr<BasisSet> primary, Options& options);
+    DFTGrid(std::shared_ptr<Molecule> molecule, std::shared_ptr<BasisSet> primary,
+         std::map<std::string, int> int_opts_map, std::map<std::string, std::string> opts_map,
+         Options& options);
+virtual ~DFTGrid();
 };
 
 class RadialGrid {
@@ -265,7 +264,7 @@ public:
     double* w() const { return w_; }
 
     /// Reflection
-    void print(std::string OutFileRMR = "outfile", int level = 1) const;
+    void print(std::string out_fname = "outfile", int level = 1) const;
 };
 
 class SphericalGrid {
@@ -294,18 +293,10 @@ protected:
 
     // ==> Unique Lebedev Grids (statically stored) <== //
 
-    /// Unique Lebedev grids, accessed by number of points
-    static std::map<int, std::shared_ptr<SphericalGrid> > lebedev_npoints_;
-    /// Unique Lebedev grids, accessed by order (integrating to 2 * order + 1)
-    static std::map<int, std::shared_ptr<SphericalGrid> > lebedev_orders_;
     /// Grid npoints to order map
     static std::map<int, int> lebedev_mapping_;
     /// Initialize the above arrays with the unique Lebedev grids
     static void initialize_lebedev();
-    /// Build a Lebedev grid given a valid number of points
-    static std::shared_ptr<SphericalGrid> build_lebedev(int npoints);
-    /// Perform Lebedev grid reccurence
-    static int lebedev_reccurence(int type, int start, double a, double b, double v, SphericalGrid* leb);
     /// Print valid Lebedev grids and error out (throws)
     static void lebedev_error();
 
@@ -323,9 +314,6 @@ public:
     virtual ~SphericalGrid();
 
     /// Master build routines
-    static std::shared_ptr<SphericalGrid> build_npoints(const std::string& scheme, int npoints);
-    static std::shared_ptr<SphericalGrid> build_order(const std::string& scheme, int order);
-    /// Hack build routine (TODO: Remove ASAP)
     static std::shared_ptr<SphericalGrid> build(const std::string& scheme, int npoints, const MassPoint* points);
 
     // ==> Accessors <== //
@@ -351,18 +339,9 @@ public:
     double* theta() const { return theta_; }
 
     /// Reflection
-    void print(std::string OutFileRMR = "outfile", int level = 1) const;
+    void print(std::string out_fname = "outfile", int level = 1) const;
 
-    // ==> Unique Lebedev Grids (statically stored) <== //
 
-    /// Unique Lebedev grids, accessed by number of points
-    static std::map<int, std::shared_ptr<SphericalGrid> >& lebedev_npoints();
-    /// Unique Lebedev grids, accessed by order (integrating to 2 * order + 1)
-    static std::map<int, std::shared_ptr<SphericalGrid> >& lebedev_orders();
-    /// Next largest valid Lebedev grid npoints, or -1 if guess is larger than biggest Lebedev grid
-    static int lebedev_next_npoints(int npoints_guess);
-    /// Next largest valid Lebedev grid order, or -1 if guess is larger than biggest Lebedev grid
-    static int lebedev_next_order(int order_guess);
 };
 
 class BlockOPoints {
@@ -370,6 +349,13 @@ class BlockOPoints {
 protected:
     /// number of points in this block
     int npoints_;
+
+    /// Data holders if requested
+    SharedVector xvec_;
+    SharedVector yvec_;
+    SharedVector zvec_;
+    SharedVector wvec_;
+
     /// Pointer to x (does not own)
     double* x_;
     /// Pointer to y (does not own)
@@ -396,6 +382,8 @@ protected:
     void bound();
 
 public:
+    BlockOPoints(SharedVector x, SharedVector y, SharedVector z, SharedVector w,
+                 std::shared_ptr<BasisExtents> extents);
     BlockOPoints(int npoints, double* x, double* y, double* z, double* w,
         std::shared_ptr<BasisExtents> extents);
     virtual ~BlockOPoints();
@@ -406,7 +394,7 @@ public:
     /// Number of grid points
     int npoints() const { return npoints_; }
     /// Print a trace of this BlockOPoints
-    void print(std::string OutFileRMR = "outfile", int print = 2);
+    void print(std::string out_fname = "outfile", int print = 2);
 
     /// The x points. You do not own this
     double* x() const { return x_; }
@@ -442,7 +430,7 @@ public:
     virtual ~BasisExtents();
 
     /// Print a trace of these extents
-    void print(std::string OutFileRMR = "outfile");
+    void print(std::string out_fname = "outfile");
     /// Reset delta and recompute extents
     void set_delta(double delta) { delta_ = delta; computeExtents(); }
 

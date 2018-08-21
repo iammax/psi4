@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,14 +30,13 @@
 #define _psi_src_lib_libmints_vector_h
 
 #include "psi4/libmints/dimension.h"
+#include "psi4/libmints/typedefs.h"
 
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
 #include <iterator>
 #include <memory>
-
-#include "psi4/pybind11.h"
 
 namespace psi {
 
@@ -45,7 +45,7 @@ class Matrix;
 class VectorIterator;
 
 /*! \ingroup MINTS */
-class Vector
+class PSI_API Vector
 {
 protected:
     /// Actual data, of size dimpi_.sum()
@@ -107,7 +107,7 @@ public:
     /**
      * Convenient creation function return SharedMatrix
      */
-    static std::shared_ptr<Vector> create(const std::string &name,
+    static SharedVector create(const std::string &name,
                                           const Dimension &dim);
 
     void init(int nirrep, int *dimpi);
@@ -145,43 +145,34 @@ public:
     void add(const std::vector<double> &rhs);
 
     /// Adds other vector to this
-    void add(const std::shared_ptr<Vector> &other) {
-        for (int h = 0; h < nirrep_; ++h) {
-            for (int m = 0; m < dimpi_[h]; ++m) {
-                vector_[h][m] += other->vector_[h][m];
-            }
-        }
-    }
+    void add(const SharedVector &other);
+    void add(const Vector &other);
 
     /// Subtracts other vector from this
-    void subtract(const std::shared_ptr<Vector> &other) {
-        for (int h = 0; h < nirrep_; ++h) {
-            for (int m = 0; m < dimpi_[h]; ++m) {
-                vector_[h][m] -= other->vector_[h][m];
-            }
-        }
-    }
+    void subtract(const SharedVector &other);
+    void subtract(const Vector &other);
+
+    void axpy(double scale, const SharedVector &other);
+    void axpy(double scale, const Vector &other);
 
     /// Zeros the vector out
     void zero();
 
-    /// Adds other vector to this
-    void add(const Vector &other) {
-        for (int h = 0; h < nirrep_; ++h) {
-            for (int m = 0; m < dimpi_[h]; ++m) {
-                vector_[h][m] += other.vector_[h][m];
-            }
-        }
-    }
+    /**
+     * Get a vector block
+     *
+     * @param slice Vector slice
+     * @return SharedVector object
+     */
+    SharedVector get_block(const Slice& slice);
 
-    /// Subtracts other vector from this
-    void subtract(const Vector &other) {
-        for (int h = 0; h < nirrep_; ++h) {
-            for (int m = 0; m < dimpi_[h]; ++m) {
-                vector_[h][m] -= other.vector_[h][m];
-            }
-        }
-    }
+    /**
+     * Set a vector block
+     *
+     * @param slice Vector slice
+     * @param block the SharedVector object block to set
+     */
+    void set_block(const Slice& slice,SharedVector block);
 
     double &operator()(int i) { return vector_[0][i]; }
 
@@ -191,17 +182,8 @@ public:
 
     const double &operator[](int i) const { return vector_[0][i]; }
 
-    double pyget(const py::tuple &key);
-
-    void pyset(const py::tuple &key, double value);
-
-    double pyget(int key);
-
-    void pyset(int key, double value);
-
     /// Returns a copy of the vector_
     double *to_block_vector();
-
 
     /// Returns the dimension per irrep h
     int dim(int h = 0) const { return dimpi_[h]; }
@@ -233,7 +215,7 @@ public:
      * @param outfile File point to use, defaults to Psi4's outfile.
      * @param extra When printing the name of the 'extra' will be printing after the name.
      */
-    void print(std::string outfile = "outfile", const char *extra = NULL) const;
+    void print(std::string outfile = "outfile", const char *extra = nullptr) const;
 
     /// Copies rhs to this
     void copy(const Vector *rhs);
@@ -245,25 +227,17 @@ public:
     void gemv(bool transa, double alpha, Matrix *A, Vector *X, double beta);
 
     /// Vector dot product
+    double vector_dot(const SharedVector &other);
+    double vector_dot(const Vector &other);
     double dot(Vector *X);
 
     /// Vector norm
     double norm();
+    double sum_of_squares();
+    double rms();
 
     /// Scale the elements of the vector
     void scale(const double &sc);
-
-    // Serializable pure virtual functions:
-    void send();
-
-    void recv();
-
-    void bcast(int broadcaster);
-
-    /**
-     * Performs element-by-element sum of all data from all nodes.
-     */
-    void sum();
 
     typedef std::vector<double>::iterator iterator;
     typedef std::vector<double>::const_iterator const_iterator;
@@ -311,7 +285,6 @@ public:
     */
     void set_numpy_shape(std::vector<int> shape) { numpy_shape_ = shape; }
     std::vector<int> numpy_shape() { return numpy_shape_; }
-    std::vector<py::buffer_info> array_interface();
 
     friend class Matrix;
 };
@@ -432,7 +405,7 @@ public:
      * @param outfile File point to use, defaults to Psi4's outfile.
      * @param extra When printing the name of the 'extra' will be printing after the name.
      */
-    void print(std::string outfile = "outfile", const char *extra = NULL) const;
+    void print(std::string outfile = "outfile", const char *extra = nullptr) const;
 
     /// Copies rhs to this
     void copy(const IntVector *rhs);
@@ -442,27 +415,6 @@ public:
 
     friend class VectorIterator;
 };
-
-//class VectorIterator : public std::iterator<std::forward_iterator_tag, double>
-//{
-//    pointer v_;
-
-//public:
-//    VectorIterator(pointer v) : v_(v) {}
-
-//    VectorIterator(const VectorIterator& mit) : v_(mit.v_) {}
-
-//    VectorIterator& operator++() {v_++; return *this;}  // prefix (++a)
-//    VectorIterator operator++(int) { VectorIterator tmp(*this); operator++(); return tmp; } // suffix (a++)
-
-//    bool operator==(const VectorIterator& rhs) { return v_ == rhs.v_; }
-//    bool operator!=(const VectorIterator& rhs) { return v_ != rhs.v_; }
-
-//    reference operator*() { return *v_; }
-//};
-
-typedef std::shared_ptr <Vector> SharedVector;
-typedef std::shared_ptr <IntVector> SharedIntVector;
 
 }
 

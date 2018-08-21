@@ -3,35 +3,41 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
+
+#include "dcft.h"
+#include "defines.h"
 
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libqt/qt.h"
 #include "psi4/libiwl/iwl.h"
 #include "psi4/libdiis/diismanager.h"
-#include "dcft.h"
-#include "defines.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/liboptions/liboptions.h"
+
+#include <cmath>
 
 namespace psi{ namespace dcft{
 
@@ -89,11 +95,11 @@ DCFTSolver::run_simult_dcft_oo()
 
             build_DF_tensors_UHF();
 
-            SharedMatrix mo_h_A = SharedMatrix(new Matrix("MO-based H Alpha", nirrep_, nmopi_, nmopi_));
+            auto mo_h_A = std::make_shared<Matrix>("MO-based H Alpha", nirrep_, nmopi_, nmopi_);
             mo_h_A->copy(so_h_);
             mo_h_A->transform(Ca_);
 
-            SharedMatrix mo_h_B = SharedMatrix(new Matrix("MO-based H Beta", nirrep_, nmopi_, nmopi_));
+            auto mo_h_B = std::make_shared<Matrix>("MO-based H Beta", nirrep_, nmopi_, nmopi_);
             mo_h_B->copy(so_h_);
             mo_h_B->transform(Cb_);
 
@@ -129,7 +135,7 @@ DCFTSolver::run_simult_dcft_oo()
         build_cumulant_intermediates();
         // Compute the residuals for density cumulant equations
         cumulant_convergence_ = compute_cumulant_residual();
-        if (fabs(cumulant_convergence_) > 100.0) throw PSIEXCEPTION("DCFT density cumulant equations diverged");
+        if (std::fabs(cumulant_convergence_) > 100.0) throw PSIEXCEPTION("DCFT density cumulant equations diverged");
         // Check convergence for density cumulant iterations
         cumulantDone_ = cumulant_convergence_ < cumulant_threshold_;
         // Update density cumulant tensor
@@ -142,7 +148,7 @@ DCFTSolver::run_simult_dcft_oo()
         orbitals_convergence_ = compute_orbital_residual();
         orbitalsDone_ = orbitals_convergence_ < orbitals_threshold_;
         // Check convergence of the total DCFT energy
-        energyConverged_ = fabs(old_total_energy_ - new_total_energy_) < energy_threshold_;
+        energyConverged_ = std::fabs(old_total_energy_ - new_total_energy_) < energy_threshold_;
         // Compute the orbital rotation step using Jacobi method
         compute_orbital_rotation_jacobi();
         if(orbitals_convergence_ < diis_start_thresh_ && cumulant_convergence_ < diis_start_thresh_){
@@ -262,7 +268,7 @@ DCFTSolver::compute_orbital_residual() {
         for(int i = 0; i < naoccpi_[h]; ++i){
             for(int a = 0; a < navirpi_[h]; ++a){
                 double value = 2.0 * (Xia.matrix[h][i][a] - Xai.matrix[h][a][i]);
-                maxGradient = (fabs(value) > maxGradient) ? fabs(value) : maxGradient;
+                maxGradient = (std::fabs(value) > maxGradient) ? std::fabs(value) : maxGradient;
                 orbital_gradient_a_->set(h, i, a + naoccpi_[h], value);
                 orbital_gradient_a_->set(h, a + naoccpi_[h], i, (-1.0) * value);
             }
@@ -285,7 +291,7 @@ DCFTSolver::compute_orbital_residual() {
         for(int i = 0; i < nboccpi_[h]; ++i){
             for(int a = 0; a < nbvirpi_[h]; ++a){
                 double value = 2.0 * (Xia.matrix[h][i][a] - Xai.matrix[h][a][i]);
-                maxGradient = (fabs(value) > maxGradient) ? fabs(value) : maxGradient;
+                maxGradient = (std::fabs(value) > maxGradient) ? std::fabs(value) : maxGradient;
                 orbital_gradient_b_->set(h, i, a + nboccpi_[h], value);
                 orbital_gradient_b_->set(h, a + nboccpi_[h], i, (-1.0) * value);
             }
@@ -930,8 +936,8 @@ DCFTSolver::rotate_orbitals()
     dcft_timer_on("DCFTSolver::rotate_orbitals()");
 
     // Initialize the orbital rotation matrix
-    SharedMatrix U_a(new Matrix("Orbital rotation matrix (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix U_b(new Matrix("Orbital rotation matrix (Beta)", nirrep_, nmopi_, nmopi_));
+    auto U_a = std::make_shared<Matrix>("Orbital rotation matrix (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto U_b = std::make_shared<Matrix>("Orbital rotation matrix (Beta)", nirrep_, nmopi_, nmopi_);
 
     // Compute the orbital rotation matrix and rotate the orbitals
 

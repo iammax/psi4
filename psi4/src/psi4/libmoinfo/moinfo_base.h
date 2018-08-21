@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,10 +34,10 @@
     \brief   This class stores all the basic info regarding MOs
 */
 
-#define PSI_NULL(args) args = NULL;
-#define PSI_FREE(args) if(args != NULL) free(args);
-#define PSI_DELETE(args) if(args != NULL) delete args;
-#define PSI_DELETE_ARRAY(args) if(args != NULL) delete[] args;
+#define PSI_nullptr(args) args = nullptr;
+#define PSI_FREE(args) if(args != nullptr) free(args);
+#define PSI_DELETE(args) if(args != nullptr) delete args;
+#define PSI_DELETE_ARRAY(args) if(args != nullptr) delete[] args;
 #define IOFF 5000000
 
 #include <string>
@@ -57,8 +58,8 @@ public:
 
   double      get_nuclear_energy()               const {return(nuclear_energy);}
 
-  char**      get_irr_labs()                     const {return(irr_labs);}
-  char*       get_irr_labs(int i)                const {return(irr_labs[i]);}
+  std::vector<std::string>  get_irr_labs()       const {return(irr_labs);}
+  std::string get_irr_labs(int i)                const {return(irr_labs[i]);}
 
   int         get_nirreps()                      const {return(nirreps);}
   int         get_nso()                          const {return(nso);}
@@ -117,7 +118,7 @@ protected:
   double**    scf;                                   // MO coefficients
   double***   scf_irrep;                             // MO coefficients
 
-  char**      irr_labs;
+  std::vector<std::string>   irr_labs;
 };
 
 }

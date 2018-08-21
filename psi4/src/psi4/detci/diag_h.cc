@@ -3,31 +3,29 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-#include <cstdio>
-#include <cmath>
-#include <cstring>
 #include "psi4/psifiles.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libciomr/libciomr.h"
@@ -36,11 +34,16 @@
 #include "psi4/libpsio/psio.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libqt/slaterdset.h"
+#include "psi4/libpsi4util/process.h"
 
 #include "psi4/detci/structs.h"
 #include "psi4/detci/slaterd.h"
 #include "psi4/detci/civect.h"
 #include "psi4/detci/ciwave.h"
+
+#include <cstdio>
+#include <cmath>
+#include <cstring>
 
 namespace psi {
 namespace detci {
@@ -55,7 +58,7 @@ namespace detci {
 ** Returns: none
 */
 int CIWavefunction::diag_h(double conv_e, double conv_rms) {
-    BIGINT size;
+    size_t size;
     int nroots, i, j;
     double *evals, **evecs, nucrep, edrc, tval;
     double *cbuf;
@@ -75,7 +78,7 @@ int CIWavefunction::diag_h(double conv_e, double conv_rms) {
     Parameters_->diag_iters_taken = 0;
 
     size = CIblks_->vectlen;
-    if ((BIGINT)Parameters_->nprint > size) Parameters_->nprint = (int)size;
+    if ((size_t)Parameters_->nprint > size) Parameters_->nprint = (int)size;
     nucrep = CalcInfo_->enuc;
     edrc = CalcInfo_->edrc;
 
@@ -103,8 +106,8 @@ int CIWavefunction::diag_h(double conv_e, double conv_rms) {
         }
 
         SharedMatrix H = hamiltonian();
-        SharedMatrix evecs(new Matrix("CI Eigenvectors", (size_t)size, (size_t)size));
-        SharedVector evals_v(new Vector("CI Eigenvalues", (size_t)size));
+        auto evecs = std::make_shared<Matrix>("CI Eigenvectors", (size_t)size, (size_t)size);
+        auto evals_v = std::make_shared<Vector>("CI Eigenvalues", (size_t)size);
 
         if (print_ > 4 && size < 200) {
             outfile->Printf("    Hamiltonian matrix:\n");
@@ -148,7 +151,7 @@ int CIWavefunction::diag_h(double conv_e, double conv_rms) {
 
         double **H, **b;
         int Iarel, Ialist, Ibrel, Iblist, ij, k, l, tmpi, L;
-        unsigned long int ii, jj;
+        size_t ii, jj;
         SlaterDeterminant I, J;
         int *mi_iac, *mi_ibc, *mi_iaidx, *mi_ibidx;
         double *mi_coeff;
@@ -237,7 +240,7 @@ int CIWavefunction::diag_h(double conv_e, double conv_rms) {
             if (i < Parameters_->num_init_vecs)
                 b[i] = init_array(size);
             else
-                b[i] = NULL;
+                b[i] = nullptr;
         }
 
         evecs = init_matrix(Parameters_->num_roots, size);

@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -63,16 +64,19 @@ Installation
 * .. image:: https://anaconda.org/psi4/libefp/badges/version.svg
      :target: https://anaconda.org/psi4/libefp
 
-* libefp is available as a conda package for Linux and macOS.
+* libefp is available as a conda package for Linux and macOS (and Windows, through the Ubuntu shell).
 
 * If using the |PSIfour| binary, libefp has already been installed alongside.
 
 * If using |PSIfour| built from source, and anaconda or miniconda has
   already been installed (instructions at :ref:`sec:quickconda`),
-  libefp can be obtained through ``conda install libefp``.
+  libefp can be obtained through ``conda install libefp -c psi4``.
   Then enable it as a feature with :makevar:`ENABLE_libefp`,
   hint its location with :makevar:`CMAKE_PREFIX_PATH`,
   and rebuild |PSIfour| to detect libefp and activate dependent code.
+
+* Previous bullet had details. To build |PSIfour| from source and use
+  libefp from conda without thinking, consult :ref:`sec:condapsi4dev`.
 
 * To remove a conda installation, ``conda remove libefp``.
 
@@ -308,7 +312,7 @@ How to configure libefp for building Psi4
 
 * Downstream Dependencies |w---w| |PSIfour| (\ |dr| optional) libefp
 
-* Upstream Dependencies |w---w| libefp |dr| None
+* Upstream Dependencies |w---w| libefp |dr| BLAS/LAPACK
 
 **CMake Variables**
 
@@ -316,6 +320,7 @@ How to configure libefp for building Psi4
 * :makevar:`CMAKE_PREFIX_PATH` |w---w| CMake list variable to specify where pre-built dependencies can be found. For libefp, set to an installation directory containing ``include/efp.h``
 * :makevar:`libefp_DIR` |w---w| CMake variable to specify where pre-built libefp can be found. Set to installation directory containing ``share/cmake/libefp/libefpConfig.cmake``
 * :makevar:`CMAKE_DISABLE_FIND_PACKAGE_libefp` |w---w| CMake variable to force internal build of libefp instead of detecting pre-built
+* :makevar:`CMAKE_INSIST_FIND_PACKAGE_libefp` |w---w| CMake variable to force detecting pre-built libefp and not falling back on internal build
 
 **Examples**
 

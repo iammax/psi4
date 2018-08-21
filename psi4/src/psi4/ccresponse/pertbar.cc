@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -68,7 +69,7 @@ void pertbar(const char *pert, int irrep, int anti)
   global_dpd_->file2_init(&f, PSIF_CC_OEI, irrep, 0, 1, lbl);
   sprintf(lbl, "%s_ME", prefix2);
   global_dpd_->file2_copy(&f, PSIF_CC_OEI, lbl);
-  global_dpd_->file2_print(&f, "outfile");
+  //global_dpd_->file2_print(&f, "outfile");
   global_dpd_->file2_close(&f);
 
   /** XXBAR_MI **/
@@ -86,7 +87,7 @@ void pertbar(const char *pert, int irrep, int anti)
   global_dpd_->contract222(&f, &t1, &fbar1, 0, 0, 1, 1);
   global_dpd_->file2_close(&t1);
   global_dpd_->file2_close(&f);
-  global_dpd_->file2_print(&fbar1, "outfile");
+  //global_dpd_->file2_print(&fbar1, "outfile");
   global_dpd_->file2_close(&fbar1);
 
   /** XXBAR_AE **/
@@ -104,7 +105,7 @@ void pertbar(const char *pert, int irrep, int anti)
   global_dpd_->contract222(&t1, &f, &fbar1, 1, 1, -1, 1);
   global_dpd_->file2_close(&t1);
   global_dpd_->file2_close(&f);
-  global_dpd_->file2_print(&fbar1, "outfile");
+  //global_dpd_->file2_print(&fbar1, "outfile");
   global_dpd_->file2_close(&fbar1);
 
   /** XXBAR_IA **/
@@ -150,7 +151,7 @@ void pertbar(const char *pert, int irrep, int anti)
   global_dpd_->file2_close(&t1);
   global_dpd_->file2_close(&z);
 
-  global_dpd_->file2_print(&fbar1, "outfile");
+  //global_dpd_->file2_print(&fbar1, "outfile");
   global_dpd_->file2_close(&fbar1);
 
   /** LBAR_MbIj **/

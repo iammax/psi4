@@ -3,37 +3,42 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
 #
-
 r"""File for accessory procedures in the chem module.
 Credit for the libmints vector3 class to Justin M. Turney and
 incremental improvements by other psi4 developers.
 
+Vectors that use these functions are overwhelmingly of length 3, so
+pure python instead of NumPy is the right choice efficiency-wise.
+
 """
 from __future__ import absolute_import
 from __future__ import print_function
-import math
+from __future__ import division
 import copy
+import math
+
 from .exceptions import *
 
 ZERO = 1.0E-14
@@ -74,12 +79,12 @@ def naivemult(v, u):
 def normalize(v):
     """Compute normalized vector *v*."""
     vmag = norm(v)
-    return [v[i] / vmag  for i in range(len(v))]
+    return [v[i] / vmag for i in range(len(v))]
 
 
 def distance(v, u):
     """Compute the distance between points defined by vectors *v* and *u*."""
-    return norm(sub(v, u))
+    return math.sqrt(sum(((v[i] - u[i]) * (v[i] - u[i]) for i in range(len(v)))))
 
 
 def cross(v, u):
@@ -88,7 +93,7 @@ def cross(v, u):
         raise ValidationError('cross() only defined for vectors of length 3\n')
     return [v[1] * u[2] - v[2] * u[1],
             v[2] * u[0] - v[0] * u[2],
-            v[0] * u[1] - v[1] * u[0]]
+            v[0] * u[1] - v[1] * u[0]]  # yapf: disable
 
 
 def rotate(v, theta, axis):

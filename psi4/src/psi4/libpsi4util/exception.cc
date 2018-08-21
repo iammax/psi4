@@ -3,41 +3,43 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-
+#ifndef _MSC_VER
 #include <execinfo.h>
 #include <cxxabi.h>
+#endif
+
 #include <vector>
 #include <sstream>
 #include <cstring>
 #include <cstdlib>
 #include "psi4/libpsi4util/exception.h"
-using namespace std;
 
 namespace psi {
 
-PsiException::PsiException(string msg,
+PsiException::PsiException(std::string msg,
                            const char *_file,
                            int _line) throw()
         : runtime_error(msg)
@@ -49,6 +51,9 @@ PsiException::PsiException(string msg,
     message << std::endl << "Fatal Error: " << msg << std::endl;
     message << "Error occurred in file: " << file_ << " on line: " << line_ << std::endl;
 
+// Disable stack trace printing on Windows
+#ifndef _MSC_VER
+
     std::vector<void *> Stack(5);
     char **strings;
     int size = backtrace(&Stack[0], 5);
@@ -59,7 +64,7 @@ PsiException::PsiException(string msg,
 
     for (int i = 0; i < size; i++) {
         //This part from https://panthema.net/2008/0901-stacktrace-demangled/
-        char *begin_name = NULL, *begin_offset = NULL, *end_offset = NULL;
+        char *begin_name = nullptr, *begin_offset = nullptr, *end_offset = nullptr;
         for (char *p = strings[i]; *p; ++p) {
             if (*p == '(') begin_name = p;
             else if (*p == '+')begin_offset = p;
@@ -80,6 +85,7 @@ PsiException::PsiException(string msg,
             ::free(demangledname);
         }
     }
+#endif
 
     msg_ = message.str();
 }
@@ -91,7 +97,7 @@ PsiException::PsiException(const PsiException& copy) throw()
 }
 
 void
-PsiException::rewrite_msg(string msg) throw()
+PsiException::rewrite_msg(std::string msg) throw()
 {
     msg_ = msg;
 }
@@ -121,7 +127,7 @@ PsiException::line() const throw()
 const char *
 PsiException::location() const throw()
 {
-    stringstream sstr;
+    std::stringstream sstr;
     sstr << "file: " << file_ << "\n";
     sstr << "line: " << line_;
     return sstr.str().c_str();
@@ -132,13 +138,13 @@ PsiException::~PsiException() throw()
 }
 
 SanityCheckError::SanityCheckError(
-        string message,
+        std::string message,
         const char *_file,
         int _line
 ) throw()
         : PsiException(message, _file, _line)
 {
-    stringstream sstr;
+    std::stringstream sstr;
     sstr << "sanity check failed! " << message;
     rewrite_msg(sstr.str());
 }
@@ -153,7 +159,7 @@ SystemError::SystemError(
 ) throw()
         : PsiException("", _file, _line)
 {
-    stringstream sstr;
+    std::stringstream sstr;
     sstr << "SystemError:  " << strerror(eno);
     rewrite_msg(sstr.str());
 }
@@ -162,8 +168,8 @@ SystemError::~SystemError() throw()
 { }
 
 InputException::InputException(
-        string msg,
-        string param_name,
+        std::string msg,
+        std::string param_name,
         int value,
         const char *_file,
         int _line
@@ -173,19 +179,19 @@ InputException::InputException(
 }
 
 InputException::InputException(
-        string msg,
-        string param_name,
-        string value,
+        std::string msg,
+        std::string param_name,
+        std::string value,
         const char *_file,
         int _line
 ) throw() : PsiException(msg, _file, _line)
 {
-    write_input_msg<string>(msg, param_name, value);
+    write_input_msg<std::string>(msg, param_name, value);
 }
 
 InputException::InputException(
-        string msg,
-        string param_name,
+        std::string msg,
+        std::string param_name,
         double value,
         const char *_file,
         int _line
@@ -195,23 +201,23 @@ InputException::InputException(
 }
 
 InputException::InputException(
-        string msg,
-        string param_name,
+        std::string msg,
+        std::string param_name,
         const char *_file,
         int _line
 ) throw() : PsiException(msg, _file, _line)
 {
-    write_input_msg<string>(msg, param_name, "in input");
+    write_input_msg<std::string>(msg, param_name, "in input");
 }
 
 template<class T>
 void InputException::write_input_msg(
-        string msg,
-        string param_name,
+        std::string msg,
+        std::string param_name,
         T value
 ) throw()
 {
-    stringstream sstr;
+    std::stringstream sstr;
     sstr << msg << "\n";
     sstr << "value " << value << " is incorrect" << "\n";
     sstr << "please change " << param_name << " in input";
@@ -220,7 +226,7 @@ void InputException::write_input_msg(
 
 template<class T>
 StepSizeError<T>::StepSizeError(
-        string value_name,
+        std::string value_name,
         T max,
         T actual,
         const char *_file,
@@ -235,7 +241,7 @@ StepSizeError<T>::~StepSizeError() throw()
 
 template<class T>
 MaxIterationsExceeded<T>::MaxIterationsExceeded(
-        string routine_name,
+        std::string routine_name,
         T max,
         const char *_file,
         int _line)  throw()
@@ -249,7 +255,7 @@ MaxIterationsExceeded<T>::~MaxIterationsExceeded() throw()
 
 template<class T>
 ConvergenceError<T>::ConvergenceError(
-        string routine_name,
+        std::string routine_name,
         T max,
         double _desired_accuracy,
         double _actual_accuracy,
@@ -258,7 +264,7 @@ ConvergenceError<T>::ConvergenceError(
         : MaxIterationsExceeded<T>(routine_name + " iterations", max, _file, _line), desired_acc_(_desired_accuracy),
           actual_acc_(_actual_accuracy)
 {
-    stringstream sstr;
+    std::stringstream sstr;
     sstr << "could not converge " << routine_name << ".  desired " << _desired_accuracy << " but got " <<
     _actual_accuracy << "\n";
     sstr << LimitExceeded<T>::description();
@@ -281,7 +287,7 @@ ConvergenceError<T>::actual_accuracy() const throw()
 
 template<>
 ConvergenceError<int>::ConvergenceError(
-        string routine_name,
+        std::string routine_name,
         int max,
         double _desired_accuracy,
         double _actual_accuracy,
@@ -290,7 +296,7 @@ ConvergenceError<int>::ConvergenceError(
         : MaxIterationsExceeded<int>(routine_name + " iterations", max, _file, _line), desired_acc_(_desired_accuracy),
           actual_acc_(_actual_accuracy)
 {
-    stringstream sstr;
+    std::stringstream sstr;
     sstr << "could not converge " << routine_name << ".  desired " << _desired_accuracy << " but got " <<
     _actual_accuracy << "\n";
     sstr << LimitExceeded<int>::description();
@@ -313,7 +319,7 @@ ConvergenceError<int>::actual_accuracy() const throw()
 
 template<class T>
 ResourceAllocationError<T>::ResourceAllocationError(
-        string resource_name,
+        std::string resource_name,
         T max,
         T actual,
         const char *_file,
@@ -327,14 +333,14 @@ ResourceAllocationError<T>::~ResourceAllocationError() throw()
 { }
 
 FeatureNotImplemented::FeatureNotImplemented(
-        string module_name,
-        string feature_name,
+        std::string module_name,
+        std::string feature_name,
         const char *_file,
         int _line
 ) throw()
         : PsiException("psi exception", _file, _line)
 {
-    stringstream sstr;
+    std::stringstream sstr;
     sstr << feature_name << " not implemented in " << module_name;
     rewrite_msg(sstr.str());
 }

@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -40,6 +41,7 @@ your needs, be it binary, tarball, or version-controlled repository. Or,
 select outright among:
 
 #. :ref:`faq:binary`
+#. :ref:`faq:condapkg`
 #. :ref:`faq:clonepsi4public` (*read-only* unless core developer)
 #. :ref:`faq:forkpsi4public`
 #. :ref:`faq:tarballpsi4public`
@@ -51,11 +53,11 @@ select outright among:
 Find-the-code Quiz
 ------------------
 
-* I just want to run the code. I may tweak the Python, but I’m not
+* I just want to run the code. I may tweak the Python, but I'm not
   developing anything to contribute back to the code base.
 
-  * Provided I still get good, threaded BLAS/LAPACK, I’m willing to
-    sacrifice processor architecture tuning to avoid compiling it myself.
+  * Provided I still get good, threaded BLAS/LAPACK, I'm willing to
+    sacrifice processor architecture fine tuning to avoid compiling it myself.
 
     * I'm on Linux or Mac or Windows with Ubuntu Bash Shell.
 
@@ -82,8 +84,6 @@ Find-the-code Quiz
   * In keeping with the open-source philosophy, I don't mind my code being
     as public as Psi4 itself during the development process. |w---w|
     :ref:`Goto Fork-from-GitHub <faq:forkpsi4public>`
-
-.. comment  * I have scientific competitors, and I don't want to get scooped. [Goto Fork-from-GitHub-Private](#forkpsi4private)
 
   * I want to develop *using* |PSIfour| infrastructure and libraries, not
     *on* them; I think a plugin might do.
@@ -119,11 +119,43 @@ Binary Installer
 
   Not applicable as binary is pre-built.
 
-* **Get Updates**
+* **Get Updates** :ref:`directions <faq:updatepsi4>`
 
   .. code-block:: bash
 
      >>> conda update psi4
+
+* **Contribute Back**
+
+  Not applicable as not under git control.
+
+
+.. _`faq:binarypackage`:
+
+Conda Binary Package
+--------------------
+
+* **Get Initially**
+
+  The pre-compiled conda packages at https://anaconda.org/psi4/psi4
+  can be installed into an existing Anaconda or Miniconda distribution
+  according to :ref:`directions <faq:psi4pkg>`. Locally, install into
+  a conda environment as below.
+
+  .. code-block:: bash
+
+     >>> conda create -n p4env psi4 -c psi4
+     >>> conda activate p4env
+
+* **Build**
+
+  Not applicable as binary is pre-built.
+
+* **Get Updates** :ref:`directions <faq:updatepsi4>`
+
+  .. code-block:: bash
+
+     >>> conda update psi4 -c psi4
 
 * **Contribute Back**
 
@@ -224,7 +256,7 @@ Tarball from GitHub Repository
 
 * **Get Initially**
 
-  From the |PSIfour| repository at https://github.com/psi4/psi4, hit the
+  Discouraged! From the |PSIfour| repository at https://github.com/psi4/psi4, hit the
   "Clone or download" then "Download ZIP" button. Locally, unpack as
   below.
 
@@ -277,3 +309,4 @@ What is the suggested GitHub workflow
 
 .. image:: /prflow.001.jpeg
 .. image:: /prflow.002.jpeg
+.. image:: /prflow.003.jpeg

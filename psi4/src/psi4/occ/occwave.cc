@@ -3,30 +3,31 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
 #include <fstream>
-#include <math.h>
+#include <cmath>
 
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libtrans/mospace.h"
@@ -34,6 +35,10 @@
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/pointgrp.h"
 #include "psi4/libmints/molecule.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
+#include "psi4/liboptions/liboptions.h"
+
 #include "occwave.h"
 
 using namespace psi;
@@ -131,7 +136,7 @@ void OCCWave::common_init()
     }
     else {
         double temp;
-        temp = 2.0 - 0.5 * log10(tol_Eod); // I think (U.B) this is the desirable map balancing accuracy and efficiency.
+        temp = 2.0 - 0.5 * std::log10(tol_Eod); // I think (U.B) this is the desirable map balancing accuracy and efficiency.
         //temp = 3.0 - 0.5 * log10(tol_Eod); // Lori's old map leads unecessary iterations for the omp2-2 test case.
         //temp = 1.74 - 0.71 * log10(tol_Eod); //OLD map for wfn != OMP2
         if (temp < 5.0) {
@@ -149,7 +154,7 @@ void OCCWave::common_init()
     }
     else {
         double temp2;
-        temp2 = -log10(tol_grad) - 1.5;
+        temp2 = -std::log10(tol_grad) - 1.5;
         if (temp2 > 4.0) {
             temp2 = 4.0;
         }
@@ -176,7 +181,7 @@ void OCCWave::common_init()
         else if (options_.get_str("DO_DIIS") == "FALSE") do_diis_ = 0;
 
         // SCF TYPE
-        if (options_.get_str("SCF_TYPE") == "DF" || options_.get_str("SCF_TYPE") == "CD") {
+        if ((options_.get_str("SCF_TYPE").find("DF") != std::string::npos) || options_.get_str("SCF_TYPE") == "CD") {
             if (dertype != "NONE") {
                 throw PSIEXCEPTION("Analytic gradients are NOT available for SCF_TYPE=DF/CD !");
             }
@@ -188,18 +193,18 @@ void OCCWave::common_init()
 
 if (reference_ == "RESTRICTED") {
     // Memory allocation
-    HmoA = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha one-electron ints", nirrep_, nmopi_, nmopi_));
-    FockA = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha Fock matrix", nirrep_, nmopi_, nmopi_));
-    gamma1corr = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha correlation OPDM", nirrep_, nmopi_, nmopi_));
-    g1symm = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha OPDM", nirrep_, nmopi_, nmopi_));
-    GFock = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha generalized Fock matrix", nirrep_, nmopi_, nmopi_));
-    UorbA = std::shared_ptr<Matrix>(new Matrix("Alpha MO rotation matrix", nirrep_, nmopi_, nmopi_));
-    KorbA = std::shared_ptr<Matrix>(new Matrix("K alpha MO rotation", nirrep_, nmopi_, nmopi_));
-    KsqrA = std::shared_ptr<Matrix>(new Matrix("K^2 alpha MO rotation", nirrep_, nmopi_, nmopi_));
-    HG1 = std::shared_ptr<Matrix>(new Matrix("h*g1symm", nirrep_, nmopi_, nmopi_));
-    WorbA = std::shared_ptr<Matrix>(new Matrix("Alpha MO gradient matrix", nirrep_, nmopi_, nmopi_));
-    GooA = std::shared_ptr<Matrix>(new Matrix("Alpha Goo intermediate", nirrep_, aoccpiA, aoccpiA));
-    GvvA = std::shared_ptr<Matrix>(new Matrix("Alpha Gvv intermediate", nirrep_, avirtpiA, avirtpiA));
+    HmoA = std::make_shared<Matrix>("MO-basis alpha one-electron ints", nirrep_, nmopi_, nmopi_);
+    FockA = std::make_shared<Matrix>("MO-basis alpha Fock matrix", nirrep_, nmopi_, nmopi_);
+    gamma1corr = std::make_shared<Matrix>("MO-basis alpha correlation OPDM", nirrep_, nmopi_, nmopi_);
+    g1symm = std::make_shared<Matrix>("MO-basis alpha OPDM", nirrep_, nmopi_, nmopi_);
+    GFock = std::make_shared<Matrix>("MO-basis alpha generalized Fock matrix", nirrep_, nmopi_, nmopi_);
+    UorbA = std::make_shared<Matrix>("Alpha MO rotation matrix", nirrep_, nmopi_, nmopi_);
+    KorbA = std::make_shared<Matrix>("K alpha MO rotation", nirrep_, nmopi_, nmopi_);
+    KsqrA = std::make_shared<Matrix>("K^2 alpha MO rotation", nirrep_, nmopi_, nmopi_);
+    HG1 = std::make_shared<Matrix>("h*g1symm", nirrep_, nmopi_, nmopi_);
+    WorbA = std::make_shared<Matrix>("Alpha MO gradient matrix", nirrep_, nmopi_, nmopi_);
+    GooA = std::make_shared<Matrix>("Alpha Goo intermediate", nirrep_, aoccpiA, aoccpiA);
+    GvvA = std::make_shared<Matrix>("Alpha Gvv intermediate", nirrep_, avirtpiA, avirtpiA);
 
         Molecule& mol = *reference_wavefunction_->molecule().get();
         CharacterTable ct = mol.point_group()->char_table();
@@ -219,13 +224,13 @@ if (reference_ == "RESTRICTED") {
         cost_iabc_ = 0;
         cost_abcd_ = 0;
         for(int h=0; h < nirrep_; h++) {
-            cost_iabc_ += (ULI)ov_pairpiAA[h] * (ULI)vv_pairpiAA[h];
-            cost_abcd_ += (ULI)vv_pairpiAA[h] * (ULI)vv_pairpiAA[h];
+            cost_iabc_ += (size_t)ov_pairpiAA[h] * (size_t)vv_pairpiAA[h];
+            cost_abcd_ += (size_t)vv_pairpiAA[h] * (size_t)vv_pairpiAA[h];
         }
-        cost_iabc_ /= (ULI)1024 * (ULI)1024;
-        cost_abcd_ /= (ULI)1024 * (ULI)1024;
-        cost_iabc_ *= (ULI)sizeof(double);
-        cost_abcd_ *= (ULI)sizeof(double);
+        cost_iabc_ /= (size_t)1024 * (size_t)1024;
+        cost_abcd_ /= (size_t)1024 * (size_t)1024;
+        cost_iabc_ *= (size_t)sizeof(double);
+        cost_abcd_ *= (size_t)sizeof(double);
 
         // print
     if (wfn_type_ == "OMP2") {
@@ -238,24 +243,24 @@ if (reference_ == "RESTRICTED") {
 
         if (cost_iabc_ < memory_mb_) {
             incore_iabc_ = 1;
-            outfile->Printf(     "\tSwitching to the incore algoritm for iabc..\n");
+            outfile->Printf(     "\tSwitching to the incore algorithm for iabc..\n");
 
         }
         else {
             incore_iabc_ = 0;
-            outfile->Printf(     "\tSwitching to the out of core algoritm for iabc..\n");
+            outfile->Printf(     "\tSwitching to the out of core algorithm for iabc..\n");
 
         }
 
         //cost_abcd_ = 8 * nvoA * nvoA * nvoA * nvoA;
         if (cost_abcd_ < memory_mb_) {
             incore_abcd_ = 1;
-            outfile->Printf(     "\tSwitching to the incore algoritm for abcd..\n");
+            outfile->Printf(     "\tSwitching to the incore algorithm for abcd..\n");
 
         }
         else {
             incore_abcd_ = 0;
-            outfile->Printf(     "\tSwitching to the out of core algoritm for abcd..\n");
+            outfile->Printf(     "\tSwitching to the out of core algorithm for abcd..\n");
 
         }
     }// end if (wfn_type_ == "OMP2")
@@ -268,19 +273,19 @@ if (reference_ == "RESTRICTED") {
 
 if (wfn_type_ == "OMP2" && incore_iabc_ == 0) {
     ints = new IntegralTransform(shared_from_this(), spaces,
-                           IntegralTransform::Restricted,
-                           IntegralTransform::IWLAndDPD,
-                           IntegralTransform::QTOrder,
-                           IntegralTransform::OccOnly,
+                           IntegralTransform::TransformationType::Restricted,
+                           IntegralTransform::OutputType::IWLAndDPD,
+                           IntegralTransform::MOOrdering::QTOrder,
+                           IntegralTransform::FrozenOrbitals::OccOnly,
                            false);
 }
 
 else {
     ints = new IntegralTransform(shared_from_this(), spaces,
-                           IntegralTransform::Restricted,
-                           IntegralTransform::DPDOnly,
-                           IntegralTransform::QTOrder,
-                           IntegralTransform::OccOnly,
+                           IntegralTransform::TransformationType::Restricted,
+                           IntegralTransform::OutputType::DPDOnly,
+                           IntegralTransform::MOOrdering::QTOrder,
+                           IntegralTransform::FrozenOrbitals::OccOnly,
                            false);
 }
 
@@ -302,35 +307,35 @@ else {
 
 else if (reference_ == "UNRESTRICTED") {
     // Memory allocation
-    HmoA = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha one-electron ints", nirrep_, nmopi_, nmopi_));
-    HmoB = std::shared_ptr<Matrix>(new Matrix("MO-basis beta one-electron ints", nirrep_, nmopi_, nmopi_));
-    FockA = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha Fock matrix", nirrep_, nmopi_, nmopi_));
-    FockB = std::shared_ptr<Matrix>(new Matrix("MO-basis beta Fock matrix", nirrep_, nmopi_, nmopi_));
-    gamma1corrA = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha correlation OPDM", nirrep_, nmopi_, nmopi_));
-    gamma1corrB = std::shared_ptr<Matrix>(new Matrix("MO-basis beta correlation OPDM", nirrep_, nmopi_, nmopi_));
-    g1symmA = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha OPDM", nirrep_, nmopi_, nmopi_));
-    g1symmB = std::shared_ptr<Matrix>(new Matrix("MO-basis beta OPDM", nirrep_, nmopi_, nmopi_));
-    GFockA = std::shared_ptr<Matrix>(new Matrix("MO-basis alpha generalized Fock matrix", nirrep_, nmopi_, nmopi_));
-    GFockB = std::shared_ptr<Matrix>(new Matrix("MO-basis beta generalized Fock matrix", nirrep_, nmopi_, nmopi_));
-    UorbA = std::shared_ptr<Matrix>(new Matrix("Alpha MO rotation matrix", nirrep_, nmopi_, nmopi_));
-    UorbB = std::shared_ptr<Matrix>(new Matrix("Beta MO rotation matrix", nirrep_, nmopi_, nmopi_));
-    KorbA = std::shared_ptr<Matrix>(new Matrix("K alpha MO rotation", nirrep_, nmopi_, nmopi_));
-    KorbB = std::shared_ptr<Matrix>(new Matrix("K beta MO rotation", nirrep_, nmopi_, nmopi_));
-    KsqrA = std::shared_ptr<Matrix>(new Matrix("K^2 alpha MO rotation", nirrep_, nmopi_, nmopi_));
-    KsqrB = std::shared_ptr<Matrix>(new Matrix("K^2 beta MO rotation", nirrep_, nmopi_, nmopi_));
-    HG1A = std::shared_ptr<Matrix>(new Matrix("Alpha h*g1symm", nirrep_, nmopi_, nmopi_));
-    HG1B = std::shared_ptr<Matrix>(new Matrix("Beta h*g1symm", nirrep_, nmopi_, nmopi_));
-    WorbA = std::shared_ptr<Matrix>(new Matrix("Alpha MO gradient matrix", nirrep_, nmopi_, nmopi_));
-    WorbB = std::shared_ptr<Matrix>(new Matrix("Beta MO gradient matrix", nirrep_, nmopi_, nmopi_));
-    GooA = std::shared_ptr<Matrix>(new Matrix("Alpha Goo intermediate", nirrep_, aoccpiA, aoccpiA));
-    GooB = std::shared_ptr<Matrix>(new Matrix("Beta Goo intermediate", nirrep_, aoccpiB, aoccpiB));
-    GvvA = std::shared_ptr<Matrix>(new Matrix("Alpha Gvv intermediate", nirrep_, avirtpiA, avirtpiA));
-    GvvB = std::shared_ptr<Matrix>(new Matrix("Beta Gvv intermediate", nirrep_, avirtpiB, avirtpiB));
+    HmoA = std::make_shared<Matrix>("MO-basis alpha one-electron ints", nirrep_, nmopi_, nmopi_);
+    HmoB = std::make_shared<Matrix>("MO-basis beta one-electron ints", nirrep_, nmopi_, nmopi_);
+    FockA = std::make_shared<Matrix>("MO-basis alpha Fock matrix", nirrep_, nmopi_, nmopi_);
+    FockB = std::make_shared<Matrix>("MO-basis beta Fock matrix", nirrep_, nmopi_, nmopi_);
+    gamma1corrA = std::make_shared<Matrix>("MO-basis alpha correlation OPDM", nirrep_, nmopi_, nmopi_);
+    gamma1corrB = std::make_shared<Matrix>("MO-basis beta correlation OPDM", nirrep_, nmopi_, nmopi_);
+    g1symmA = std::make_shared<Matrix>("MO-basis alpha OPDM", nirrep_, nmopi_, nmopi_);
+    g1symmB = std::make_shared<Matrix>("MO-basis beta OPDM", nirrep_, nmopi_, nmopi_);
+    GFockA = std::make_shared<Matrix>("MO-basis alpha generalized Fock matrix", nirrep_, nmopi_, nmopi_);
+    GFockB = std::make_shared<Matrix>("MO-basis beta generalized Fock matrix", nirrep_, nmopi_, nmopi_);
+    UorbA = std::make_shared<Matrix>("Alpha MO rotation matrix", nirrep_, nmopi_, nmopi_);
+    UorbB = std::make_shared<Matrix>("Beta MO rotation matrix", nirrep_, nmopi_, nmopi_);
+    KorbA = std::make_shared<Matrix>("K alpha MO rotation", nirrep_, nmopi_, nmopi_);
+    KorbB = std::make_shared<Matrix>("K beta MO rotation", nirrep_, nmopi_, nmopi_);
+    KsqrA = std::make_shared<Matrix>("K^2 alpha MO rotation", nirrep_, nmopi_, nmopi_);
+    KsqrB = std::make_shared<Matrix>("K^2 beta MO rotation", nirrep_, nmopi_, nmopi_);
+    HG1A = std::make_shared<Matrix>("Alpha h*g1symm", nirrep_, nmopi_, nmopi_);
+    HG1B = std::make_shared<Matrix>("Beta h*g1symm", nirrep_, nmopi_, nmopi_);
+    WorbA = std::make_shared<Matrix>("Alpha MO gradient matrix", nirrep_, nmopi_, nmopi_);
+    WorbB = std::make_shared<Matrix>("Beta MO gradient matrix", nirrep_, nmopi_, nmopi_);
+    GooA = std::make_shared<Matrix>("Alpha Goo intermediate", nirrep_, aoccpiA, aoccpiA);
+    GooB = std::make_shared<Matrix>("Beta Goo intermediate", nirrep_, aoccpiB, aoccpiB);
+    GvvA = std::make_shared<Matrix>("Alpha Gvv intermediate", nirrep_, avirtpiA, avirtpiA);
+    GvvB = std::make_shared<Matrix>("Beta Gvv intermediate", nirrep_, avirtpiB, avirtpiB);
 
         // ROHF-MP2
         if (reference == "ROHF" && orb_opt_ == "FALSE" && wfn_type_ == "OMP2") {
-        t1A = std::shared_ptr<Matrix>(new Matrix("t_I^A", nirrep_, aoccpiA, avirtpiA));
-        t1B = std::shared_ptr<Matrix>(new Matrix("t_i^a", nirrep_, aoccpiB, avirtpiB));
+        t1A = std::make_shared<Matrix>("t_I^A", nirrep_, aoccpiA, avirtpiA);
+        t1B = std::make_shared<Matrix>("t_i^a", nirrep_, aoccpiB, avirtpiB);
         }
 
         Molecule& mol = *reference_wavefunction_->molecule().get();
@@ -351,10 +356,10 @@ else if (reference_ == "UNRESTRICTED") {
     spaces.push_back(MOSpace::vir);
 
     ints = new IntegralTransform(shared_from_this(), spaces,
-                           IntegralTransform::Unrestricted,
-                           IntegralTransform::DPDOnly,
-                           IntegralTransform::QTOrder,
-                           IntegralTransform::OccOnly,
+                           IntegralTransform::TransformationType::Unrestricted,
+                           IntegralTransform::OutputType::DPDOnly,
+                           IntegralTransform::MOOrdering::QTOrder,
+                           IntegralTransform::FrozenOrbitals::OccOnly,
                            false);
 
 
@@ -441,8 +446,8 @@ double OCCWave::compute_energy()
       C_pitzerA = Ca_->to_block_matrix();
 
       // write binary data
-      ofstream OutFile1;
-      OutFile1.open("CmoA.psi", ios::out | ios::binary);
+      std::ofstream OutFile1;
+      OutFile1.open("CmoA.psi", std::ios::out | std::ios::binary);
       OutFile1.write( (char*)C_pitzerA[0], sizeof(double)*nso_*nmo_);
       OutFile1.close();
       free_block(C_pitzerA);
@@ -457,8 +462,8 @@ double OCCWave::compute_energy()
           C_pitzerB = Cb_->to_block_matrix();
 
           // write binary data
-          ofstream OutFile2;
-          OutFile2.open("CmoB.psi", ios::out | ios::binary);
+          std::ofstream OutFile2;
+          OutFile2.open("CmoB.psi", std::ios::out | std::ios::binary);
           OutFile2.write( (char*)C_pitzerB[0], sizeof(double)*nso_*nmo_);
           OutFile2.close();
           free_block(C_pitzerB);
@@ -488,8 +493,8 @@ outfile->Printf("\n Diagonalizing one-particle response density matrix... \n");
 outfile->Printf("\n");
 
 
-      SharedMatrix Udum = std::shared_ptr<Matrix>(new Matrix("Udum", nirrep_, nmopi_, nmopi_));
-      SharedVector diag = std::shared_ptr<Vector>(new Vector("Natural orbital occupation numbers", nirrep_, nmopi_));
+      auto Udum = std::make_shared<Matrix>("Udum", nirrep_, nmopi_, nmopi_);
+      auto diag = std::make_shared<Vector>("Natural orbital occupation numbers", nirrep_, nmopi_);
 
       // Diagonalizing Alpha-OPDM
       Udum->zero();
@@ -588,7 +593,7 @@ void OCCWave::mem_release()
         delete oo_pairidxAA;
         delete vv_pairidxAA;
 
-    Ca_.reset();
+    //Ca_.reset();
     Ca_ref.reset();
     Hso.reset();
     Tso.reset();

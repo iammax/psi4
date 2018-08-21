@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,22 +30,26 @@
     \ingroup CCENERGY
     \brief Enter brief description of file here
 */
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
+
+#include "Params.h"
+#include "MOInfo.h"
+#include "ccwave.h"
+
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/libdpd/dpd.h"
 #include "psi4/libiwl/iwl.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/psifiles.h"
-#include "Params.h"
-#include "MOInfo.h"
-#include "ccwave.h"
 
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/libtrans/mospace.h"
 #include "psi4/libmints/matrix.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 
 namespace psi { namespace ccenergy {
 
@@ -89,7 +94,7 @@ int CCEnergyWavefunction::rotate(void)
         for(h=0; h < nirreps; h++)
             for(i=0; i < moinfo_.occpi[h]; i++)
                 for(a=0; a < moinfo_.virtpi[h]; a++)
-                    if(fabs(T1.matrix[h][i][a]) > max) max = fabs(T1.matrix[h][i][a]);
+                    if(std::fabs(T1.matrix[h][i][a]) > max) max = std::fabs(T1.matrix[h][i][a]);
 
         global_dpd_->file2_mat_close(&T1);
         global_dpd_->file2_close(&T1);
@@ -103,7 +108,7 @@ int CCEnergyWavefunction::rotate(void)
         for(h=0; h < nirreps; h++)
             for(i=0; i < moinfo_.aoccpi[h]; i++)
                 for(a=0; a < moinfo_.avirtpi[h]; a++)
-                    if(fabs(T1.matrix[h][i][a]) > max) max = fabs(T1.matrix[h][i][a]);
+                    if(std::fabs(T1.matrix[h][i][a]) > max) max = std::fabs(T1.matrix[h][i][a]);
 
         global_dpd_->file2_mat_close(&T1);
         global_dpd_->file2_close(&T1);
@@ -115,19 +120,19 @@ int CCEnergyWavefunction::rotate(void)
         for(h=0; h < nirreps; h++)
             for(i=0; i < moinfo_.boccpi[h]; i++)
                 for(a=0; a < moinfo_.bvirtpi[h]; a++)
-                    if(fabs(T1.matrix[h][i][a]) > max) max = fabs(T1.matrix[h][i][a]);
+                    if(std::fabs(T1.matrix[h][i][a]) > max) max = std::fabs(T1.matrix[h][i][a]);
 
         global_dpd_->file2_mat_close(&T1);
         global_dpd_->file2_close(&T1);
     }
 
-    if(fabs(max) <= params_.bconv) {
+    if(std::fabs(max) <= params_.bconv) {
         outfile->Printf( "    Brueckner orbitals converged.  Maximum T1 = %15.12f\n",
-                         fabs(max));
+                         std::fabs(max));
         return(1);
     }
     else
-        outfile->Printf( "    Rotating orbitals.  Maximum T1 = %15.12f\n", fabs(max));
+        outfile->Printf( "    Rotating orbitals.  Maximum T1 = %15.12f\n", std::fabs(max));
 
     /* grab the SO-basis overlap integrals for later use */
     SO_S = block_matrix(nso, nso);
@@ -188,7 +193,7 @@ int CCEnergyWavefunction::rotate(void)
         }
         S = block_matrix(nmo, nmo);
         for(i=0; i < nmo; i++) {
-            if(fabs(evals[i]) > 1e-8) S[i][i] = 1/sqrt(evals[i]);
+            if(std::fabs(evals[i]) > 1e-8) S[i][i] = 1/sqrt(evals[i]);
             else S[i][i] = 0.0;
         }
         free(evals);
@@ -351,8 +356,8 @@ int CCEnergyWavefunction::rotate(void)
         for(p=0; p < nmo; p++) {
             max = 0.0;
             for(q=0; q < nmo; q++) {
-                if(fabs(MO_S[p][q]) > max) {
-                    max = fabs(MO_S[p][q]); max_col = q;
+                if(std::fabs(MO_S[p][q]) > max) {
+                    max = std::fabs(MO_S[p][q]); max_col = q;
                 }
             }
             if(max_col != p) phase_ok = 0;
@@ -435,7 +440,7 @@ int CCEnergyWavefunction::rotate(void)
         /* build S^-1/2 for this basis */
         S = block_matrix(nmo, nmo);
         for(i=0; i < nmo; i++) {
-            if(fabs(evals[i]) > 1e-8) S[i][i] = 1/sqrt(evals[i]);
+            if(std::fabs(evals[i]) > 1e-8) S[i][i] = 1/sqrt(evals[i]);
             else S[i][i] = 0.0;
         }
         free(evals);
@@ -505,7 +510,7 @@ int CCEnergyWavefunction::rotate(void)
         /* build S^-1/2 for this basis */
         S = block_matrix(nmo, nmo);
         for(i=0; i < nmo; i++) {
-            if(fabs(evals[i]) > 1e-8) S[i][i] = 1/sqrt(evals[i]);
+            if(std::fabs(evals[i]) > 1e-8) S[i][i] = 1/sqrt(evals[i]);
             else S[i][i] = 0.0;
         }
         free(evals);
@@ -639,8 +644,8 @@ int CCEnergyWavefunction::rotate(void)
         for(p=0; p < nmo; p++) {
             max = 0.0;
             for(q=0; q < nmo; q++) {
-                if(fabs(MO_S[p][q]) > max) {
-                    max = fabs(MO_S[p][q]); max_col = q;
+                if(std::fabs(MO_S[p][q]) > max) {
+                    max = std::fabs(MO_S[p][q]); max_col = q;
                 }
             }
             if(max_col != p) phase_ok = 0;
@@ -741,8 +746,8 @@ int CCEnergyWavefunction::rotate(void)
         for(p=0; p < nmo; p++) {
             max = 0.0;
             for(q=0; q < nmo; q++) {
-                if(fabs(MO_S[p][q]) > max) {
-                    max = fabs(MO_S[p][q]); max_col = q;
+                if(std::fabs(MO_S[p][q]) > max) {
+                    max = std::fabs(MO_S[p][q]); max_col = q;
                 }
             }
             if(max_col != p) phase_ok = 0;

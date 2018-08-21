@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -171,12 +172,12 @@ void sigmaCC3(int i, int C_irr, double omega) {
            /* <D| H'   <T| (Uhat T2)c   |0> |T> / (-wt) -> sigma_2 */
   
     if (params.t3_Ws_incore)
-      global_dpd_->cc3_sigma_RHF_ic(&tIjAb, &WAbEi, &WMbIj, 0, NULL, NULL, 
+      global_dpd_->cc3_sigma_RHF_ic(&tIjAb, &WAbEi, &WMbIj, 0, nullptr, nullptr, 
         1, &FME, &WmAEf, &WMnIe, &SIjAb, moinfo.occpi, moinfo.occ_off,
         moinfo.virtpi, moinfo.vir_off, 0.0, "outfile", params.nthreads,
         params.newtrips);
     else
-    global_dpd_->cc3_sigma_RHF(&tIjAb, &WAbEi, &WMbIj, 0, NULL, NULL,
+    global_dpd_->cc3_sigma_RHF(&tIjAb, &WAbEi, &WMbIj, 0, nullptr, nullptr,
        1, &FME, &WmAEf, &WMnIe, &SIjAb, moinfo.occpi, moinfo.occ_off,
        moinfo.virtpi, moinfo.vir_off, 0.0, "outfile", params.newtrips);
   
@@ -542,7 +543,7 @@ void sigmaCC3(int i, int C_irr, double omega) {
 
          /* <D| H'   <T| (Uhat T2)c   |0> |T> / (-wt) -> sigma_2 */
 
-    global_dpd_->cc3_sigma_UHF_AAA(&TIJAB, &WABEI, &WMBIJ, 0, NULL, NULL,
+    global_dpd_->cc3_sigma_UHF_AAA(&TIJAB, &WABEI, &WMBIJ, 0, nullptr, nullptr,
         1, &FME, &WAMEF, &WMNIE, &SIJAB, moinfo.aoccpi, moinfo.aocc_off,
         moinfo.avirtpi, moinfo.avir_off, 0.0, "outfile");
 
@@ -564,7 +565,7 @@ void sigmaCC3(int i, int C_irr, double omega) {
 
          /* <D| H'   <T| (Uhat T2)c   |0> |T> / (-wt) -> sigma_2 */
 
-    global_dpd_->cc3_sigma_UHF_BBB(&Tijab, &Wabei, &Wmbij, 0, NULL, NULL,
+    global_dpd_->cc3_sigma_UHF_BBB(&Tijab, &Wabei, &Wmbij, 0, nullptr, nullptr,
         1, &Fme, &Wamef, &Wmnie, &Sijab, moinfo.boccpi, moinfo.bocc_off, 
         moinfo.bvirtpi, moinfo.bvir_off, 0.0, "outfile");
 
@@ -600,7 +601,7 @@ void sigmaCC3(int i, int C_irr, double omega) {
          /* <D| H'   <T| (Uhat T2)c   |0> |T> / (-wt) -> sigma_2 */
 
     global_dpd_->cc3_sigma_UHF_AAB(&TIJAB, &TIjAb, &TiJaB, &WABEI, &WaBeI, &WAbEi,
-       &WMBIJ, &WMbIj, &WmBiJ, 0, NULL, NULL, NULL, NULL,
+       &WMBIJ, &WMbIj, &WmBiJ, 0, nullptr, nullptr, nullptr, nullptr,
        1, &FME, &Fme, &WAMEF, &WaMeF, &WAmEf, &WMNIE, &WMnIe, &WmNiE,
        &SIJAB, &SIjAb, moinfo.aoccpi, moinfo.aocc_off, moinfo.boccpi,
        moinfo.bocc_off, moinfo.avirtpi, moinfo.avir_off, moinfo.bvirtpi,
@@ -638,7 +639,7 @@ void sigmaCC3(int i, int C_irr, double omega) {
          /* <D| H'   <T| (Uhat T2)c   |0> |T> / (-wt) -> sigma_2 */
 
     global_dpd_->cc3_sigma_UHF_BBA(&Tijab, &TIjAb, &TiJaB, &Wabei, &WaBeI, &WAbEi,
-      &Wmbij, &WMbIj, &WmBiJ, 0, NULL, NULL, NULL, NULL,
+      &Wmbij, &WMbIj, &WmBiJ, 0, nullptr, nullptr, nullptr, nullptr,
       1, &FME, &Fme, &Wamef, &WaMeF, &WAmEf, &Wmnie, &WMnIe, &WmNiE,
       &Sijab, &SIjAb, moinfo.aoccpi, moinfo.aocc_off, moinfo.boccpi,
       moinfo.bocc_off, moinfo.avirtpi, moinfo.avir_off, moinfo.bvirtpi,

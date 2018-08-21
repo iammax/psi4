@@ -1,7 +1,5 @@
 #! EOM-CC2/cc-pVDZ on H2O2 with two excited states in each irrep
 
-memory 250 mb
-
 molecule h2o2 {
   0 1
   O
@@ -16,7 +14,7 @@ set {
   roots_per_irrep [2, 2]
 }
 
-cc_energy, wfn = property('eom-cc2', properties=['oscillator_strength'],return_wfn=True)
+cc_energy, wfn = properties('eom-cc2', properties=['oscillator_strength'],return_wfn=True)
 
 gs_refs = {
         "CC DIPOLE X":                 0.0000,

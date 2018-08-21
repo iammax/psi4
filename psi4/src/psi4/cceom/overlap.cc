@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -45,7 +46,7 @@
 
 namespace psi { namespace cceom {
 
-int overlap(int C_irr, int current) {
+void overlap(int C_irr, int current) {
   dpdfile2 R1, R1A, R1B;
   dpdfile2 R1_old, R1A_old, R1B_old;
   dpdbuf4 R2, R2AA, R2BB, R2AB;
@@ -137,7 +138,7 @@ int overlap(int C_irr, int current) {
       overlap += global_dpd_->buf4_dot(&R2AB, &R2AB_old);
     }
 
-    outfile->Printf( "State %d --> %5.3f\n", i, fabs(overlap));
+    outfile->Printf( "State %d --> %5.3f\n", i, std::fabs(overlap));
 
     if(params.eom_ref == 0) {
       global_dpd_->file2_close(&R1_old);
@@ -163,7 +164,6 @@ int overlap(int C_irr, int current) {
     global_dpd_->buf4_close(&R2BB);
     global_dpd_->buf4_close(&R2AB);
   }
-
 }
 
 void overlap_stash(int C_irr)

@@ -3,36 +3,37 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
 #
 
 from __future__ import print_function
-import math
 import re
+
 from psi4 import core
 from psi4.driver import qcdb
 from psi4.driver import p4util
 from psi4.driver.p4util.exceptions import *
-from psi4.driver.procedures import *
+from psi4.driver.procrouting import *
 
 
 def _method_exists(ptype, method_name):
@@ -80,7 +81,7 @@ def _set_convergence_criterion(ptype, method_name, scf_Ec, pscf_Ec, scf_Dc, pscf
         print('      Setting convergence', end=' ')
     # Set method-dependent scf convergence criteria, check against energy routines
     if not core.has_option_changed('SCF', 'E_CONVERGENCE'):
-        if procedures['energy'][method_name] in [proc.run_scf, proc.run_dft]:
+        if procedures['energy'][method_name] == proc.run_scf:
             core.set_local_option('SCF', 'E_CONVERGENCE', scf_Ec)
             if verbose >= 2:
                 print(scf_Ec, end=' ')
@@ -93,7 +94,7 @@ def _set_convergence_criterion(ptype, method_name, scf_Ec, pscf_Ec, scf_Dc, pscf
             print('CUSTOM', core.get_option('SCF', 'E_CONVERGENCE'), end=' ')
 
     if not core.has_option_changed('SCF', 'D_CONVERGENCE'):
-        if procedures['energy'][method_name] in [proc.run_scf, proc.run_dft]:
+        if procedures['energy'][method_name] == proc.run_scf:
             core.set_local_option('SCF', 'D_CONVERGENCE', scf_Dc)
             if verbose >= 2:
                 print(scf_Dc, end=' ')
@@ -107,12 +108,12 @@ def _set_convergence_criterion(ptype, method_name, scf_Ec, pscf_Ec, scf_Dc, pscf
 
     # Set post-scf convergence criteria (global will cover all correlated modules)
     if not core.has_global_option_changed('E_CONVERGENCE'):
-        if procedures['energy'][method_name] not in [proc.run_scf, proc.run_dft]:
+        if procedures['energy'][method_name] != proc.run_scf:
             core.set_global_option('E_CONVERGENCE', gen_Ec)
             if verbose >= 2:
                 print(gen_Ec, end=' ')
     else:
-        if procedures['energy'][method_name] not in [proc.run_scf, proc.run_dft]:
+        if procedures['energy'][method_name] != proc.run_scf:
             if verbose >= 2:
                 print('CUSTOM', core.get_global_option('E_CONVERGENCE'), end=' ')
 

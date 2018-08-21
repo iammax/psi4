@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -52,6 +53,7 @@
 #include "psi4/libpsi4util/libpsi4util.h"
 #include "psi4/libpsi4util/memory_manager.h"
 #include "psi4/libqt/qt.h"
+#include "psi4/libpsi4util/process.h"
 
 // PSI C++
 #include "psi4/libpsio/psio.hpp"
@@ -66,7 +68,6 @@
 
 // PSI FILES
 
-using namespace std;
 using namespace psi;
 
 namespace psi{
@@ -76,7 +77,7 @@ namespace psi{
     Timer               *global_timer;
     CCBLAS              *blas;
     CCSort              *sorter;
-    CCTransform         *trans = NULL;
+    CCTransform         *trans = nullptr;
     MOInfo              *moinfo;
     ModelSpace          *model_space;
     Debugging           *debugging;
@@ -108,7 +109,7 @@ psimrcc(SharedWavefunction ref_wfn, Options &options)
 
   int nactmo = moinfo->get_nactv();
   int nactel = moinfo->get_nactive_ael() + moinfo->get_nactive_bel();
-  if(nactel > 2 and nactmo > 2){
+  if(nactel > 2 && nactmo > 2){
       outfile->Printf("\n   WARNING: PSIMRCC detected that you are not using a CAS(2,n) or CAS(m,2) active space");
       outfile->Printf("\n            You requested a CAS(%d,%d) space.  In this case the program will run",nactel,nactmo);
       outfile->Printf("\n            but will negled matrix elements of the effective Hamiltonian between");
@@ -124,7 +125,7 @@ psimrcc(SharedWavefunction ref_wfn, Options &options)
     mrpt2(ref_wfn, options);
   }else{
     mrccsd(ref_wfn, options);
-    if(nactel > 2 and nactmo > 2){
+    if(nactel > 2 && nactmo > 2){
         outfile->Printf("\n   WARNING: PSIMRCC detected that you are not using a CAS(2,n) or CAS(m,2) active space");
         outfile->Printf("\n            You requested a CAS(%d,%d) space.  In this case the program will run",nactel,nactmo);
         outfile->Printf("\n            but will negled matrix elements of the effective Hamiltonian between");

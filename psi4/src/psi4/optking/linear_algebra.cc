@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -225,7 +226,7 @@ double ** symm_matrix_inv(double **A, int dim, bool redundant) {
   double * evals = init_array(dim);
   double ** A_evects = matrix_return_copy(A, dim, dim);
 
-  if (dim <= 0) return ( (double **) NULL);
+  if (dim <= 0) return ( (double **) nullptr);
 
   if (! opt_symm_matrix_eig(A_evects, dim, evals) )
     throw(INTCO_EXCEPT("symm_matrix_inv : opt_symm_matrix_eig could not diagonalize"));
@@ -234,14 +235,14 @@ double ** symm_matrix_inv(double **A, int dim, bool redundant) {
   for (i=0;i<dim;++i)
     det *= evals[i];
 
-  if (!redundant && fabs(det) < 1E-10)
+  if (!redundant && std::fabs(det) < 1E-10)
     throw(INTCO_EXCEPT("symm_matrix_inv : Non-generalized inverse of matrix failed"));
 
   double ** A_inv = init_matrix(dim, dim);
 
   if (redundant) {
     for (i=0;i<dim;++i)
-      if (fabs(evals[i]) > Opt_params.redundant_eval_tol)
+      if (std::fabs(evals[i]) > Opt_params.redundant_eval_tol)
         A_inv[i][i] = 1.0/evals[i];
   }
   else {
@@ -318,7 +319,7 @@ void array_scm(double *v1, double a, int n) {
 double array_abs_max(double *v1, int n) {
   double max = 0.0;
   for (int i=0; i<n; ++i)
-    if (fabs(v1[i]) > max) max = fabs(v1[i]);
+    if (std::fabs(v1[i]) > max) max = std::fabs(v1[i]);
   return max;
 }
 
@@ -344,7 +345,7 @@ void matrix_root(double **A, int dim, bool inverse) {
 
   if (inverse) {
     for(int k=0; k<dim; k++)
-      if(fabs(A_evals[k]) > Opt_params.redundant_eval_tol)
+      if(std::fabs(A_evals[k]) > Opt_params.redundant_eval_tol)
         A_evals[k] = 1.0/A_evals[k];
   }
 

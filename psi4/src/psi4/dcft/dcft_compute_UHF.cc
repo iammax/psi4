@@ -3,37 +3,41 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
 #include "dcft.h"
-#include <cmath>
+#include "defines.h"
+
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 #include "psi4/libdpd/dpd.h"
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libdiis/diismanager.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libpsio/psio.h"
 
-#include "defines.h"
+#include <cmath>
 
 
 
@@ -108,7 +112,7 @@ double DCFTSolver::compute_energy_UHF()
         run_qc_dcft();
     }
     else {
-        throw PSIEXCEPTION("Unknown DCFT algoritm");
+        throw PSIEXCEPTION("Unknown DCFT algorithm");
     }
 
     // If not converged -> Break
@@ -327,13 +331,13 @@ DCFTSolver::run_twostep_dcft_cumulant_updates() {
         new_total_energy_ = scf_energy_ + lambda_energy_;
         // Check convergence for density cumulant iterations
         cumulantDone_ = cumulant_convergence_ < cumulant_threshold_;
-        energyConverged_ = fabs(new_total_energy_ - old_total_energy_) < energy_threshold_;
+        energyConverged_ = std::fabs(new_total_energy_ - old_total_energy_) < energy_threshold_;
         if (options_.get_str("ALGORITHM") == "TWOSTEP") {
             outfile->Printf( "\t* %-3d   %12.3e      %12.3e   %12.3e  %21.15f  %-3s *\n",
                     nLambdaIterations, orbitals_convergence_, cumulant_convergence_, new_total_energy_ - old_total_energy_,
                     new_total_energy_, diisString.c_str());
         }
-        if (fabs(cumulant_convergence_) > 100.0) throw PSIEXCEPTION("DCFT density cumulant equations diverged");
+        if (std::fabs(cumulant_convergence_) > 100.0) throw PSIEXCEPTION("DCFT density cumulant equations diverged");
 
     }
 
@@ -345,7 +349,7 @@ DCFTSolver::run_twostep_dcft_cumulant_updates() {
 void
 DCFTSolver::run_twostep_dcft_orbital_updates() {
 
-    SharedMatrix tmp = SharedMatrix(new Matrix("temp", nirrep_, nsopi_, nsopi_));
+    auto tmp = std::make_shared<Matrix>("temp", nirrep_, nsopi_, nsopi_);
 
     // Set up DIIS
     DIISManager scfDiisManager(maxdiis_, "DCFT DIIS Orbitals",DIISManager::LargestError,DIISManager::InCore);
@@ -411,11 +415,11 @@ DCFTSolver::run_twostep_dcft_orbital_updates() {
         // Compute the DCFT energy
         new_total_energy_ = scf_energy_ + lambda_energy_;
         // Check convergence of the total DCFT energy
-        energyConverged_ = fabs(new_total_energy_ - old_total_energy_) < energy_threshold_;
+        energyConverged_ = std::fabs(new_total_energy_ - old_total_energy_) < energy_threshold_;
         outfile->Printf( "\t* %-3d   %12.3e      %12.3e   %12.3e  %21.15f  %-3s *\n",
                 nSCFCycles, orbitals_convergence_, cumulant_convergence_, new_total_energy_ - old_total_energy_,
                 new_total_energy_, diisString.c_str());
-        if (fabs(orbitals_convergence_) > 100.0) throw PSIEXCEPTION("DCFT orbital updates diverged");
+        if (std::fabs(orbitals_convergence_) > 100.0) throw PSIEXCEPTION("DCFT orbital updates diverged");
 
     }
     orbitalsDone_ = nSCFCycles == 1;
@@ -436,7 +440,7 @@ DCFTSolver::run_simult_dcft()
                          "\t* Cycle  RMS [F, Kappa]   RMS Lambda Error   delta E        Total Energy     DIIS *\n"
                          "\t*---------------------------------------------------------------------------------*\n");
 
-    SharedMatrix tmp = SharedMatrix(new Matrix("temp", nirrep_, nsopi_, nsopi_));
+    auto tmp = std::make_shared<Matrix>("temp", nirrep_, nsopi_, nsopi_);
     // Set up the DIIS manager
     DIISManager diisManager(maxdiis_, "DCFT DIIS vectors");
     dpdbuf4 Laa, Lab, Lbb;
@@ -474,11 +478,11 @@ DCFTSolver::run_simult_dcft()
 
             build_DF_tensors_UHF();
 
-            SharedMatrix mo_h_A = SharedMatrix(new Matrix("MO-based H Alpha", nirrep_, nmopi_, nmopi_));
+            auto mo_h_A = std::make_shared<Matrix>("MO-based H Alpha", nirrep_, nmopi_, nmopi_);
             mo_h_A->copy(so_h_);
             mo_h_A->transform(Ca_);
 
-            SharedMatrix mo_h_B = SharedMatrix(new Matrix("MO-based H Beta", nirrep_, nmopi_, nmopi_));
+            auto mo_h_B = std::make_shared<Matrix>("MO-based H Beta", nirrep_, nmopi_, nmopi_);
             mo_h_B->copy(so_h_);
             mo_h_B->transform(Cb_);
 
@@ -489,13 +493,13 @@ DCFTSolver::run_simult_dcft()
             moFb_->add(mo_gbarGamma_B_);
 
             // Back-transform the Fock matrix to the SO basis: F_so = (Ct)^-1 F_mo C^-1 = (C^-1)t F_mo C^-1
-            SharedMatrix Ca_inverse = SharedMatrix(new Matrix("Ca_ inverse", nirrep_, nmopi_, nsopi_));
+            auto Ca_inverse = std::make_shared<Matrix>("Ca_ inverse", nirrep_, nmopi_, nsopi_);
             Ca_inverse->copy(Ca_);
             Ca_inverse->general_invert();
             Fa_->copy(moFa_);
             Fa_->transform(Ca_inverse);
 
-            SharedMatrix Cb_inverse = SharedMatrix(new Matrix("Cb_ inverse", nirrep_, nmopi_, nsopi_));
+            auto Cb_inverse = std::make_shared<Matrix>("Cb_ inverse", nirrep_, nmopi_, nsopi_);
             Cb_inverse->copy(Cb_);
             Cb_inverse->general_invert();
             Fb_->copy(moFa_);
@@ -530,7 +534,7 @@ DCFTSolver::run_simult_dcft()
         build_cumulant_intermediates();
         // Compute the residuals for density cumulant equations
         cumulant_convergence_ = compute_cumulant_residual();
-        if (fabs(cumulant_convergence_) > 100.0) throw PSIEXCEPTION("DCFT density cumulant equations diverged");
+        if (std::fabs(cumulant_convergence_) > 100.0) throw PSIEXCEPTION("DCFT density cumulant equations diverged");
         // Check convergence for density cumulant iterations
         cumulantDone_ = cumulant_convergence_ < cumulant_threshold_;
         // Update density cumulant tensor
@@ -540,7 +544,7 @@ DCFTSolver::run_simult_dcft()
         // Add lambda energy to the DCFT total energy
         new_total_energy_ += lambda_energy_;
         // Check convergence of the total DCFT energy
-        energyConverged_ = fabs(old_total_energy_ - new_total_energy_) < energy_threshold_;
+        energyConverged_ = std::fabs(old_total_energy_ - new_total_energy_) < energy_threshold_;
         if(orbitals_convergence_ < diis_start_thresh_ && cumulant_convergence_ < diis_start_thresh_){
             //Store the DIIS vectors
             dpdbuf4 Laa, Lab, Lbb, Raa, Rab, Rbb;

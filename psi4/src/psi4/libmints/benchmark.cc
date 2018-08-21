@@ -3,47 +3,51 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
+
 #include "psi4/libmints/basisset.h"
+#include "psi4/libmints/molecule.h"
 #include "psi4/libmints/integral.h"
 #include "psi4/libmints/3coverlap.h"
+
 #include "psi4/libqt/qt.h"
 #include "psi4/libciomr/libciomr.h"
-#include "psi4/libpsi4util/libpsi4util.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libpsio/psio.h"
-#include <cmath>
-#include <cstdlib>
 #include "psi4/psi4-dec.h"
+#include "psi4/libpsi4util/libpsi4util.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 #include <map>
 #include <string>
+#include <cmath>
+#include <cstdlib>
 #include <vector>
 
 #ifdef USING_LAPACK_MKL
 #include <mkl.h>
 #endif
-#include "psi4/libparallel/ParallelPrinter.h"
 
 namespace psi {
 
@@ -70,7 +74,7 @@ void benchmark_blas1(int N, double min_time)
     outfile->Printf( "\n");
 
     double T;
-    unsigned long int rounds;
+    size_t rounds;
     double t;
     int dim;
     Timer* qq;
@@ -113,7 +117,7 @@ void benchmark_blas1(int N, double min_time)
     for (int k = 0; k < N; k++) {
 
         dim *= 2;
-        unsigned long int full_dim = dim * (unsigned long int) dim;
+        size_t full_dim = dim * (size_t) dim;
 
         double* A = init_array(full_dim);
         double* B = init_array(full_dim);
@@ -154,7 +158,7 @@ void benchmark_blas1(int N, double min_time)
         rounds = 0L;
         qq = new Timer();
         while (T < min_time) {
-            for (unsigned long int Q = 0; Q < full_dim; Q++)
+            for (size_t Q = 0; Q < full_dim; Q++)
                 t = A[Q];
             T = qq->get();
             rounds++;
@@ -168,7 +172,7 @@ void benchmark_blas1(int N, double min_time)
         rounds = 0L;
         qq = new Timer();
         while (T < min_time) {
-            for (unsigned long int Q = 0; Q < full_dim; Q++)
+            for (size_t Q = 0; Q < full_dim; Q++)
                 A[Q] = t;
             T = qq->get();
             rounds++;
@@ -182,7 +186,7 @@ void benchmark_blas1(int N, double min_time)
         rounds = 0L;
         qq = new Timer();
         while (T < min_time) {
-            for (unsigned long int Q = 0; Q < full_dim; Q++)
+            for (size_t Q = 0; Q < full_dim; Q++)
                 A[Q] = B[Q];
             T = qq->get();
             rounds++;
@@ -191,7 +195,7 @@ void benchmark_blas1(int N, double min_time)
         t = T / (double) rounds;
         timings1["Cross"][k] = t;
 
-        for (unsigned long int Q = 0L; Q < full_dim; Q++) {
+        for (size_t Q = 0L; Q < full_dim; Q++) {
             A[Q] = rand() / (double) RAND_MAX;
             B[Q] = rand() / (double) RAND_MAX;
         }
@@ -532,7 +536,7 @@ void benchmark_blas1(int N, double min_time)
         dim = 1;
         for (int k = 0; k < N; k++) {
             dim *= 2;
-            unsigned long int full_dim = dim * (unsigned long int) dim;
+            size_t full_dim = dim * (size_t) dim;
             outfile->Printf( "  %9.3E", timings1[ops1[s]][k] / (double) full_dim);
         }
         outfile->Printf( "\n");
@@ -552,7 +556,7 @@ void benchmark_blas1(int N, double min_time)
         dim = 1;
         for (int k = 0; k < N; k++) {
             dim *= 2;
-            unsigned long int full_dim = dim * (unsigned long int) dim;
+            size_t full_dim = dim * (size_t) dim;
             outfile->Printf( "  %9.3E", full_dim / timings1[ops1[s]][k]);
         }
         outfile->Printf( "\n");
@@ -580,7 +584,7 @@ void benchmark_blas2(int N, double min_time)
     outfile->Printf( "\n");
 
     double T;
-    unsigned long int rounds;
+    size_t rounds;
     double t;
     int dim;
     Timer* qq;
@@ -607,13 +611,13 @@ void benchmark_blas2(int N, double min_time)
     for (int k = 0; k < N; k++) {
 
         dim *= 2;
-        unsigned long int full_dim = dim * (unsigned long int) dim;
+        size_t full_dim = dim * (size_t) dim;
 
         double* A = init_array(full_dim);
         double* B = init_array(full_dim);
         double* C = init_array(full_dim);
 
-        for (unsigned long int Q = 0L; Q < full_dim; Q++) {
+        for (size_t Q = 0L; Q < full_dim; Q++) {
             A[Q] = rand() / (double) RAND_MAX;
             B[Q] = rand() / (double) RAND_MAX;
         }
@@ -814,7 +818,7 @@ void benchmark_blas2(int N, double min_time)
         dim = 1;
         for (int k = 0; k < N; k++) {
             dim *= 2;
-            unsigned long int full_dim = dim * (unsigned long int) dim;
+            size_t full_dim = dim * (size_t) dim;
             outfile->Printf( "  %9.3E", full_dim / timings2[ops2[s]][k]);
         }
         outfile->Printf( "\n");
@@ -842,7 +846,7 @@ void benchmark_blas3(int N, double min_time, int max_threads)
     outfile->Printf( "        the order they appear in the function call. All lda values are D.\n");
     outfile->Printf( "\n");
     double T;
-    unsigned long int rounds;
+    size_t rounds;
     double t;
     int dim;
     Timer* qq;
@@ -892,7 +896,7 @@ void benchmark_blas3(int N, double min_time, int max_threads)
         for (int k = 0; k < N; k++) {
 
             dim *= 2;
-            unsigned long int full_dim = dim * (unsigned long int) dim;
+            size_t full_dim = dim * (size_t) dim;
 
             double* A = init_array(full_dim);
             double* Aback = init_array(full_dim);
@@ -903,7 +907,7 @@ void benchmark_blas3(int N, double min_time, int max_threads)
             int lwork = dim*3;
             double* eig = init_array(dim);
 
-            for (unsigned long int Q = 0; Q < full_dim; Q++)
+            for (size_t Q = 0; Q < full_dim; Q++)
                 A[Q] = rand() / (double) RAND_MAX;
 
             for (int i = 0; i < dim; i++)
@@ -1348,7 +1352,7 @@ void benchmark_disk(int N, double min_time)
     outfile->Printf( "\n");
 
     double T;
-    unsigned long int rounds;
+    size_t rounds;
     double t;
     int dim;
     Timer* qq;
@@ -1373,7 +1377,7 @@ void benchmark_disk(int N, double min_time)
     for (int k = 0; k < N; k++) {
 
         dim *= 2;
-        unsigned long int full_dim = dim * (unsigned long int) dim;
+        size_t full_dim = dim * (size_t) dim;
 
         double* A = init_array(full_dim);
         psio_->open(0, PSIO_OPEN_NEW);
@@ -1408,7 +1412,7 @@ void benchmark_disk(int N, double min_time)
         while (T < min_time) {
             psiadd = PSIO_ZERO;
             for (int Q = 0; Q < dim; Q++)
-                psio_->write(0,"BENCH_DATA", (char*) &A[Q*(unsigned long int) dim], dim * sizeof(double), psiadd, &psiadd);
+                psio_->write(0,"BENCH_DATA", (char*) &A[Q*(size_t) dim], dim * sizeof(double), psiadd, &psiadd);
             T = qq->get();
             rounds++;
         }
@@ -1427,7 +1431,7 @@ void benchmark_disk(int N, double min_time)
                     psiadd = psio_get_address(PSIO_ZERO, 2*Q*dim*sizeof(double));
                 else
                     psiadd = psio_get_address(PSIO_ZERO, (Q - dim/2 + 1)*dim*sizeof(double));
-                psio_->write(0,"BENCH_DATA", (char*) &A[Q*(unsigned long int) dim], dim * sizeof(double), psiadd, &psiadd);
+                psio_->write(0,"BENCH_DATA", (char*) &A[Q*(size_t) dim], dim * sizeof(double), psiadd, &psiadd);
             }
             T = qq->get();
             rounds++;
@@ -1457,7 +1461,7 @@ void benchmark_disk(int N, double min_time)
         while (T < min_time) {
             psiadd = PSIO_ZERO;
             for (int Q = 0; Q < dim; Q++)
-                psio_->read(0,"BENCH_DATA", (char*) &A[Q*(unsigned long int) dim], dim * sizeof(double), psiadd, &psiadd);
+                psio_->read(0,"BENCH_DATA", (char*) &A[Q*(size_t) dim], dim * sizeof(double), psiadd, &psiadd);
             T = qq->get();
             rounds++;
         }
@@ -1476,7 +1480,7 @@ void benchmark_disk(int N, double min_time)
                     psiadd = psio_get_address(PSIO_ZERO, 2*Q*dim*sizeof(double));
                 else
                     psiadd = psio_get_address(PSIO_ZERO, (Q - dim/2 + 1)*dim*sizeof(double));
-                psio_->read(0,"BENCH_DATA", (char*) &A[Q*(unsigned long int) dim], dim * sizeof(double), psiadd, &psiadd);
+                psio_->read(0,"BENCH_DATA", (char*) &A[Q*(size_t) dim], dim * sizeof(double), psiadd, &psiadd);
             }
             T = qq->get();
             rounds++;
@@ -1532,7 +1536,7 @@ void benchmark_disk(int N, double min_time)
         dim = 1;
         for (int k = 0; k < N; k++) {
             dim *= 2;
-            unsigned long int full_dim = dim * (unsigned long int) dim;
+            size_t full_dim = dim * (size_t) dim;
             outfile->Printf( "  %9.3E", full_dim / timings[ops[s]][k]);
         }
         outfile->Printf( "\n");
@@ -1552,7 +1556,7 @@ void benchmark_disk(int N, double min_time)
         dim = 1;
         for (int k = 0; k < N; k++) {
             dim *= 2;
-            unsigned long int full_dim = dim * (unsigned long int) dim;
+            size_t full_dim = dim * (size_t) dim;
             outfile->Printf( "  %9.3E", 8.0E-9 *full_dim / timings[ops[s]][k]);
         }
         outfile->Printf( "\n");
@@ -1564,7 +1568,7 @@ void benchmark_disk(int N, double min_time)
 void benchmark_math(double min_time)
 {
     double T;
-    unsigned long int rounds;
+    size_t rounds;
     double t;
     Timer* qq;
 
@@ -1599,7 +1603,7 @@ void benchmark_math(double min_time)
     ops.push_back("fabs");
 
     // In case the compiler gets awesome
-    std::shared_ptr<OutFile> printer(new OutFile("dump.dat",TRUNCATE));
+    auto printer = std::make_shared<PsiOutStream>("dump.dat",std::ostream::trunc);
 
     #define LOOP_SIZE 10000
     #define UNROLL_SIZE 10
@@ -1628,7 +1632,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf("%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["+"] = t;
 
     T = 0.0;
@@ -1655,7 +1659,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf("%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["-"] = t;
 
     T = 0.0;
@@ -1682,7 +1686,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf("%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["*"] = t;
 
     T = 0.0;
@@ -1709,7 +1713,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["/"] = t;
     T = 0.0;
     rounds = 0L;
@@ -1735,7 +1739,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["+="] = t;
 
     T = 0.0;
@@ -1762,7 +1766,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["-="] = t;
 
     T = 0.0;
@@ -1789,7 +1793,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["*="] = t;
 
     T = 0.0;
@@ -1816,7 +1820,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["/="] = t;
 
     T = 0.0;
@@ -1842,7 +1846,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["sin"] = t;
 
     T = 0.0;
@@ -1868,7 +1872,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["cos"] = t;
 
     T = 0.0;
@@ -1894,7 +1898,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["tan"] = t;
 
     b = 0.8;
@@ -1921,7 +1925,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["asin"] = t;
 
     T = 0.0;
@@ -1947,7 +1951,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["acos"] = t;
 
     T = 0.0;
@@ -1973,7 +1977,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["atan"] = t;
 
     T = 0.0;
@@ -2000,7 +2004,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["atan2"] = t;
 
     T = 0.0;
@@ -2026,7 +2030,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["cosh"] = t;
 
     T = 0.0;
@@ -2052,7 +2056,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["sinh"] = t;
 
     T = 0.0;
@@ -2078,7 +2082,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["tanh"] = t;
 
     double temp[2];
@@ -2106,7 +2110,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["exp"] = t;
 
     T = 0.0;
@@ -2131,7 +2135,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["pow"] = t;
 
     T = 0.0;
@@ -2156,7 +2160,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["log"] = t;
 
     T = 0.0;
@@ -2182,7 +2186,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["floor"] = t;
 
     T = 0.0;
@@ -2207,7 +2211,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["ceil"] = t;
 
     T = 0.0;
@@ -2215,16 +2219,16 @@ void benchmark_math(double min_time)
     qq = new Timer();
     while (T < min_time) {
         for (int Q = 0; Q < LOOP_SIZE; Q++) {
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
-            c = fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
+            c = std::fabs(c);
         }
 
         T = qq->get();
@@ -2232,7 +2236,7 @@ void benchmark_math(double min_time)
     }
     printer->Printf( "%14.10f\n", c);
     delete qq;
-    t = T / (double) (rounds * LOOP_SIZE * (unsigned long int)UNROLL_SIZE);
+    t = T / (double) (rounds * LOOP_SIZE * (size_t)UNROLL_SIZE);
     timings["fabs"] = t;
 
     outfile->Printf( "\n");
@@ -2266,7 +2270,7 @@ void benchmark_math(double min_time)
 void benchmark_integrals(int max_am, double min_time)
 {
     double T;
-    unsigned long int rounds;
+    size_t rounds;
     double t;
     Timer* qq;
 
@@ -2278,9 +2282,9 @@ void benchmark_integrals(int max_am, double min_time)
     std::shared_ptr<BasisSet> zero = BasisSet::zero_ao_basis_set();
 
     //Factories
-    std::shared_ptr<IntegralFactory> bbbb(new IntegralFactory(basis, basis, basis, basis));
-    std::shared_ptr<IntegralFactory> b0bb(new IntegralFactory(basis, zero, basis, basis));
-    std::shared_ptr<IntegralFactory> b0b0(new IntegralFactory(basis, zero, basis, zero));
+    auto bbbb = std::make_shared<IntegralFactory>(basis, basis, basis, basis);
+    auto b0bb = std::make_shared<IntegralFactory>(basis, zero, basis, basis);
+    auto b0b0 = std::make_shared<IntegralFactory>(basis, zero, basis, zero);
 
     std::vector<std::string> int_types;
     int_types.push_back("2C Overlap");

@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -91,6 +92,19 @@ Overall |PSIfour| Package
 
 The following citation should be used in any publication utilizing the
 |PSIfour| program package:
+
+* "Psi4 1.1: An Open-Source Electronic Structure Program Emphasizing
+  Automation, Advanced Libraries, and Interoperability", R. M. Parrish, L.
+  A. Burns, D. G. A. Smith, A. C. Simmonett, A. E. DePrince III, E. G.
+  Hohenstein, U. Bozkaya, A. Yu. Sokolov, R. Di Remigio, R. M. Richard, J.
+  F. Gonthier, A. M. James, H. R. McAlexander, A. Kumar, M. Saitow, X. Wang,
+  B. P. Pritchard, P. Verma, H. F. Schaefer III, K. Patkowski, R. A. King,
+  E. F. Valeev, F. A. Evangelista, J. M. Turney, T. D. Crawford, and C. D.
+  Sherrill, *J. Chem. Theory Comput.*, **13(7)** 3185--3197 (2017).
+  (doi: `10.1021/acs.jctc.7b00174
+  <http://dx.doi.org/10.1021/acs.jctc.7b00174>`_).
+
+The following citation covers |PSIfour| alpha and beta versions:
 
 * "Psi4: An open-source *ab initio* electronic structure program,"
   J. M. Turney, A. C. Simmonett, R. M. Parrish, E. G. Hohenstein, F.
@@ -202,6 +216,21 @@ and cholesky-decomposed coupled-cluster singles and doubles method
   U. Bozkaya,   *J. Chem. Phys.* **144**, 144108 (2016).
   (doi: `10.1063/1.4945706 <http://dx.doi.org/10.1063/1.4945706>`_).
 
+Implementation of analytic gradients for the density-fitted 
+coupled-cluster singles and doubles method
+
+* "Analytic energy gradients for the coupled-cluster singles and doubles method with
+  the density-fitting approximation," 
+  U. Bozkaya and C. D. Sherrill,   *J. Chem. Phys.* **144**, 174103 (2016).
+  (doi: `10.1063/1.4948318 <http://dx.doi.org/10.1063/1.4948318>`_).
+
+Implementation of analytic gradients for the density-fitted 
+coupled-cluster singles and doubles with perturbative triples method
+
+* "Analytic energy gradients for the coupled-cluster singles and doubles 
+  with perturbative triples method with the density-fitting approximation," 
+  U. Bozkaya and C. D. Sherrill,   *J. Chem. Phys.* **147**, 044104 (2017).
+  (doi: `10.1063/1.4994918 <http://dx.doi.org/10.1063/1.4994918>`_).
  
 Mukherjee State-Specific Multi-Reference Coupled Cluster (Mk-MRCC)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -495,24 +524,43 @@ Implementation within Psi4
 .. index:: architectures
 .. index:: compilers
 
-Supported Architectures
-=======================
+Supported Systems
+=================
 
-The majority of |PSIfour| was developed on Mac and Linux machines; in
-principle, it should work on any Unix system. The latest version of the
-|PSIfour| program package may be obtained at `psicode.org
-<http://psicode.org>`_. The package is available as a binary for Linux,
-macOS, or Windows Subsystem for Linux (:ref:`Installing from Binary
-<sec:conda>`) or as source code (zipped archive or git repository from
-`https://github.com/psi4/psi4 <http://www.github.com/psi4/psi4>`_).
+Architectures 
+    The majority of |PSIfour| was developed on Mac and Linux machines; in
+    principle, it should work on any Unix system. The latest version of the
+    |PSIfour| program package may be obtained at `psicode.org <http://psicode.org>`_.
+    The package is available as a binary (:ref:`Installing from Binary
+    <sec:conda>`) for Linux, macOS, or Windows (via Windows Subsystem for
+    Linux aka `Bash on Ubuntu on Windows
+    <https://msdn.microsoft.com/commandline/wsl/about>`_)
+    or as source code (git repository or zipped archive from
+    `https://github.com/psi4/psi4 <http://www.github.com/psi4/psi4>`_).
+Compilers
+    |PSIfour| has been successfully compiled using Intel, GCC, and Clang
+    compilers. :ref:`Compiler requirements <faq:approvedcxx>` are primarily
+    C++11 compliance (*i.e.*, GCC version 4.9 or above).
+    For some architectures, a :ref:`precompiled binary
+    <sec:conda>` is available. See :ref:`Compiling and Installing
+    <sec:installFile>` for details.
+Python
+    |PSIfour| 1.1 and 1.2 are supported on Python 2.7, 3.5,
+    and 3.6. After 1.2, only Python 3 will be supported
+    `in accordance with other scientific software projects
+    <https://python3statement.org/>`_). Once Python 3.7 is released,
+    the plan is to support >=3.6 or at least two Python versions.
 
-|PSIfour| has been successfully compiled using Intel, GCC, and Clang
-compilers. :ref:`Compiler requirements <faq:approvedcxx>` are primarily
-C++11 compliance (*i.e.*, GCC version 4.9 or above).
-For some architectures, a :ref:`precompiled binary
-<sec:conda>` is available. See :ref:`Compiling and Installing
-<sec:installFile>` for details.
+.. index:: license
 
+License
+=======
+
+|PSIfour| is distributed under the GNU Lesser General Public License
+version 3, `LGPL-3.0 <https://opensource.org/licenses/LGPL-3.0>`_.  Its
+required dependencies and add-ons have their own licenses, ranging from
+BSD-2-Clause to GPL-2.0+. It is possible to build |PSIfour| without any
+GPL dependencies.
 
 Capabilities
 ============
@@ -537,9 +585,9 @@ For more details, see Tables :ref:`Energy <table:energy_gen>`,
     +                         +----------------+-------------------+--------------+----------------+                             +-----------+------------+
     |                         | Reference      | Type              | Reference    | Type           |                             | OO [#f9]_ | FNO [#f1]_ |
     +=========================+================+===================+==============+================+=============================+===========+============+
-    | HF                      | RHF/UHF/ROHF   | CONV/DF/CD        | RHF/UHF/ROHF | CONV/DF        | threaded                    |           |            |
+    | HF, HF-3c               | RHF/UHF/ROHF   | CONV/DF/CD        | RHF/UHF/ROHF | CONV/DF        | threaded                    |           |            |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
-    | DFT                     | RKS/UKS        | CONV/DF/CD [#f7]_ | RKS/UKS      | DF [#f4]_      | threaded                    |           |            |
+    | DFT, PBEh-3c            | RKS/UKS        | CONV/DF/CD [#f7]_ | RKS/UKS      | DF [#f4]_      | threaded                    |           |            |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
     | EFP [#f5]_              | RHF            |                   | ---          | ---            |                             |           |            |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
@@ -565,11 +613,11 @@ For more details, see Tables :ref:`Energy <table:energy_gen>`,
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
     | CCD                     | RHF            | DF/CD             | RHF          | DF             | threaded [#f3]_             |           |            |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
-    | CC2                     | RHF/UHF/ROHF   | CONV              | ---          | ---            | threaded [#f3]_             |           |            |
+    | CC2                     | RHF/UHF/ROHF   | CONV              | RHF          | CONV           | threaded [#f3]_             |           |            |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
     | CCSD [#f10]_            | RHF/UHF/ROHF   | CONV/DF/CD [#f8]_ | RHF/UHF/ROHF | CONV/DF [#f8]_ | threaded [#f3]_             |           | E [#f2]_   |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
-    | CCSD(T) [#f10]_         | RHF/UHF/ROHF   | CONV/DF/CD [#f8]_ | RHF/UHF      | CONV           | threaded (pthreads) [#f3]_  |           | E [#f2]_   |
+    | CCSD(T) [#f10]_         | RHF/UHF/ROHF   | CONV/DF/CD [#f8]_ | RHF/UHF      | CONV/DF [#f8]_ | threaded (pthreads) [#f3]_  |           | E [#f2]_   |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
     | CCSD(AT) [#f10]_        | RHF            | CONV/DF/CD        | ---          | ---            | threaded [#f3]_             |           |            |
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
@@ -613,7 +661,7 @@ For more details, see Tables :ref:`Energy <table:energy_gen>`,
     +-------------------------+----------------+-------------------+--------------+----------------+-----------------------------+-----------+------------+
 
 Geometry optimization can be performed using either analytic gradients
-or energy points. Likewise, vibrational frequencies can be 
+or energy points. Likewise, vibrational frequencies can be
 computed by analytic second derivatives, by finite
 differences of analytic gradients, or by finite differences of energies.
 |PSIfour| can also compute an extensive list of one-electron properties.

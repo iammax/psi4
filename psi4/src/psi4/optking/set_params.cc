@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,8 +35,11 @@
 #define EXTERN
 #include "globals.h"
 
+#include <cmath>
+
 #if defined(OPTKING_PACKAGE_PSI)
  #include "psi4/psi4-dec.h"
+ #include "psi4/liboptions/liboptions.h"
 #elif defined(OPTKING_PACKAGE_QCHEM)
  #include <qchem.h>
 #endif
@@ -310,6 +314,14 @@ void set_params(void)
       Opt_params.conv_max_disp  = 6.0e-5;  Opt_params.i_max_disp = true;
       Opt_params.conv_rms_disp  = 4.0e-5;  Opt_params.i_rms_disp = true;
     }
+    else if (Opt_params.general_conv == "INTERFRAG_TIGHT") {
+      Opt_params.i_untampered = true;
+      Opt_params.conv_max_DE    = 1.0e-6;  Opt_params.i_max_DE = true;
+      Opt_params.conv_max_force = 1.5e-5;  Opt_params.i_max_force = true;
+      Opt_params.conv_rms_force = 1.0e-5;  Opt_params.i_rms_force = true;
+      Opt_params.conv_max_disp  = 6.0e-4;  Opt_params.i_max_disp = true;
+      Opt_params.conv_rms_disp  = 4.0e-4;  Opt_params.i_rms_disp = true;
+    }
     else if (Opt_params.general_conv == "GAU_VERYTIGHT") {
       Opt_params.i_untampered = true;
       Opt_params.conv_max_force = 2.0e-6;  Opt_params.i_max_force = true;
@@ -348,27 +360,27 @@ void set_params(void)
     if (options["MAX_FORCE_G_CONVERGENCE"].has_changed()) {
       Opt_params.i_untampered = false;
       Opt_params.i_max_force = true;
-      Opt_params.conv_max_force = fabs(options.get_double("MAX_FORCE_G_CONVERGENCE"));
+      Opt_params.conv_max_force = std::fabs(options.get_double("MAX_FORCE_G_CONVERGENCE"));
     }
     if (options["RMS_FORCE_G_CONVERGENCE"].has_changed()) {
       Opt_params.i_untampered = false;
       Opt_params.i_rms_force = true;
-      Opt_params.conv_rms_force = fabs(options.get_double("RMS_FORCE_G_CONVERGENCE"));
+      Opt_params.conv_rms_force = std::fabs(options.get_double("RMS_FORCE_G_CONVERGENCE"));
     }
     if (options["MAX_ENERGY_G_CONVERGENCE"].has_changed()) {
       Opt_params.i_untampered = false;
       Opt_params.i_max_DE = true;
-      Opt_params.conv_max_DE = fabs(options.get_double("MAX_ENERGY_G_CONVERGENCE"));
+      Opt_params.conv_max_DE = std::fabs(options.get_double("MAX_ENERGY_G_CONVERGENCE"));
     }
     if (options["MAX_DISP_G_CONVERGENCE"].has_changed()) {
       Opt_params.i_untampered = false;
       Opt_params.i_max_disp = true;
-      Opt_params.conv_max_disp = fabs(options.get_double("MAX_DISP_G_CONVERGENCE"));
+      Opt_params.conv_max_disp = std::fabs(options.get_double("MAX_DISP_G_CONVERGENCE"));
     }
     if (options["RMS_DISP_G_CONVERGENCE"].has_changed()) {
       Opt_params.i_untampered = false;
       Opt_params.i_rms_disp = true;
-      Opt_params.conv_rms_disp = fabs(options.get_double("RMS_DISP_G_CONVERGENCE"));
+      Opt_params.conv_rms_disp = std::fabs(options.get_double("RMS_DISP_G_CONVERGENCE"));
     }
 
     // even if a specific threshold were given, allow for Molpro/Qchem/G03 flex criteria

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,12 +30,16 @@
     \ingroup CCDENSITY
     \brief Enter brief description of file here
 */
+
 #include "psi4/libdpd/dpd.h"
+
 #include "MOInfo.h"
 #include "Params.h"
 #include "Frozen.h"
 #define EXTERN
 #include "globals.h"
+
+#include <cmath>
 
 namespace psi { namespace ccdensity {
 
@@ -90,7 +95,7 @@ void build_X(void)
     for(int h=0; h < moinfo.nirreps; h++){
       for(int i=0; i < moinfo.occpi[h]; i++)
           for(int j=0; j < moinfo.occpi[h]; j++){
-             double diff = fabs(I2.matrix[h][i][j] - I2.matrix[h][j][i]); 
+             double diff = std::fabs(I2.matrix[h][i][j] - I2.matrix[h][j][i]); 
              if (diff > 1e-8) 
 		  I.matrix[h][i][j] = (I2.matrix[h][i][j] - I2.matrix[h][j][i])/(F.matrix[h][i][i] - F.matrix[h][j][j]) ;
              else 
@@ -98,7 +103,7 @@ void build_X(void)
       }
       for(int a=0; a < moinfo.virtpi[h]; a++)
           for(int b=0; b < moinfo.virtpi[h]; b++) {
-             double diff = fabs(I3.matrix[h][a][b] - I3.matrix[h][b][a]); 
+             double diff = std::fabs(I3.matrix[h][a][b] - I3.matrix[h][b][a]); 
              if (diff > 1e-8) 
 		  I1.matrix[h][a][b] = (I3.matrix[h][a][b] - I3.matrix[h][b][a]) /(F1.matrix[h][a][a] - F1.matrix[h][b][b]) ;
              else 

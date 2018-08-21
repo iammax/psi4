@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,16 +31,13 @@
 #include "dfocc.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libdiis/diismanager.h"
-using namespace std;
 
+namespace psi {
+namespace dfoccwave {
 
-namespace psi{ namespace dfoccwave{
-
-void DFOCC::ccsdl_l2_amps()
-{
-
+void DFOCC::ccsdl_l2_amps() {
     // defs
-    SharedTensor2d K, I, M, L, Lnew, T, U, Tau, W, X, Y, Z;
+    SharedTensor2d K, I, M, L, Lnew, T, U, Tau, W, X, Y, Z, tL2;
 
     // l_ij^ab <= X(ia,jb) + X(jb,a) = 2Xt(ia,jb)
     // X(ia,jb) = l_i^a Ft_jb
@@ -57,13 +55,13 @@ void DFOCC::ccsdl_l2_amps()
     // l_ij^ab <= X(ia,jb) + X(jb,a) = 2Xt(ia,jb)
     // X(ia,jb) = -\sum_{m} l_m^a W_ijmb
     W = SharedTensor2d(new Tensor2d("WL (MN|IE)", naoccA, naoccA, naoccA, navirA));
-    //W->read(psio_, PSIF_DFOCC_AMPS);
+    // W->read(psio_, PSIF_DFOCC_AMPS);
     ccsdl_Wmnie_direct(W);
     Y = SharedTensor2d(new Tensor2d("Y (MN|EI)", naoccA, naoccA, navirA, naoccA));
     Y->sort(1243, W, 1.0, 0.0);
     W.reset();
     T = SharedTensor2d(new Tensor2d("Temp <IJ|BA>", naoccA, naoccA, navirA, navirA));
-    T->contract(false, false, naoccA*naoccA*navirA, navirA, naoccA, Y, l1A, -1.0, 0.0);
+    T->contract(false, false, naoccA * naoccA * navirA, navirA, naoccA, Y, l1A, -1.0, 0.0);
     Y.reset();
     X->sort(1423, T, 1.0, 1.0);
     T.reset();
@@ -114,21 +112,28 @@ void DFOCC::ccsdl_l2_amps()
 
     // WabefL2
     if (Wabef_type_ == "AUTO") {
-	if (!do_ppl_hm) ccsdl_WabefL2();
-	else {
-	    ccsdl_LijmeL2_high_mem();
-	    ccsdl_WabefL2_high_mem();
-	}
-    }
-    else if (Wabef_type_ == "LOW_MEM") ccsdl_WabefL2();
+        if (!do_ppl_hm)
+            ccsdl_WabefL2();
+        else {
+            ccsdl_LijmeL2_high_mem();
+            ccsdl_WabefL2_high_mem();
+        }
+    } else if (Wabef_type_ == "LOW_MEM")
+        ccsdl_WabefL2();
     else if (Wabef_type_ == "HIGH_MEM") {
-	ccsdl_LijmeL2_high_mem();
-	ccsdl_WabefL2_high_mem();
+        ccsdl_LijmeL2_high_mem();
+        ccsdl_WabefL2_high_mem();
     }
 
     // Denom
     Lnew = SharedTensor2d(new Tensor2d("New L2 (IA|JB)", naoccA, navirA, naoccA, navirA));
     Lnew->read_symm(psio_, PSIF_DFOCC_AMPS);
+    if (wfn_type_ == "DF-CCSD(T)") {
+        tL2 = SharedTensor2d(new Tensor2d("(T)L2 (IA|JB)", naoccA, navirA, naoccA, navirA));
+        tL2->read_symm(psio_, PSIF_DFOCC_AMPS);
+        Lnew->axpy(tL2, 1.0);
+        tL2.reset();
+    }
     Lnew->apply_denom_chem(nfrzc, noccA, FockA);
 
     // Reset T1
@@ -148,10 +153,10 @@ void DFOCC::ccsdl_l2_amps()
     Lnew.reset();
 
     // DIIS
-    std::shared_ptr<Matrix> RL2(new Matrix("RL2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> RL2(new Matrix("RL2", naoccA * navirA, naoccA * navirA));
     Tau->to_matrix(RL2);
     Tau.reset();
-    std::shared_ptr<Matrix> L2(new Matrix("L2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> L2(new Matrix("L2", naoccA * navirA, naoccA * navirA));
     l2->to_matrix(L2);
     std::shared_ptr<Matrix> RL1(new Matrix("RL1", naoccA, navirA));
     Rl1A->to_matrix(RL1);
@@ -175,7 +180,7 @@ void DFOCC::ccsdl_l2_amps()
 
     // Form Tau(ia,jb) = L(ia,jb) + l(ia) * l(jb)
     Tau = SharedTensor2d(new Tensor2d("Tau (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsdl_tau_amps(Tau,l2);
+    ccsdl_tau_amps(Tau, l2);
 
     // Energy
     U = SharedTensor2d(new Tensor2d("2*Tau(ia,jb) - Tau(ib,ja)", naoccA, navirA, naoccA, navirA));
@@ -191,17 +196,17 @@ void DFOCC::ccsdl_l2_amps()
     EccsdL = Escf + EcorrL;
 
     // print
-    //l2->print();
+    // l2->print();
 
-}// end ccsdl_l2_amps
+}  // end ccsdl_l2_amps
 
 //======================================================================
 //    CCSD: Tau_ij^ab = l_ij^ab + l_i^a l_j^b
 //======================================================================
-void DFOCC::ccsdl_tau_amps(SharedTensor2d &U, SharedTensor2d &T)
-{
+void DFOCC::ccsdl_tau_amps(SharedTensor2d &U, SharedTensor2d &T) {
     U->dirprd224(l1A, l1A);
     U->add(T);
-}// end ccsdl_tau_amps
+}  // end ccsdl_tau_amps
 
-}} // End Namespaces
+}  // namespace dfoccwave
+}  // namespace psi

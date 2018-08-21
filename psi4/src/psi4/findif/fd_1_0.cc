@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -37,24 +38,24 @@
 #include "psi4/libmints/writer.h"
 #include "psi4/libmints/factory.h"
 #include "psi4/libmints/cdsalclist.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 #include "psi4/pybind11.h"
 
 namespace psi {
 namespace findif {
 
-SharedMatrix fd_1_0(std::shared_ptr <Molecule> mol, Options &options, const py::list &python_energies)
+SharedMatrix fd_1_0(std::shared_ptr<Molecule> mol, Options &options, const py::list &python_energies)
 {
     int pts = options.get_int("POINTS");
     double disp_size = options.get_double("DISP_SIZE");
+    int print_lvl = options.get_int("PRINT");
 
     int Natom = mol->natom();
-    std::shared_ptr <MatrixFactory> fact;
 
-    py::object pyExtern = dynamic_cast<PythonDataType *>(options["EXTERN"].get())->to_python();
-//    std::shared_ptr <ExternalPotential> external = pyExtern.cast < std::shared_ptr < ExternalPotential >> ();
-    bool noextern = pyExtern ? false : true;
-    CdSalcList cdsalc(mol, fact, 0x1, noextern, noextern);
+    bool t_project = !options.get_bool("EXTERN") && !options.get_bool("PERTURB_H");
+    bool r_project = t_project && options.get_bool("FD_PROJECT");
+    CdSalcList cdsalc(mol, 0x1, t_project, r_project);
     int Nsalc = cdsalc.ncd();
 
     // Compute number of displacements - check with number of energies passed in
@@ -84,35 +85,40 @@ SharedMatrix fd_1_0(std::shared_ptr <Molecule> mol, Options &options, const py::
             g_q[i] = (E[4 * i] - 8.0 * E[4 * i + 1] + 8.0 * E[4 * i + 2] - E[4 * i + 3]) / (12.0 * disp_size);
     }
 
-    outfile->Printf("\n-------------------------------------------------------------\n\n");
-    outfile->Printf("  Computing gradient from energies (fd_1_0).\n");
-
-    // Print out energies and gradients
     double energy_ref = E[Ndisp - 1];
-    outfile->Printf("\tUsing %d-point formula.\n", pts);
-    outfile->Printf("\tEnergy without displacement: %15.10lf\n", energy_ref);
-    outfile->Printf("\tCheck energies below for precision!\n");
-    outfile->Printf("\tForces are for mass-weighted, symmetry-adapted cartesians (in au).\n");
 
-    int cnt;
-    if (pts == 3) {
-        cnt = -2;
-        outfile->Printf("\n\t Coord      Energy(-)        Energy(+)        Force\n");
-        for (int i = 0; i < Nsalc; ++i) {
-            cnt += 2;
-            outfile->Printf("\t%5d %17.10lf%17.10lf%17.10lf\n", i, E[cnt], E[cnt + 1], g_q[i]);
+    if (print_lvl) {
+        outfile->Printf("\n-------------------------------------------------------------\n\n");
+        outfile->Printf("  Computing gradient from energies (fd_1_0).\n");
+
+        // Print out energies and gradients
+        outfile->Printf("\tUsing %d-point formula.\n", pts);
+        outfile->Printf("\tEnergy without displacement: %15.10lf\n", energy_ref);
+        outfile->Printf("\tCheck energies below for precision!\n");
+        outfile->Printf("\tForces are for mass-weighted, symmetry-adapted cartesians (in au).\n");
+    }
+
+    if (print_lvl) {
+        int cnt;
+        if (pts == 3) {
+            cnt = -2;
+            outfile->Printf("\n\t Coord      Energy(-)        Energy(+)        Force\n");
+            for (int i = 0; i < Nsalc; ++i) {
+                cnt += 2;
+                outfile->Printf("\t%5d %17.10lf%17.10lf%17.10lf\n", i, E[cnt], E[cnt + 1], g_q[i]);
+            }
+            outfile->Printf("\n");
+        } else if (pts == 5) {
+            cnt = -4;
+            outfile->Printf(
+                    "\n\t Coord      Energy(-2)        Energy(-1)        Energy(+1)        Energy(+2)            Force\n");
+            for (int i = 0; i < Nsalc; ++i) {
+                cnt += 4;
+                outfile->Printf("\t%5d %17.10lf %17.10lf %17.10lf %17.10lf %17.10lf\n",
+                                i, E[cnt], E[cnt + 1], E[cnt + 2], E[cnt + 3], g_q[i]);
+            }
+            outfile->Printf("\n");
         }
-        outfile->Printf("\n");
-    } else if (pts == 5) {
-        cnt = -4;
-        outfile->Printf(
-                "\n\t Coord      Energy(-2)        Energy(-1)        Energy(+1)        Energy(+2)            Force\n");
-        for (int i = 0; i < Nsalc; ++i) {
-            cnt += 4;
-            outfile->Printf("\t%5d %17.10lf %17.10lf %17.10lf %17.10lf %17.10lf\n",
-                            i, E[cnt], E[cnt + 1], E[cnt + 2], E[cnt + 3], g_q[i]);
-        }
-        outfile->Printf("\n");
     }
 
     // Build B matrix of salc coefficients
@@ -148,7 +154,9 @@ SharedMatrix fd_1_0(std::shared_ptr <Molecule> mol, Options &options, const py::
     }
 
     SharedMatrix sgradient(gradient_matrix.clone());
-    outfile->Printf("\n-------------------------------------------------------------\n");
+    if (print_lvl) {
+        outfile->Printf("\n-------------------------------------------------------------\n");
+    }
 
     return sgradient;
 }

@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -29,6 +30,8 @@ r"""Module to provide mechanism to store and restore option states in driver.
 
 """
 import sys
+from contextlib import contextmanager
+
 from .exceptions import *
 
 
@@ -38,7 +41,7 @@ class OptionState(object):
     *module* scopes; otherwise (used for BASIS keywords), only global scope is stored.
     Class can store, print, and restore option values. ::
 
-        >>> OptionState('SCF_TYPE', 'SCF')
+        >>> OptionState('E_CONVERGENCE', 'SCF')
 
         >>> print(OptionState('DF_BASIS_MP2'))
 
@@ -92,9 +95,8 @@ class OptionsState(object):
     them, then restoring before function return. ::
 
         >>> optstash = OptionsState(
-                ['SCF', 'DFT_FUNCTIONAL'],
                 ['DF_BASIS_SCF'],
-                ['SCF', 'SCF_TYPE'],
+                ['SCF_TYPE'],
                 ['SCF', 'REFERENCE'])
 
         >>> print(optstash)
@@ -103,21 +105,36 @@ class OptionsState(object):
 
     """
     def __init__(self, *largs):
-        self.data = []
+        self.data = {}
         for item in largs:
-            if len(item) == 2:
-                self.data.append(OptionState(item[1], item[0]))
-            elif len(item) == 1:
-                self.data.append(OptionState(item[0]))
-            else:
-                raise ValidationError('Each argument to OptionsState should be an array, the first element of which is     the module scope and the second element of which is the module name. Bad argument: %s' % (item))
+            self.add_option(item)
+
+    def add_option(self, item):
+        if len(item) == 2:
+            key = (item[1], item[0])
+        elif len(item) == 1:
+            key = (item[0], )
+        else:
+            raise ValidationError('Each argument to OptionsState should be an array, the first element of which is     the module scope and the second element of which is the module name. Bad argument: %s' % (item))
+
+        if key in self.data:
+            raise ValidationError('Malformed options state, duplicate key adds of "%s". This should not happen, please raise a issue on github.com/psi4/psi4' % key)
+        else:
+            self.data[key] = OptionState(*key)
 
     def __str__(self):
         text = ''
-        for item in self.data:
+        for key, item in self.data.items():
             text += str(item)
         return text
 
     def restore(self):
-        for item in self.data:
+        for key, item in self.data.items():
             item.restore()
+
+
+@contextmanager
+def OptionsStateCM(osd):
+    oso = OptionsState(osd)
+    yield
+    oso.restore()

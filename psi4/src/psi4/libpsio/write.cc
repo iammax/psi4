@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -42,12 +43,12 @@
 
 namespace psi {
 
-void PSIO::write(unsigned int unit, const char *key, char *buffer, ULI size,
+void PSIO::write(size_t unit, const char *key, char *buffer, size_t size,
                  psio_address start, psio_address *end) {
   psio_ud *this_unit;
   psio_tocentry *this_entry, *last_entry;
   psio_address start_toc, start_data, end_data; /* global addresses */
-  ULI tocentry_size;
+  size_t tocentry_size;
   int dirty = 0;
 
   this_unit = &(psio_unit[unit]);
@@ -57,7 +58,7 @@ void PSIO::write(unsigned int unit, const char *key, char *buffer, ULI size,
 
   tocentry_size = sizeof(psio_tocentry) - 2*sizeof(psio_tocentry *);
 
-  if (this_entry == NULL) { /* New TOC entry */
+  if (this_entry == nullptr) { /* New TOC entry */
     if (start.page||start.offset)
       psio_error(unit, PSIO_ERROR_BLKSTART);
 
@@ -66,13 +67,13 @@ void PSIO::write(unsigned int unit, const char *key, char *buffer, ULI size,
     this_entry = (psio_tocentry *) malloc(sizeof(psio_tocentry));
     ::strncpy(this_entry->key, key, PSIO_KEYLEN);
     this_entry->key[PSIO_KEYLEN-1] = '\0';
-    this_entry->next = NULL;
-    this_entry->last = NULL;
+    this_entry->next = nullptr;
+    this_entry->last = nullptr;
 
     /* Compute the global address of the new entry */
     if (!(this_unit->toclen)) { /* First TOC entry */
       this_entry->sadd.page = 0;
-      this_entry->sadd.offset = sizeof(ULI); /* offset for the toclen value stored first */
+      this_entry->sadd.offset = sizeof(size_t); /* offset for the toclen value stored first */
       this_unit->toc = this_entry;
     } else { /* Use ending address from last TOC entry */
       last_entry = toclast(unit);
@@ -113,16 +114,16 @@ void PSIO::write(unsigned int unit, const char *key, char *buffer, ULI size,
     /* Compute the new global ending address for the entry, if necessary */
     end_data = psio_get_address(start_data, size);
     if (end_data.page > this_entry->eadd.page) {
-      if (this_entry->next != NULL) {
-        fprintf(stderr, "PSIO_ERROR: Attempt to write into next entry: %d, %s\n", unit, key);
+      if (this_entry->next != nullptr) {
+        fprintf(stderr, "PSIO_ERROR: Attempt to write into next entry: %zu, %s\n", unit, key);
         psio_error(unit, PSIO_ERROR_BLKEND);
       }
       this_entry->eadd = end_data;
       dirty = 1; /* set flag for writing the TOC header */
     } else if ((end_data.page == this_entry->eadd.page) &&(end_data.offset
         > this_entry->eadd.offset)) {
-      if (this_entry->next != NULL) {
-        fprintf(stderr, "PSIO_ERROR: Attempt to write into next entry: %d, %s\n", unit, key);
+      if (this_entry->next != nullptr) {
+        fprintf(stderr, "PSIO_ERROR: Attempt to write into next entry: %zu, %s\n", unit, key);
         psio_error(unit, PSIO_ERROR_BLKEND);
       }
       this_entry->eadd = end_data;
@@ -159,7 +160,7 @@ void PSIO::write(unsigned int unit, const char *key, char *buffer, ULI size,
    ** \ingroup PSIO
    */
 
-  int psio_write(unsigned int unit, const char *key, char *buffer, ULI size,
+  int psio_write(size_t unit, const char *key, char *buffer, size_t size,
                  psio_address start, psio_address *end) {
     _default_psio_lib_->write(unit, key, buffer, size, start, end);
     return 1;

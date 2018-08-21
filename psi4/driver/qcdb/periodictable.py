@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -49,7 +50,7 @@ _temp_element = ["GHOST", "HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM",
     "ASTATINE", "RADON", "FRANCIUM", "RADIUM", "ACTINIUM",
     "THORIUM", "PROTACTINIUM", "URANIUM", "NEPTUNIUM", "PLUTONIUM",
     "AMERICIUM", "CURIUM", "BERKELIUM", "CALIFORNIUM", "EINSTEINIUM",
-    "FERMIUM", "MENDELEVIUM", "NOBELIUM", "LAWRENCIUM" "RUTHERFORDIUM",
+    "FERMIUM", "MENDELEVIUM", "NOBELIUM", "LAWRENCIUM", "RUTHERFORDIUM",
     "DUBNIUM", "SEABORGIUM", "BOHRIUM"]
 
 _temp_symbol = ["X", "H", "HE", "LI", "BE", "B", "C", "N", "O", "F", "NE", "NA", "MG",
@@ -1098,7 +1099,7 @@ el2mass = dict(zip(_temp_symbol, _temp_mass))
 el2mass["GH"] = 0.  # note that ghost atoms in Cfour have mass 100.
 eliso2mass = dict(zip(_temp_iso_symbol, _temp_iso_mass))  # encompasses el2mass
 eliso2mass["GH"] = 0.  # note that ghost atoms in Cfour have mass 100.  # encompasses el2mass
-#eliso2mass["X0"] = 0.  # probably needed, just checking
+eliso2mass["X0"] = 0.  # probably needed, just checking
 el2z = dict(zip(_temp_symbol, _temp_z))
 el2z["GH"] = 0
 z2mass = dict(zip(_temp_z, _temp_mass))

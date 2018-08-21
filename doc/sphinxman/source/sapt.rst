@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -36,7 +37,7 @@
 SAPT: Symmetry-Adapted Perturbation Theory
 ==========================================
 
-.. codeauthor:: Edward G. Hohenstein, Rob M. Parrish and J\ |e_acute|\ r\ |o_circumflex|\ me F. Gonthier
+.. codeauthor:: Edward G. Hohenstein, Rob M. Parrish, J\ |e_acute|\ r\ |o_circumflex|\ me F. Gonthier, and Daniel. G. A. Smith
 .. sectionauthor:: Edward G. Hohenstein and J\ |e_acute|\ r\ |o_circumflex|\ me F. Gonthier
 
 *Module:* :ref:`Keywords <apdx:sapt>`, :ref:`PSI Variables <apdx:sapt_psivar>`, :source:`LIBSAPT_SOLVER <psi4/src/psi4/libsapt_solver>`
@@ -352,6 +353,12 @@ yourself. In the example below, we do a stability analysis for the open-shell mo
   psi4.IO.change_file_namespace(97, 'monomerB', 'dimer')
   psi4.IO.set_default_namespace('dimer')
   
+  aux_basis = psi4.core.BasisSet.build(wfn_dimer.molecule(), "DF_BASIS_SAPT",
+                                psi4.core.get_global_option("DF_BASIS_SAPT"),
+                                "RIFIT", psi4.core.get_global_option("BASIS"))
+  wfn_dimer.set_basisset("DF_BASIS_SAPT", aux_basis)
+  wfn_dimer.set_basisset("DF_BASIS_ELST", aux_basis)
+  
   psi4.sapt(wfn_dimer,wfn_monA,wfn_monB)
 
 In this way, any of the SCF options can be tweaked for individual fragments.
@@ -405,7 +412,7 @@ Advanced SAPT0 Keywords
 
 .. include:: autodir_options_c/sapt__aio_cphf.rst
 .. include:: autodir_options_c/sapt__aio_df_ints.rst
-.. include:: autodir_options_c/sapt__no_response.rst
+.. include:: autodir_options_c/sapt__coupled_induction.rst
 .. include:: autodir_options_c/sapt__exch_scale_alpha.rst
 .. include:: autodir_options_c/sapt__ints_tolerance.rst
 .. include:: autodir_options_c/sapt__denominator_delta.rst
@@ -575,6 +582,29 @@ towards the complete basis set limit than the default procedure, which uses
 the dimer-centered basis set.  Hence, monomer-centered basis SAPT
 computations are not recommended. The open-shell SAPT0 code is not
 compatible yet with monomer-centered computations.
+
+Computations with Mid-bonds
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SAPT computations with midbonds can be accomplished by adding a third ghost
+monomer to the computation.  For example ::
+
+    molecule dimer {
+        0 1
+        He 0  0  5
+        --
+        0 1
+        He 0  0 -5
+        --
+        0 1
+        @He 0  0  0
+    }
+
+
+Here the functions of the third monomer will be added to the virtual space of
+the entire computation. Note that an error will be thrown if each atom in the
+third monomer is not a ghost to prevent confusion with three-body SAPT which is
+not currently supported by Psi4.
 
 
 Interpreting SAPT Results
@@ -762,4 +792,20 @@ set to :math:`1.0`.
    methods in :ref:`SAPT module<sec:sapt>`, there is no workaround;
    on-the-fly construction of an auxiliary basis through Cholesky
    decomposition (not implemented) is the long-term solution.
+
+Spin-Flip SAPT
+^^^^^^^^^^^^^^
+
+SAPT0 with two open-shell references will always yield a high-spin complex.  In
+order to obtain a SAPT-based estimate of the splittings between different spin
+states of a complex the first-order exchange energies for all multiplets can be
+shown to be a linear combination of two matrix elements: a diagonal exchange
+term that determines the spin-averaged effect and a spin-flip term responsible
+for the splittings between the states. The numerical factors in this linear
+combination are determined solely by the Clebsch-Gordan coefficients:
+accordingly, the :math:`S^{2}` approximation implies a Heisenberg Hamiltonian
+picture with a single coupling strength parameter determining all the
+splittings. This method can be invoked with `energy("SF-SAPT")` and
+publications resulting from the use of the SF-SAPT code should cite the
+following publications: [Patkowski:2018:164110]_
 

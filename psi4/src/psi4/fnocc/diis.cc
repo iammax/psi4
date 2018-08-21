@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -51,7 +52,7 @@ void CoupledCluster::DIIS(double*c,long int nvec,long int n,int replace_diis_ite
 
   char*evector=(char*)malloc(1000*sizeof(char));
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio->open(PSIF_DCC_EVEC,PSIO_OPEN_OLD);
 
   // add row to matrix, don't build the whole thing.
@@ -138,7 +139,7 @@ void CoupledCluster::DIISOldVector(long int iter,int diis_iter,int replace_diis_
      sprintf(oldvector,"oldvector%i",replace_diis_iter);
   }
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   if (diis_iter==0) {
      psio->open(PSIF_DCC_OVEC,PSIO_OPEN_NEW);
   }else {
@@ -176,7 +177,7 @@ double CoupledCluster::DIISErrorVector(int diis_iter,int replace_diis_iter,int i
      sprintf(evector,"evector%i",replace_diis_iter);
   }
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   if (diis_iter==0) {
      psio->open(PSIF_DCC_EVEC,PSIO_OPEN_NEW);
      double * temp = (double*)malloc(maxdiis*maxdiis*sizeof(double));
@@ -207,7 +208,7 @@ void CoupledCluster::DIISNewAmplitudes(int diis_iter,int&replace_diis_iter){
   char*oldvector;
   oldvector=(char*)malloc(1000*sizeof(char));
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio->open(PSIF_DCC_OVEC,PSIO_OPEN_OLD);
 
   psio_address addr;
@@ -230,8 +231,8 @@ void CoupledCluster::DIISNewAmplitudes(int diis_iter,int&replace_diis_iter){
       C_DAXPY(arraysize,diisvec[j-1],tempt,1,tb,1);
       psio->read(PSIF_DCC_OVEC,oldvector,(char*)&tempt[0],o*v*sizeof(double),addr,&addr);
       C_DAXPY(o*v,diisvec[j-1],tempt,1,t1,1);
-      //if ( fabs( diisvec[j-1] ) < min ) {
-      //    min = fabs( diisvec[j-1] );
+      //if ( std::fabs( diisvec[j-1] ) < min ) {
+      //    min = std::fabs( diisvec[j-1] );
       //    replace_diis_iter = j;
       //}
   }

@@ -3,34 +3,35 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
 #
 
 from __future__ import absolute_import
-from math import sqrt, pi
+
 import numpy as np
 
 from psi4 import core
-from psi4.driver import p4const
+from psi4.driver import constants
 from psi4.driver.p4util.exceptions import *
 
 
@@ -85,7 +86,7 @@ def anharmonicity(rvals, energies, plot_fit='', mol = None):
                  corresponding to the spectroscopic constants in cm-1
     """
 
-    angstrom_to_bohr = 1.0 / p4const.psi_bohr2angstroms
+    angstrom_to_bohr = 1.0 / constants.bohr2angstroms
     angstrom_to_meter = 10e-10;
 
     # Make sure the input is valid
@@ -126,30 +127,30 @@ def anharmonicity(rvals, energies, plot_fit='', mol = None):
         raise Exception("Minimum energy point is outside range of points provided.  Use a higher range of r values.")
 
     # Convert to convenient units, and compute spectroscopic constants
-    d0,d1,d2,d3,d4 = derivs*p4const.psi_hartree2aJ
+    d0,d1,d2,d3,d4 = derivs*constants.hartree2aJ
     core.print_out("\nEquilibrium Energy %20.14f Hartrees\n" % e)
     core.print_out("Gradient           %20.14f\n" % g)
     core.print_out("Quadratic Force Constant %14.7f MDYNE/A\n" % d2)
     core.print_out("Cubic Force Constant     %14.7f MDYNE/A**2\n" % d3)
     core.print_out("Quartic Force Constant   %14.7f MDYNE/A**3\n" % d4)
 
-    hbar = p4const.psi_h / (2.0 * pi)
-    mu = ((m1*m2)/(m1+m2))*p4const.psi_amu2kg
-    we = 5.3088375e-11*sqrt(d2/mu)
+    hbar = constants.h / (2.0 * np.pi)
+    mu = ((m1*m2)/(m1+m2))*constants.amu2kg
+    we = 5.3088375e-11 * np.sqrt(d2/mu)
     wexe = (1.2415491e-6)*(we/d2)**2 * ((5.0*d3*d3)/(3.0*d2)-d4)
 
     # Rotational constant: Be
-    I = ((m1*m2)/(m1+m2)) * p4const.psi_amu2kg * (re * angstrom_to_meter)**2
-    B = p4const.psi_h / (8.0 * pi**2 * p4const.psi_c * I)
+    I = ((m1*m2)/(m1+m2)) * constants.amu2kg * (re * angstrom_to_meter)**2
+    B = constants.h / (8.0 * np.pi**2 * constants.c * I)
 
     # alpha_e and quartic centrifugal distortion constant
-    ae = -(6.0 * B**2 / we) * ((1.05052209e-3*we*d3)/(sqrt(B * d2**3))+1.0)
+    ae = -(6.0 * B**2 / we) * ((1.05052209e-3*we*d3)/(np.sqrt(B * d2**3))+1.0)
     de = 4.0*B**3 / we**2
 
     # B0 and r0 (plus re check using Be)
     B0 = B - ae / 2.0
-    r0 = sqrt(p4const.psi_h / (8.0 * pi**2 * mu * p4const.psi_c * B0))
-    recheck = sqrt(p4const.psi_h / (8.0 * pi**2 * mu * p4const.psi_c * B))
+    r0 = np.sqrt(constants.h / (8.0 * np.pi**2 * mu * constants.c * B0))
+    recheck = np.sqrt(constants.h / (8.0 * np.pi**2 * mu * constants.c * B))
     r0 /= angstrom_to_meter;
     recheck /= angstrom_to_meter;
 
@@ -161,79 +162,79 @@ def anharmonicity(rvals, energies, plot_fit='', mol = None):
     if(plot_fit):
         try:
             import matplotlib.pyplot as plt
-
-            # Correct the derivatives for the missing factorial prefactors
-            dvals = np.zeros(5)
-            dvals[0:5] = derivs[0:5]
-            dvals[2] /= 2
-            dvals[3] /= 6
-            dvals[4] /= 24
-
-            # Default plot range, before considering energy levels
-            minE = np.min(energies)
-            maxE = np.max(energies)
-            minR = np.min(rvals)
-            maxR = np.max(rvals)
-
-            # Plot vibrational energy levels
-            we_au = we / p4const.psi_hartree2wavenumbers
-            wexe_au = wexe / p4const.psi_hartree2wavenumbers
-            coefs2 = [ dvals[2], dvals[1], dvals[0] ]
-            coefs4 = [ dvals[4], dvals[3], dvals[2], dvals[1], dvals[0] ]
-            for n in range(3):
-                Eharm = we_au*(n+0.5)
-                Evpt2 = Eharm - wexe_au*(n+0.5)**2
-                coefs2[-1] = -Eharm
-                coefs4[-1] = -Evpt2
-                roots2 = np.roots(coefs2)
-                roots4 = np.roots(coefs4)
-                xvals2 = roots2 + re
-                xvals4 = np.choose(np.where(np.isreal(roots4)), roots4)[0].real + re
-                Eharm += dvals[0]
-                Evpt2 += dvals[0]
-                plt.plot(xvals2, [Eharm, Eharm], 'b', linewidth=1)
-                plt.plot(xvals4, [Evpt2, Evpt2], 'g', linewidth=1)
-                maxE = Eharm
-                maxR = np.max([xvals2,xvals4])
-                minR = np.min([xvals2,xvals4])
-
-            # Find ranges for the plot
-            dE = maxE - minE
-            minE -= 0.2*dE
-            maxE += 0.4*dE
-            dR = maxR - minR
-            minR -= 0.2*dR
-            maxR += 0.2*dR
-
-            # Generate the fitted PES
-            xpts = np.linspace(minR, maxR, 1000)
-            xrel = xpts-re
-            xpows = xrel[:,np.newaxis] ** range(5)
-            fit2 = np.einsum('xd,d', xpows[:,0:3], dvals[0:3])
-            fit4 = np.einsum('xd,d', xpows, dvals)
-
-            # Make / display the plot
-            plt.plot(xpts, fit2, 'b', linewidth=2.5, label='Harmonic (quadratic) fit')
-            plt.plot(xpts, fit4, 'g', linewidth=2.5, label='Anharmonic (quartic) fit')
-            plt.plot([re, re], [minE, maxE], 'b--', linewidth=0.5)
-            plt.plot([r0, r0], [minE, maxE], 'g--', linewidth=0.5)
-            plt.scatter(rvals, energies, c='Black', linewidth=3, label='Input Data')
-            plt.legend()
-
-            plt.xlabel('Bond length (Angstroms)')
-            plt.ylabel('Energy (Eh)')
-            plt.xlim(minR, maxR)
-            plt.ylim(minE, maxE)
-            if plot_fit == 'screen':
-                plt.show()
-            else:
-                plt.savefig(plot_fit)
-                core.print_out("\n\tPES fit saved to %s.\n\n" % plot_fit)
-
         except ImportError:
             msg = "\n\tPlot not generated; matplotlib is not installed on this machine.\n\n"
             print(msg)
             core.print_out(msg)
+
+        # Correct the derivatives for the missing factorial prefactors
+        dvals = np.zeros(5)
+        dvals[0:5] = derivs[0:5]
+        dvals[2] /= 2
+        dvals[3] /= 6
+        dvals[4] /= 24
+
+        # Default plot range, before considering energy levels
+        minE = np.min(energies)
+        maxE = np.max(energies)
+        minR = np.min(rvals)
+        maxR = np.max(rvals)
+
+        # Plot vibrational energy levels
+        we_au = we / constants.hartree2wavenumbers
+        wexe_au = wexe / constants.hartree2wavenumbers
+        coefs2 = [ dvals[2], dvals[1], dvals[0] ]
+        coefs4 = [ dvals[4], dvals[3], dvals[2], dvals[1], dvals[0] ]
+        for n in range(3):
+            Eharm = we_au*(n+0.5)
+            Evpt2 = Eharm - wexe_au*(n+0.5)**2
+            coefs2[-1] = -Eharm
+            coefs4[-1] = -Evpt2
+            roots2 = np.roots(coefs2)
+            roots4 = np.roots(coefs4)
+            xvals2 = roots2 + re
+            xvals4 = np.choose(np.where(np.isreal(roots4)), roots4)[0].real + re
+            Eharm += dvals[0]
+            Evpt2 += dvals[0]
+            plt.plot(xvals2, [Eharm, Eharm], 'b', linewidth=1)
+            plt.plot(xvals4, [Evpt2, Evpt2], 'g', linewidth=1)
+            maxE = Eharm
+            maxR = np.max([xvals2,xvals4])
+            minR = np.min([xvals2,xvals4])
+
+        # Find ranges for the plot
+        dE = maxE - minE
+        minE -= 0.2*dE
+        maxE += 0.4*dE
+        dR = maxR - minR
+        minR -= 0.2*dR
+        maxR += 0.2*dR
+
+        # Generate the fitted PES
+        xpts = np.linspace(minR, maxR, 1000)
+        xrel = xpts - re
+        xpows = xrel[:, None] ** range(5)
+        fit2 = np.einsum('xd,d', xpows[:,0:3], dvals[0:3])
+        fit4 = np.einsum('xd,d', xpows, dvals)
+
+        # Make / display the plot
+        plt.plot(xpts, fit2, 'b', linewidth=2.5, label='Harmonic (quadratic) fit')
+        plt.plot(xpts, fit4, 'g', linewidth=2.5, label='Anharmonic (quartic) fit')
+        plt.plot([re, re], [minE, maxE], 'b--', linewidth=0.5)
+        plt.plot([r0, r0], [minE, maxE], 'g--', linewidth=0.5)
+        plt.scatter(rvals, energies, c='Black', linewidth=3, label='Input Data')
+        plt.legend()
+
+        plt.xlabel('Bond length (Angstroms)')
+        plt.ylabel('Energy (Eh)')
+        plt.xlim(minR, maxR)
+        plt.ylim(minE, maxE)
+        if plot_fit == 'screen':
+            plt.show()
+        else:
+            plt.savefig(plot_fit)
+            core.print_out("\n\tPES fit saved to %s.\n\n" % plot_fit)
+
     core.print_out("\nre     = %10.6f A  check: %10.6f\n" % (re, recheck))
     core.print_out("r0       = %10.6f A\n" % r0)
     core.print_out("we       = %10.4f cm-1\n" % we)

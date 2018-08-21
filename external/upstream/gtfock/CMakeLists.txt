@@ -7,6 +7,10 @@ if(${ENABLE_GTFock})
         message(FATAL_ERROR "GTFock has not been hooked back in after the inversion.")
         add_library(gtfock_external INTERFACE)  # dummy
     else()
+        if(${CMAKE_INSIST_FIND_PACKAGE_GTFock})
+            message(FATAL_ERROR "Suitable GTFock could not be externally located as user insists")
+        endif()
+
         include(ExternalProject)
         message(STATUS "Suitable GTFock could not be located, ${Magenta}Building GTFock${ColourReset} instead.")
         message(FATAL_ERROR "GTFock has not been hooked back in after the inversion.")
@@ -28,8 +32,7 @@ if(${ENABLE_GTFock})
                        -DENABLE_GENERIC=${ENABLE_GENERIC}
                        -DLIBC_INTERJECT=${LIBC_INTERJECT}
             CMAKE_CACHE_ARGS -DCMAKE_Fortran_FLAGS:STRING=${CMAKE_Fortran_FLAGS}
-            INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
-            DESTDIR=${CMAKE_BINARY_DIR}/stage)
+            INSTALL_COMMAND DESTDIR=${CMAKE_BINARY_DIR}/stage ${CMAKE_MAKE_PROGRAM} install)
 
         set(GTFock_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/GTFock CACHE PATH "path to internally built GTFockConfig.cmake" FORCE)
     endif()

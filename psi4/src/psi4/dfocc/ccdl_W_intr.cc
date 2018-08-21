@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,13 +31,11 @@
 #include "dfocc.h"
 
 using namespace psi;
-using namespace std;
 
+namespace psi {
+namespace dfoccwave {
 
-namespace psi{ namespace dfoccwave{
-
-void DFOCC::ccdl_VmnijL2()
-{
+void DFOCC::ccdl_VmnijL2() {
     // defs
     SharedTensor2d K, T, Lnew, U, Tau, W, X;
     SharedTensor2d M, L, I, Y, S, A;
@@ -87,18 +86,18 @@ void DFOCC::ccdl_VmnijL2()
     // L(ia,jb) <-- S(a>=b,i>=j) + A(a>=b,i>=j)
     Lnew = SharedTensor2d(new Tensor2d("New L2 (IA|JB)", naoccA, navirA, naoccA, navirA));
     Lnew->read_symm(psio_, PSIF_DFOCC_AMPS);
-    #pragma omp parallel for
-    for(int a = 0 ; a < navirA; ++a){
-        for(int b = 0 ; b < navirA; ++b){
-            int ab = index2(a,b);
-            for(int i = 0 ; i < naoccA; ++i){
-                int ia = ia_idxAA->get(i,a);
-                for(int j = 0 ; j < naoccA; ++j){
-                    int jb = ia_idxAA->get(j,b);
-                    int ij = index2(i,j);
-                    int perm1 = ( i > j ) ? 1 : -1;
-                    int perm2 = ( a > b ) ? 1 : -1;
-                    double value = S->get(ij,ab) + (perm1 * perm2 * A->get(ij,ab));
+#pragma omp parallel for
+    for (int a = 0; a < navirA; ++a) {
+        for (int b = 0; b < navirA; ++b) {
+            int ab = index2(a, b);
+            for (int i = 0; i < naoccA; ++i) {
+                int ia = ia_idxAA->get(i, a);
+                for (int j = 0; j < naoccA; ++j) {
+                    int jb = ia_idxAA->get(j, b);
+                    int ij = index2(i, j);
+                    int perm1 = (i > j) ? 1 : -1;
+                    int perm2 = (a > b) ? 1 : -1;
+                    double value = S->get(ij, ab) + (perm1 * perm2 * A->get(ij, ab));
                     Lnew->add(ia, jb, value);
                 }
             }
@@ -108,7 +107,6 @@ void DFOCC::ccdl_VmnijL2()
     A.reset();
     Lnew->write_symm(psio_, PSIF_DFOCC_AMPS);
     Lnew.reset();
-
 
     /*
     // Read Vmnij
@@ -141,13 +139,12 @@ void DFOCC::ccdl_VmnijL2()
 
     timer_off("VmnijL2");
 
-}// end ccdl_VmnijL2
+}  // end ccdl_VmnijL2
 
 //======================================================================
 //    Wmnij
 //======================================================================
-void DFOCC::ccdl_Wmnij()
-{
+void DFOCC::ccdl_Wmnij() {
     // defs
     SharedTensor2d K, T, Lnew, U, Tau, W, X;
     SharedTensor2d M, L, I, Y, S, A;
@@ -165,11 +162,11 @@ void DFOCC::ccdl_Wmnij()
     // W_mnij = \sum_{ef} Tau_ij^ef <mn|ef>
     // (+)Tau(ij, ab) = 1/2 (Tau_ij^ab + Tau_ji^ab) * (2 - \delta_{ab})
     // (-)Tau(ij, ab) = 1/2 (Tau_ij^ab - Tau_ji^ab) * (2 - \delta_{ab})
-    //Tau = SharedTensor2d(new Tensor2d("T2 (IA|JB)", naoccA, navirA, naoccA, navirA));
-    //Tau->read_symm(psio_, PSIF_DFOCC_AMPS);
+    // Tau = SharedTensor2d(new Tensor2d("T2 (IA|JB)", naoccA, navirA, naoccA, navirA));
+    // Tau->read_symm(psio_, PSIF_DFOCC_AMPS);
     U = SharedTensor2d(new Tensor2d("T2 <IJ|AB>", naoccA, naoccA, navirA, navirA));
     U->sort(1324, t2, 1.0, 0.0);
-    //Tau.reset();
+    // Tau.reset();
     Ts = SharedTensor2d(new Tensor2d("(+)tTau [I>=J|A>=B]", ntri_ijAA, ntri_abAA));
     Ta = SharedTensor2d(new Tensor2d("(-)tTau [I>=J|A>=B]", ntri_ijAA, ntri_abAA));
     Ts->symm_col_packed4(U);
@@ -193,19 +190,19 @@ void DFOCC::ccdl_Wmnij()
     A->gemm(false, true, Va, Ta, 1.0, 0.0);
     Vs.reset();
     Va.reset();
-    // add to W(mn,ij)
-    #pragma omp parallel for
-    for(int m = 0 ; m < naoccA; ++m){
-        for(int n = 0 ; n < naoccA; ++n){
-            int mn = index2(m,n);
-            int mn2 = ij_idxAA->get(m,n);
-            for(int i = 0 ; i < naoccA; ++i){
-                for(int j = 0 ; j < naoccA; ++j){
-                    int ij = index2(i,j);
-                    int ij2 = ij_idxAA->get(i,j);
-                    int perm1 = ( i > j ) ? 1 : -1;
-                    int perm2 = ( m > n ) ? 1 : -1;
-                    double value = S->get(mn,ij) + (perm1 * perm2 * A->get(mn,ij));
+// add to W(mn,ij)
+#pragma omp parallel for
+    for (int m = 0; m < naoccA; ++m) {
+        for (int n = 0; n < naoccA; ++n) {
+            int mn = index2(m, n);
+            int mn2 = ij_idxAA->get(m, n);
+            for (int i = 0; i < naoccA; ++i) {
+                for (int j = 0; j < naoccA; ++j) {
+                    int ij = index2(i, j);
+                    int ij2 = ij_idxAA->get(i, j);
+                    int perm1 = (i > j) ? 1 : -1;
+                    int perm2 = (m > n) ? 1 : -1;
+                    double value = S->get(mn, ij) + (perm1 * perm2 * A->get(mn, ij));
                     W->add(mn2, ij2, value);
                 }
             }
@@ -218,13 +215,12 @@ void DFOCC::ccdl_Wmnij()
 
     timer_off("Wmnij");
 
-}// end ccdl_Wmnij
+}  // end ccdl_Wmnij
 
 //======================================================================
 //    WijmnL2
 //======================================================================
-void DFOCC::ccdl_WijmnL2()
-{
+void DFOCC::ccdl_WijmnL2() {
     // defs
     SharedTensor2d K, T, Lnew, U, Tau, W, X;
     SharedTensor2d M, L, I, Y, S, A;
@@ -325,18 +321,18 @@ void DFOCC::ccdl_WijmnL2()
     // L(ia,jb) <-- S(a>=b,i>=j) + A(a>=b,i>=j)
     Lnew = SharedTensor2d(new Tensor2d("New L2 (IA|JB)", naoccA, navirA, naoccA, navirA));
     Lnew->read_symm(psio_, PSIF_DFOCC_AMPS);
-    #pragma omp parallel for
-    for(int a = 0 ; a < navirA; ++a){
-        for(int b = 0 ; b < navirA; ++b){
-            int ab = index2(a,b);
-            for(int i = 0 ; i < naoccA; ++i){
-                int ia = ia_idxAA->get(i,a);
-                for(int j = 0 ; j < naoccA; ++j){
-                    int jb = ia_idxAA->get(j,b);
-                    int ij = index2(i,j);
-                    int perm1 = ( i > j ) ? 1 : -1;
-                    int perm2 = ( a > b ) ? 1 : -1;
-                    double value = S->get(ij,ab) + (perm1 * perm2 * A->get(ij,ab));
+#pragma omp parallel for
+    for (int a = 0; a < navirA; ++a) {
+        for (int b = 0; b < navirA; ++b) {
+            int ab = index2(a, b);
+            for (int i = 0; i < naoccA; ++i) {
+                int ia = ia_idxAA->get(i, a);
+                for (int j = 0; j < naoccA; ++j) {
+                    int jb = ia_idxAA->get(j, b);
+                    int ij = index2(i, j);
+                    int perm1 = (i > j) ? 1 : -1;
+                    int perm2 = (a > b) ? 1 : -1;
+                    double value = S->get(ij, ab) + (perm1 * perm2 * A->get(ij, ab));
                     Lnew->add(ia, jb, value);
                 }
             }
@@ -349,13 +345,12 @@ void DFOCC::ccdl_WijmnL2()
 
     timer_off("WijmnL2");
 
-}// end ccdl_WijmnL2
+}  // end ccdl_WijmnL2
 
 //======================================================================
 //    Wmbej
 //======================================================================
-void DFOCC::ccdl_Wmbej()
-{
+void DFOCC::ccdl_Wmbej() {
     // defs
     SharedTensor2d K, L, T, T1, Tnew, U, Tau, W, X, Y, Z;
 
@@ -388,13 +383,12 @@ void DFOCC::ccdl_Wmbej()
 
     timer_off("Wmbej");
 
-}// end ccdl_Wmbej
+}  // end ccdl_Wmbej
 
 //======================================================================
 //    Wmbje
 //======================================================================
-void DFOCC::ccdl_Wmbje()
-{
+void DFOCC::ccdl_Wmbje() {
     // defs
     SharedTensor2d K, L, T, T1, Tnew, U, Tau, W, X, Y, Z;
 
@@ -418,7 +412,7 @@ void DFOCC::ccdl_Wmbje()
     X->sort(1432, K, 1.0, 0.0);
     K.reset();
     T = SharedTensor2d(new Tensor2d("T2p (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsd_t2_prime_amps(T,t2);
+    ccsd_t2_prime_amps(T, t2);
     Z->gemm(false, false, X, T, -1.0, 1.0);
     X.reset();
     T.reset();
@@ -427,13 +421,12 @@ void DFOCC::ccdl_Wmbje()
 
     timer_off("Wmbje");
 
-}// end ccdl_Wmbje
+}  // end ccdl_Wmbje
 
 //======================================================================
 //    WmbejL2
 //======================================================================
-void DFOCC::ccdl_WmbejL2()
-{
+void DFOCC::ccdl_WmbejL2() {
     // defs
     SharedTensor2d K, L, T, Lnew, U, Tau, W, W2, X, Y;
 
@@ -447,7 +440,7 @@ void DFOCC::ccdl_WmbejL2()
     // l_ij^ab <= Ct(ia,jb) + 2*Ct(ib,ja)
     // C(ia,jb) = -\sum_{me} l_mi^ae W'(jb,me) = -\sum_{me} L'(ia,me) W'(jb,me)
     U = SharedTensor2d(new Tensor2d("L2p (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsd_t2_prime_amps(U,l2);
+    ccsd_t2_prime_amps(U, l2);
     Y = SharedTensor2d(new Tensor2d("C2 (IA|JB)", naoccA, navirA, naoccA, navirA));
     Y->gemm(false, true, U, W, -1.0, 0.0);
     U.reset();
@@ -467,7 +460,7 @@ void DFOCC::ccdl_WmbejL2()
     Y->axpy(W, 2.0);
     W.reset();
     U = SharedTensor2d(new Tensor2d("Ut2 (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsd_u2_amps(U,l2);
+    ccsd_u2_amps(U, l2);
     X->gemm(false, true, U, Y, 0.5, 1.0);
     U.reset();
     Y.reset();
@@ -481,13 +474,12 @@ void DFOCC::ccdl_WmbejL2()
 
     timer_off("WmbejL2");
 
-}// end ccdl_WmbejL2
+}  // end ccdl_WmbejL2
 
 //======================================================================
 //    WabefL2
 //======================================================================
-void DFOCC::ccdl_WabefL2()
-{
+void DFOCC::ccdl_WabefL2() {
     // defs
     SharedTensor2d K, M, L, I, T, Lnew, U, Tau, W, X, Y, Z, S, A;
     SharedTensor2d V, Vs, Ts, Va, Ta, J, T1;
@@ -499,22 +491,22 @@ void DFOCC::ccdl_WabefL2()
     // (-)l(ij, ab) = 1/2 (l_ij^ab - l_ji^ab) * (2 - \delta_{ab})
     U = SharedTensor2d(new Tensor2d("(+)L [I>=J|A>=B]", ntri_ijAA, ntri_abAA));
     T = SharedTensor2d(new Tensor2d("(-)L [I>=J|A>=B]", ntri_ijAA, ntri_abAA));
-    #pragma omp parallel for
-    for(int i = 0 ; i < naoccA; ++i){
-        for(int j = 0 ; j <= i; ++j){
-            int ij = index2(i,j);
-            for(int a = 0 ; a < navirA; ++a){
-                int ia = ia_idxAA->get(i,a);
-                int ja = ia_idxAA->get(j,a);
-                for(int b = 0 ; b <= a; ++b){
+#pragma omp parallel for
+    for (int i = 0; i < naoccA; ++i) {
+        for (int j = 0; j <= i; ++j) {
+            int ij = index2(i, j);
+            for (int a = 0; a < navirA; ++a) {
+                int ia = ia_idxAA->get(i, a);
+                int ja = ia_idxAA->get(j, a);
+                for (int b = 0; b <= a; ++b) {
                     double perm = (a == b ? 1.0 : 2.0);
-                    int ab = index2(a,b);
-                    int jb = ia_idxAA->get(j,b);
-                    int ib = ia_idxAA->get(i,b);
-                    double value1 = 0.5 * perm * ( l2->get(ia,jb) + l2->get(ja,ib) );
-                    double value2 = 0.5 * perm * ( l2->get(ia,jb) - l2->get(ja,ib) );
-                    U->set(ij,ab,value1);
-                    T->set(ij,ab,value2);
+                    int ab = index2(a, b);
+                    int jb = ia_idxAA->get(j, b);
+                    int ib = ia_idxAA->get(i, b);
+                    double value1 = 0.5 * perm * (l2->get(ia, jb) + l2->get(ja, ib));
+                    double value2 = 0.5 * perm * (l2->get(ia, jb) - l2->get(ja, ib));
+                    U->set(ij, ab, value1);
+                    T->set(ij, ab, value2);
                 }
             }
         }
@@ -541,22 +533,22 @@ void DFOCC::ccdl_WabefL2()
     S = SharedTensor2d(new Tensor2d("S (A>=B, I>=J)", ntri_abAA, ntri_ijAA));
     A = SharedTensor2d(new Tensor2d("A (A>=B, I>=J)", ntri_abAA, ntri_ijAA));
     // Main loop
-    for(int a = 0 ; a < navirA; ++a){
-        int nb = a+1;
+    for (int a = 0; a < navirA; ++a) {
+        int nb = a + 1;
 
         // Form J[a](bf,e) = \sum_{Q} B(bfQ)*B(aeQ) cost = V^4N/2
-        I->contract(false, true, navirA*nb, navirA, nQ, K, K, 0, a*navirA*nQ, 1.0, 0.0);
+        I->contract(false, true, navirA * nb, navirA, nQ, K, K, 0, a * navirA * nQ, 1.0, 0.0);
 
-        // Form (+)V[a](b, e>=f)
-        #pragma omp parallel for
-        for(int b = 0 ; b <= a; ++b){
-            for(int e = 0 ; e < navirA; ++e){
+// Form (+)V[a](b, e>=f)
+#pragma omp parallel for
+        for (int b = 0; b <= a; ++b) {
+            for (int e = 0; e < navirA; ++e) {
                 int be = e + (b * navirA);
-                for(int f = 0 ; f <= e; ++f){
-                    int ef = index2(e,f);
+                for (int f = 0; f <= e; ++f) {
+                    int ef = index2(e, f);
                     int bf = f + (b * navirA);
-                    double value1 = 0.5 * ( I->get(bf, e) + I->get(be, f) );
-                    double value2 = 0.5 * ( I->get(bf, e) - I->get(be, f) );
+                    double value1 = 0.5 * (I->get(bf, e) + I->get(be, f));
+                    double value2 = 0.5 * (I->get(bf, e) - I->get(be, f));
                     Vs->set(b, ef, value1);
                     Va->set(b, ef, value2);
                 }
@@ -567,19 +559,18 @@ void DFOCC::ccdl_WabefL2()
         Ts->contract(false, true, nb, ntri_ijAA, ntri_abAA, Vs, U, 1.0, 0.0);
         Ta->contract(false, true, nb, ntri_ijAA, ntri_abAA, Va, T, 1.0, 0.0);
 
-        // Form S(ij,ab) & A(ij,ab)
-        #pragma omp parallel for
-        for(int b = 0 ; b <=a; ++b){
-            int ab = index2(a,b);
-            for(int i = 0 ; i < naoccA; ++i){
-                for(int j = 0 ; j <= i; ++j){
-                    int ij = index2(i,j);
-                     S->add(ab, ij, Ts->get(b,ij));
-                     A->add(ab, ij, Ta->get(b,ij));
+// Form S(ij,ab) & A(ij,ab)
+#pragma omp parallel for
+        for (int b = 0; b <= a; ++b) {
+            int ab = index2(a, b);
+            for (int i = 0; i < naoccA; ++i) {
+                for (int j = 0; j <= i; ++j) {
+                    int ij = index2(i, j);
+                    S->add(ab, ij, Ts->get(b, ij));
+                    A->add(ab, ij, Ta->get(b, ij));
                 }
             }
         }
-
     }
     K.reset();
     I.reset();
@@ -594,18 +585,18 @@ void DFOCC::ccdl_WabefL2()
     // L(ia,jb) <-- S(a>=b,i>=j) + A(a>=b,i>=j)
     Lnew = SharedTensor2d(new Tensor2d("New L2 (IA|JB)", naoccA, navirA, naoccA, navirA));
     Lnew->read_symm(psio_, PSIF_DFOCC_AMPS);
-    #pragma omp parallel for
-    for(int a = 0 ; a < navirA; ++a){
-        for(int b = 0 ; b < navirA; ++b){
-            int ab = index2(a,b);
-            for(int i = 0 ; i < naoccA; ++i){
-                int ia = ia_idxAA->get(i,a);
-                for(int j = 0 ; j < naoccA; ++j){
-                    int jb = ia_idxAA->get(j,b);
-                    int ij = index2(i,j);
-                    int perm1 = ( i > j ) ? 1 : -1;
-                    int perm2 = ( a > b ) ? 1 : -1;
-                    double value = S->get(ab,ij) + (perm1 * perm2 * A->get(ab,ij));
+#pragma omp parallel for
+    for (int a = 0; a < navirA; ++a) {
+        for (int b = 0; b < navirA; ++b) {
+            int ab = index2(a, b);
+            for (int i = 0; i < naoccA; ++i) {
+                int ia = ia_idxAA->get(i, a);
+                for (int j = 0; j < naoccA; ++j) {
+                    int jb = ia_idxAA->get(j, b);
+                    int ij = index2(i, j);
+                    int perm1 = (i > j) ? 1 : -1;
+                    int perm2 = (a > b) ? 1 : -1;
+                    double value = S->get(ab, ij) + (perm1 * perm2 * A->get(ab, ij));
                     Lnew->add(ia, jb, value);
                 }
             }
@@ -618,7 +609,7 @@ void DFOCC::ccdl_WabefL2()
 
     timer_off("WabefL2");
 
-}// end ccdl_WabefL2
+}  // end ccdl_WabefL2
 
-}} // End Namespaces
-
+}  // namespace dfoccwave
+}  // namespace psi

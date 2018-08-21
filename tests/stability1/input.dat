@@ -18,8 +18,6 @@ for h in range(0,4):                                       #TEST
     for i in range(0,2):                                   #TEST
       ref.set(h,i,0,ref_vals_sym[h * 2 + i])               #TEST
 
-memory 500 mb
-
 nucenergy =   2.64588604295000  #TEST
 refenergy =  -24.6562185615315  #TEST
 
@@ -53,8 +51,7 @@ ref_vals_sym = [ [ 0.128037 ],             #TEST
                  [ 0.128037 ],             #TEST
                ]                           #TEST
 
-ref = psi4.Matrix(2,1)                     #TEST
-ref.set(ref_vals_sym)                      #TEST
+ref = psi4.Matrix.from_list(ref_vals_sym)  #TEST
 
 refenergy =  -24.78964070898462 #TEST
 

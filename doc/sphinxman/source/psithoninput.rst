@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -70,11 +71,12 @@ override the builtins (in the input file, not in the C++ code).
 The physical constants used within |PSIfour|, which are automatically
 made available within all |PSIfour| input files.
 
-.. literalinclude:: @SFNX_INCLUDE@psi4/driver/p4const/physconst.py
+.. literalinclude:: @SFNX_INCLUDE@psi4/driver/constants/physconst.py
    :lines: 28-
 
-The ``psi_`` prefix is to prevent clashes with user-defined variables in
-|PSIfour| input files.
+In Psithon input files, prepend physical constants with ``psi_`` to
+prevent clashes with user-defined variables (*e.g.*, ``psi_h``). In
+PsiAPI mode, access as, *e.g.*, ``psi4.constants.h``.
 
 .. index:: memory
 .. _`sec:memory`:
@@ -82,23 +84,32 @@ The ``psi_`` prefix is to prevent clashes with user-defined variables in
 Memory Specification
 ====================
 
-By default, |PSIfour| assumes that 256 Mb of memory are available. While this is
+By default, |PSIfour| assumes that 500 MiB of memory are available. While this is
 enough for many computations, many of the algorithms will perform better if
 more is available. To specify memory, the ``memory`` keyword should be used. The following
-lines are all equivalent methods for specifying that 2 Gb of RAM is available
+lines are all equivalent methods for specifying that 2 GB of RAM is available
 to |PSIfour|::
 
     # all equivalent
 
-    memory 2 Gb
+    memory 2 GB
     
-    memory 2000 Mb
+    memory 2000 MB
     
-    memory 2000000 Kb
+    memory 2000000 kB
+
+Please note that memory can be specified both in IEC binary units (1 KiB = 1024 bytes) and SI units (1 kB = 1000 bytes). |PSIfour| recognizes and obeys both of them correctly. The units are not case sensitive (Kb and KB are equivalent to kB).
+
+By default, |PSIfour| performs a "sanity check" when parsing Psithon input files, enforcing a minimum memory requirement of 250 MiB. While it is generally not recomennded to do so, expert users can bypass this check by directly setting the number of bytes availble to |PSIfour|::
+
+    # setting available memory to 2 MB
+    set_memory_bytes(2000000)
+    
+Please note that this memory setting only governs the maximal memory usage of the major data structures and actual total memory usage is slightly higher. This is usually a negligible, except when setting tiny memory allowances.
 
 One convenient way to override the |PSIfour| default memory is to place a
 memory command in the |psirc| file (Sec. :ref:`sec:psirc`). For example,
-the following makes the default memory 2 Gb. ::
+the following makes the default memory 2 GB. ::
 
     set_memory(2000000000)
 
@@ -106,6 +117,10 @@ However, unless you're assured of having only one job running on a node at
 a time (and all nodes on the filesystem with |psirc| have similar memory
 capacities), it is advised to set memory in the input file on a
 per-calculation basis.
+
+That same command can be used for PsiAPI mode::
+
+    psi4.set_memory(int(5e8))
 
 .. note:: For parallel jobs, the ``memory`` keyword represents the total memory
    available to the job, *not* the memory per thread.
@@ -214,6 +229,23 @@ the input file, so if the last four commands in the above example were to read :
 
 the commands that set the print level would be ineffective, as they would be
 processed after the CCSD computation completes.
+
+In PsiAPI mode, one can use commands :py:func:`~psi4.set_options` and
+:py:func:`~psi4.set_module_options` like below. Note that these values
+should be of correct type, strings for strings, floats for floats like
+convergences. The function `~psi4.core.clean_options` that reinitializes
+all options may also be useful to separate calculations in a PsiAPI
+session. ::
+
+   psi4.set_options({
+       'scf_type': 'pk',
+       'e_convergence': 1.e-5,
+       'soscf': True
+   })
+
+   psi4.set_module_options({
+       'geom_maxiter': 50
+   })
 
 Basis Sets
 ==========

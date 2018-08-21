@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -49,19 +50,16 @@ using namespace psi;
  * @param s3 - the MO space for the third index
  * @param s4 - the MO space for the fourth index
  */
-void
-IntegralTransform::transform_tei(const std::shared_ptr<MOSpace> s1, const std::shared_ptr<MOSpace> s2,
-                                 const std::shared_ptr<MOSpace> s3, const std::shared_ptr<MOSpace> s4,
-                                 HalfTrans ht)
-{
+void IntegralTransform::transform_tei(const std::shared_ptr<MOSpace> s1, const std::shared_ptr<MOSpace> s2,
+                                      const std::shared_ptr<MOSpace> s3, const std::shared_ptr<MOSpace> s4,
+                                      HalfTrans ht) {
     check_initialized();
     // Only do the first half if the "make" flag is set
-    if(ht == MakeAndKeep || ht == MakeAndNuke)
-        transform_tei_first_half(s1, s2);
+    if (ht == HalfTrans::MakeAndKeep || ht == HalfTrans::MakeAndNuke) transform_tei_first_half(s1, s2);
 
-    if(ht == ReadAndNuke || ht == MakeAndNuke){
+    if (ht == HalfTrans::ReadAndNuke || ht == HalfTrans::MakeAndNuke) {
         keepHtInts_ = false;
-    }else{
+    } else {
         keepHtInts_ = true;
     }
     transform_tei_second_half(s1, s2, s3, s4);

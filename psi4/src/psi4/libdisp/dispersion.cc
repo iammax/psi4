@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -40,7 +41,7 @@
 #include "dispersion.h"
 #include "dispersion_defines.h"
 #include "psi4/liboptions/liboptions.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/libpsi4util/libpsi4util.h"
 
 #include <iostream>
@@ -50,8 +51,6 @@
 #include <sstream>
 #include <vector>
 #include <memory>
-
-#include "psi4/pybind11.h"
 
 namespace psi {
 
@@ -63,7 +62,7 @@ Dispersion::~Dispersion()
 {
 }
 
-std::shared_ptr <Dispersion> Dispersion::build(const std::string &name, double s6, double p1, double p2, double p3)
+std::shared_ptr<Dispersion> Dispersion::build(const std::string &name, double s6, double p1, double p2, double p3)
 {
     // Options &options = Process::environment.options;
     // if (options["DFT_DISPERSION_PARAMETERS"].has_changed()) {
@@ -78,7 +77,7 @@ std::shared_ptr <Dispersion> Dispersion::build(const std::string &name, double s
     // }
 
     if (to_upper_copy(name) == "-D1") {
-        std::shared_ptr <Dispersion> disp(new Dispersion());
+        auto disp = std::make_shared<Dispersion>();
         disp->name_ = "-D1";
         disp->description_ = "    Grimme's -D1 Dispersion Correction\n";
         disp->citation_ = "    Grimme, S. (2004), J. Comp. Chem., 25: 1463-1473\n";
@@ -91,7 +90,7 @@ std::shared_ptr <Dispersion> Dispersion::build(const std::string &name, double s
         disp->Damping_type_ = Damping_D1;
         return disp;
     } else if (to_upper_copy(name) == "-D2") {
-        std::shared_ptr <Dispersion> disp(new Dispersion());
+        auto disp = std::make_shared<Dispersion>();
         disp->name_ = "-D2";
         disp->description_ = "    Grimme's -D2 Dispersion Correction\n";
         disp->citation_ = "    Grimme, S. (2006),  J. Comp. Chem., 27: 1787-1799\n";
@@ -104,7 +103,7 @@ std::shared_ptr <Dispersion> Dispersion::build(const std::string &name, double s
         disp->Damping_type_ = Damping_D1;
         return disp;
     } else if (to_upper_copy(name) == "-CHG") {
-        std::shared_ptr <Dispersion> disp(new Dispersion());
+        auto disp = std::make_shared<Dispersion>();
         disp->name_ = "-CHG";
         disp->description_ = "    Chai and Head-Gordon Dispersion Correction\n";
         disp->citation_ = "    Chai, J.-D.; Head-Gordon, M. (2010), J. Chem. Phys., 132: 6615-6620\n";
@@ -117,7 +116,7 @@ std::shared_ptr <Dispersion> Dispersion::build(const std::string &name, double s
         disp->Damping_type_ = Damping_CHG;
         return disp;
     } else if (to_upper_copy(name) == "-DAS2009") {
-        std::shared_ptr <Dispersion> disp(new Dispersion());
+        auto disp = std::make_shared<Dispersion>();
         disp->name_ = "-DAS2009";
         disp->description_ = "    Podeszwa and Szalewicz Dispersion Correction\n";
         disp->citation_ = "    Pernal, K.; Podeszwa, R.; Patkowski, K.; Szalewicz, K. (2009), Phys. Rev. Lett., 103: 263201\n";
@@ -133,7 +132,7 @@ std::shared_ptr <Dispersion> Dispersion::build(const std::string &name, double s
         disp->Spherical_type_ = Spherical_Das;
         return disp;
     } else if (to_upper_copy(name) == "-DAS2010") {
-        std::shared_ptr <Dispersion> disp(new Dispersion());
+        auto disp = std::make_shared<Dispersion>();
         disp->name_ = "-DAS2010";
         disp->description_ = "    Podeszwa and Szalewicz Dispersion Correction\n";
         disp->citation_ = "    Podeszwa, R.; Pernal, K.; Patkowski, K.; Szalewicz, K. (2010), J. Phys. Chem. Lett., 1: 550\n";
@@ -156,8 +155,8 @@ std::shared_ptr <Dispersion> Dispersion::build(const std::string &name, double s
 void Dispersion::print(std::string out, int level) const
 {
     if (level < 1) return;
-    std::shared_ptr <psi::PsiOutStream> printer = (out == "outfile" ? outfile :
-                                                   std::shared_ptr<OutFile>(new OutFile(out)));
+    std::shared_ptr<psi::PsiOutStream> printer = (out == "outfile" ? outfile :
+                                                   std::make_shared<PsiOutStream>(out));
     printer->Printf("   => %s: Empirical Dispersion <=\n\n", name_.c_str());
 
     printer->Printf("%s", description_.c_str());
@@ -172,7 +171,7 @@ void Dispersion::print(std::string out, int level) const
     printer->Printf("\n");
 }
 
-std::string Dispersion::print_energy(std::shared_ptr <Molecule> m)
+std::string Dispersion::print_energy(std::shared_ptr<Molecule> m)
 {
     double e = compute_energy(m);
     std::stringstream s;
@@ -184,7 +183,7 @@ std::string Dispersion::print_energy(std::shared_ptr <Molecule> m)
     return s.str();
 }
 
-std::string Dispersion::print_gradient(std::shared_ptr <Molecule> m)
+std::string Dispersion::print_gradient(std::shared_ptr<Molecule> m)
 {
     SharedMatrix G = compute_gradient(m);
     double *g = G->pointer()[0];
@@ -205,7 +204,7 @@ std::string Dispersion::print_gradient(std::shared_ptr <Molecule> m)
     return s.str();
 }
 
-std::string Dispersion::print_hessian(std::shared_ptr <Molecule> m)
+std::string Dispersion::print_hessian(std::shared_ptr<Molecule> m)
 {
     SharedMatrix H = compute_hessian(m);
     double **h = H->pointer();;
@@ -242,14 +241,18 @@ std::string Dispersion::print_hessian(std::shared_ptr <Molecule> m)
     return s.str();
 }
 
-double Dispersion::compute_energy(std::shared_ptr <Molecule> m)
+double Dispersion::compute_energy(std::shared_ptr<Molecule> m)
 {
     double E = 0.0;
 
     if (Damping_type_ == Damping_TT) {
 
         // -DAS dispersion only involves inter-fragment terms
-        if (m->nactive_fragments() == 1) return 0.0;
+        if (m->nactive_fragments() == 1) {
+		//Just in case, since auto fragment is not called
+    		outfile->Printf("\n    Only one fragment provided, no empirical dispersion will be added.\n\n");
+		return 0.0;
+	}
 
         // need a check if there is only one active fragment ...
 
@@ -258,8 +261,8 @@ double Dispersion::compute_energy(std::shared_ptr <Molecule> m)
         realsA.push_back(0);
         std::vector<int> ghostsA;
         ghostsA.push_back(1);
-        std::shared_ptr <Molecule> monoA = m->extract_subsets(realsA, ghostsA);
-        std::shared_ptr <Vector> alist = set_atom_list(monoA);
+        std::shared_ptr<Molecule> monoA = m->extract_subsets(realsA, ghostsA);
+        std::shared_ptr<Vector> alist = set_atom_list(monoA);
         double *alist_p = alist->pointer();
 
         // list of atoms in monomer B
@@ -267,8 +270,8 @@ double Dispersion::compute_energy(std::shared_ptr <Molecule> m)
         realsB.push_back(1);
         std::vector<int> ghostsB;
         ghostsB.push_back(0);
-        std::shared_ptr <Molecule> monoB = m->extract_subsets(realsB, ghostsB);
-        std::shared_ptr <Vector> blist = set_atom_list(monoB);
+        std::shared_ptr<Molecule> monoB = m->extract_subsets(realsB, ghostsB);
+        std::shared_ptr<Vector> blist = set_atom_list(monoB);
         double *blist_p = blist->pointer();
 
         for (int i = 0; i < monoA->natom(); i++) {
@@ -325,7 +328,7 @@ double Dispersion::compute_energy(std::shared_ptr <Molecule> m)
             }
         }
     } else {
-        std::shared_ptr <Vector> atom_list = set_atom_list(m);
+        std::shared_ptr<Vector> atom_list = set_atom_list(m);
         double *atom_list_p = atom_list->pointer();
         for (int i = 0; i < m->natom(); i++) {
             for (int j = 0; j < i; j++) {
@@ -371,10 +374,14 @@ double Dispersion::compute_energy(std::shared_ptr <Molecule> m)
     return E;
 }
 
-SharedMatrix Dispersion::compute_gradient(std::shared_ptr <Molecule> m)
+SharedMatrix Dispersion::compute_gradient(std::shared_ptr<Molecule> m)
 {
-    SharedMatrix G(new Matrix("Dispersion Gradient", m->natom(), 3));
+    auto G = std::make_shared<Matrix>("Dispersion Gradient", m->natom(), 3);
     double **Gp = G->pointer();
+
+    if (Damping_type_ == Damping_TT) {
+        throw PSIEXCEPTION("+Das Gradients not yet implemented");
+    }
 
     for (int i = 0; i < m->natom(); i++) {
         for (int j = 0; j < i; j++) {
@@ -442,15 +449,15 @@ SharedMatrix Dispersion::compute_gradient(std::shared_ptr <Molecule> m)
     return G;
 }
 
-SharedMatrix Dispersion::compute_hessian(std::shared_ptr <Molecule> m)
+SharedMatrix Dispersion::compute_hessian(std::shared_ptr<Molecule> m)
 {
     throw PSIEXCEPTION("Dispersion: Hessians not implemented");
 }
 
-std::shared_ptr <Vector> Dispersion::set_atom_list(std::shared_ptr <Molecule> mol)
+std::shared_ptr<Vector> Dispersion::set_atom_list(std::shared_ptr<Molecule> mol)
 {
 
-    std::shared_ptr <Vector> atom_list(new Vector(mol->natom()));
+    auto atom_list = std::make_shared<Vector>(mol->natom());
     double *atom_list_p = atom_list->pointer();
 
     // look for hydrogens:

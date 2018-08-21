@@ -1,7 +1,5 @@
 #! ROHF-CCSD(T) cc-pVDZ frozen-core energy for the $^2\Sigma^+$ state of the CN radical, with Cartesian input.
 
-memory 250 mb
-
 refnuc   =  18.9152665531957    #TEST
 refscf   = -92.1955565653       #TEST
 refccsd  =  -0.281342908547054  #TEST
@@ -9,6 +7,7 @@ ref_t    =  -0.013974091470867  #TEST
 reftotal = -92.490873565295587  #TEST
 
 molecule CN {
+0 2
   units bohr
   C  0.000000000000      0.000000000000      1.195736583480
   N  0.000000000000      0.000000000000     -1.024692078304

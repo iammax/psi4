@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,14 +32,14 @@
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/twobody.h"
 #include "psi4/libmints/integral.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 
 #include <cfloat>
 
-using namespace std;
-
 namespace psi {
 
-ERISieve::ERISieve(std::shared_ptr <BasisSet> primary, double sieve) :
+ERISieve::ERISieve(std::shared_ptr<BasisSet> primary, double sieve) :
         primary_(primary), sieve_(sieve)
 {
     common_init();
@@ -80,11 +81,11 @@ void ERISieve::set_sieve(double sieve)
     function_pairs_reverse_.resize(nbf_ * (nbf_ + 1L) / 2L);
 
     long int offset = 0L;
-    unsigned long int MUNU = 0L;
+    size_t MUNU = 0L;
     for (int MU = 0; MU < nshell_; MU++) {
         for (int NU = 0; NU <= MU; NU++, MUNU++) {
-            if (shell_pair_values_[MU * (unsigned long int) nshell_ + NU] >= sieve2_over_max_) {
-                shell_pairs_.push_back(make_pair(MU, NU));
+            if (shell_pair_values_[MU * (size_t) nshell_ + NU] >= sieve2_over_max_) {
+                shell_pairs_.push_back(std::make_pair(MU, NU));
                 shell_pairs_reverse_[MUNU] = offset;
                 offset++;
             } else {
@@ -94,11 +95,11 @@ void ERISieve::set_sieve(double sieve)
     }
 
     offset = 0L;
-    unsigned long int munu = 0L;
+    size_t munu = 0L;
     for (int mu = 0; mu < nbf_; mu++) {
         for (int nu = 0; nu <= mu; nu++, munu++) {
-            if (function_pair_values_[mu * (unsigned long int) nbf_ + nu] >= sieve2_over_max_) {
-                function_pairs_.push_back(make_pair(mu, nu));
+            if (function_pair_values_[mu * (size_t) nbf_ + nu] >= sieve2_over_max_) {
+                function_pairs_.push_back(std::make_pair(mu, nu));
                 function_pairs_reverse_[munu] = offset;
                 offset++;
             } else {
@@ -114,7 +115,7 @@ void ERISieve::set_sieve(double sieve)
 
     for (int MU = 0; MU < nshell_; MU++) {
         for (int NU = 0; NU < nshell_; NU++) {
-            if (shell_pair_values_[MU * (unsigned long int) nshell_ + NU] >= sieve2_over_max_) {
+            if (shell_pair_values_[MU * (size_t) nshell_ + NU] >= sieve2_over_max_) {
                 shell_to_shell_[MU].push_back(NU);
             }
         }
@@ -122,7 +123,7 @@ void ERISieve::set_sieve(double sieve)
 
     for (int mu = 0; mu < nbf_; mu++) {
         for (int nu = 0; nu < nbf_; nu++) {
-            if (function_pair_values_[mu * (unsigned long int) nbf_ + nu] >= sieve2_over_max_) {
+            if (function_pair_values_[mu * (size_t) nbf_ + nu] >= sieve2_over_max_) {
                 function_to_function_[mu].push_back(nu);
             }
         }
@@ -217,7 +218,7 @@ void ERISieve::integrals()
     max_ = 0.0;
 
     IntegralFactory schwarzfactory(primary_, primary_, primary_, primary_);
-    std::shared_ptr <TwoBodyAOInt> eri = std::shared_ptr<TwoBodyAOInt>(schwarzfactory.eri());
+    std::shared_ptr<TwoBodyAOInt> eri = std::shared_ptr<TwoBodyAOInt>(schwarzfactory.eri());
     const double *buffer = eri->buffer();
 
     for (int P = 0; P < nshell_; P++) {
@@ -230,7 +231,7 @@ void ERISieve::integrals()
             double max_val = 0.0;
             for (int p = 0; p < nP; p++) {
                 for (int q = 0; q < nQ; q++) {
-                    max_val = std::max(max_val, fabs(buffer[p * (nQ * nP * nQ + nQ) + q * (nP * nQ + 1)]));
+                    max_val = std::max(max_val, std::fabs(buffer[p * (nQ * nP * nQ + nQ) + q * (nP * nQ + 1)]));
                 }
             }
             max_ = std::max(max_, max_val);
@@ -265,7 +266,7 @@ void ERISieve::integrals()
             {
 
               double p_exp = mu_shell.exp(p_ind);
-              double p_coef = fabs(mu_shell.coef(p_ind));
+              double p_coef = std::fabs(mu_shell.coef(p_ind));
 
               Vector3 p_center = mu_shell.center();
               p_center *= p_exp;
@@ -274,7 +275,7 @@ void ERISieve::integrals()
               {
 
                 double r_exp = nu_shell.exp(r_ind);
-                double r_coef = fabs(nu_shell.coef(r_ind));
+                double r_coef = std::fabs(nu_shell.coef(r_ind));
 
                 Vector3 r_center = nu_shell.center();
                 r_center *= r_exp;
@@ -295,8 +296,8 @@ void ERISieve::integrals()
             } // loop over primitives in MU
 
             contracted_center /= coef_denominator;
-            unsigned long int this_ind = MU * (unsigned long int) nshell + NU;
-            unsigned long int sym_ind = NU * (unsigned long int) nshell + MU;
+            size_t this_ind = MU * (size_t) nshell + NU;
+            size_t sym_ind = NU * (size_t) nshell + MU;
 
             for (int prim_it = 0; prim_it < (int)primitive_extents.size(); prim_it++)
             {
@@ -318,13 +319,13 @@ void ERISieve::integrals()
 bool ERISieve::shell_significant_qqr(int M, int N, int R, int S)
 {
 
-    double Q_mn = shell_pair_values_[N * (unsigned long int) nshell_ + M];
-    double Q_rs = shell_pair_values_[R * (unsigned long int) nshell_ + S];
+    double Q_mn = shell_pair_values_[N * (size_t) nshell_ + M];
+    double Q_rs = shell_pair_values_[R * (size_t) nshell_ + S];
 
-    double dist = contracted_centers_[N * (unsigned long int) nshell_ + M].distance(contracted_centers_[R * (unsigned long int) nshell_ + S]);
+    double dist = contracted_centers_[N * (size_t) nshell_ + M].distance(contracted_centers_[R * (size_t) nshell_ + S]);
 
-    double denom = dist - extents_[N * (unsigned long int) nshell_ + M]
-                   - extents_[R * (unsigned long int) nshell_ + S];
+    double denom = dist - extents_[N * (size_t) nshell_ + M]
+                   - extents_[R * (size_t) nshell_ + S];
 
     // this does the near field estimate if that's the only valid one
     // values of Q are squared

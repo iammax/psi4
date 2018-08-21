@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,6 +32,8 @@
 #include "psi4/libmints/vector.h"
 
 using namespace psi;
+
+uint64_t binomial(int n, int c1); // From solidharmonics.cc
 
 MultipoleInt::MultipoleInt(std::vector<SphericalTransform>& spherical_transforms, std::shared_ptr<BasisSet> bs1, std::shared_ptr<BasisSet> bs2, int order, int nderiv) :
 OneBodyAOInt(spherical_transforms, bs1, bs2, nderiv), mi_recur_(bs1->max_am()+2, bs2->max_am()+2, order), order_(order)
@@ -62,7 +65,7 @@ MultipoleInt::~MultipoleInt()
 SharedVector MultipoleInt::nuclear_contribution(std::shared_ptr<Molecule> mol, int order, const Vector3 &origin)
 {
     int ntot = (order+1)*(order+2)*(order+3)/6 - 1;
-    std::shared_ptr<Vector> sret(new Vector(ntot));
+    auto sret = std::make_shared<Vector>(ntot);
     double *ret = sret->pointer();
 
     int address = 0;
@@ -82,22 +85,6 @@ SharedVector MultipoleInt::nuclear_contribution(std::shared_ptr<Molecule> mol, i
 
     return sret;
 }
-
-inline uint64_t binomial(int n, int c1)
-{
-    uint64_t num = 1;
-    uint64_t den = 1;
-    int c2 = n - c1;
-    int i;
-    for (i=c2+1; i<=n; i++) {
-        num *= i;
-    }
-    for (i=2; i<=c1; i++) {
-        den *= i;
-    }
-    return num/den;
-}
-
 
 // The engine only supports segmented basis sets
 void MultipoleInt::compute_pair(const GaussianShell& s1, const GaussianShell& s2)

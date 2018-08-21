@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -36,11 +37,11 @@
 #include "psi4/libmints/sieve.h"
 #include "psi4/libiwl/iwl.hpp"
 #include "jk.h"
-#include "jk_independent.h"
-#include "link.h"
-#include "direct_screening.h"
-#include "cubature.h"
-#include "points.h"
+//#include "jk_independent.h"
+//#include "link.h"
+//#include "direct_screening.h"
+//#include "cubature.h"
+//#include "points.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/twobody.h"
@@ -48,12 +49,12 @@
 #include "psi4/lib3index/cholesky.h"
 
 #include <sstream>
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #ifdef _OPENMP
 #include <omp.h>
+#include "psi4/libpsi4util/process.h"
 #endif
 
-using namespace std;
 using namespace psi;
 
 namespace psi {
@@ -69,7 +70,7 @@ void DirectJK::common_init()
 {
     df_ints_num_threads_ = 1;
     #ifdef _OPENMP
-        df_ints_num_threads_ = omp_get_max_threads();
+        df_ints_num_threads_ = Process::environment.get_n_threads();
     #endif
 }
 void DirectJK::print_header() const
@@ -89,11 +90,11 @@ void DirectJK::print_header() const
 }
 void DirectJK::preiterations()
 {
-    sieve_ = std::shared_ptr<ERISieve>(new ERISieve(primary_, cutoff_));
+    sieve_ = std::make_shared<ERISieve>(primary_, cutoff_);
 }
 void DirectJK::compute_JK()
 {
-    std::shared_ptr<IntegralFactory> factory(new IntegralFactory(primary_,primary_,primary_,primary_));
+    auto factory = std::make_shared<IntegralFactory>(primary_,primary_,primary_,primary_);
 
     if (do_wK_) {
         std::vector<std::shared_ptr<TwoBodyAOInt> > ints;
@@ -106,7 +107,7 @@ void DirectJK::compute_JK()
         } else {
             std::vector<std::shared_ptr<Matrix> > temp;
             for (size_t i = 0; i < D_ao_.size(); i++) {
-                temp.push_back(std::shared_ptr<Matrix>(new Matrix("temp", primary_->nbf(), primary_->nbf())));
+                temp.push_back(std::make_shared<Matrix>("temp", primary_->nbf(), primary_->nbf()));
             }
             build_JK(ints,D_ao_,temp,wK_ao_);
         }
@@ -114,21 +115,25 @@ void DirectJK::compute_JK()
 
     if (do_J_ || do_K_) {
         std::vector<std::shared_ptr<TwoBodyAOInt> > ints;
-        for (int thread = 0; thread < df_ints_num_threads_; thread++) {
-            ints.push_back(std::shared_ptr<TwoBodyAOInt>(factory->erd_eri()));
+        ints.push_back(std::shared_ptr<TwoBodyAOInt>(factory->eri()));
+        for (int thread = 1; thread < df_ints_num_threads_; thread++) {
+            if(ints[0]->cloneable())
+                ints.push_back(std::shared_ptr<TwoBodyAOInt>(ints[0]->clone()));
+            else
+                ints.push_back(std::shared_ptr<TwoBodyAOInt>(factory->eri()));
         }
         if (do_J_ && do_K_) {
             build_JK(ints,D_ao_,J_ao_,K_ao_);
         } else if (do_J_) {
             std::vector<std::shared_ptr<Matrix> > temp;
             for (size_t i = 0; i < D_ao_.size(); i++) {
-                temp.push_back(std::shared_ptr<Matrix>(new Matrix("temp", primary_->nbf(), primary_->nbf())));
+                temp.push_back(std::make_shared<Matrix>("temp", primary_->nbf(), primary_->nbf()));
             }
             build_JK(ints,D_ao_,J_ao_,temp);
         } else {
             std::vector<std::shared_ptr<Matrix> > temp;
             for (size_t i = 0; i < D_ao_.size(); i++) {
-                temp.push_back(std::shared_ptr<Matrix>(new Matrix("temp", primary_->nbf(), primary_->nbf())));
+                temp.push_back(std::make_shared<Matrix>("temp", primary_->nbf(), primary_->nbf()));
             }
             build_JK(ints,D_ao_,temp,K_ao_);
         }
@@ -239,7 +244,7 @@ void DirectJK::build_JK(std::vector<std::shared_ptr<TwoBodyAOInt> >& ints,
     for (int thread = 0; thread < nthread; thread++) {
         std::vector<std::shared_ptr<Matrix> > JK2;
         for (size_t ind = 0; ind < D.size(); ind++) {
-            JK2.push_back(std::shared_ptr<Matrix>(new Matrix("JKT", (lr_symmetric_ ? 6 : 10) * max_task, max_task)));
+            JK2.push_back(std::make_shared<Matrix>("JKT", (lr_symmetric_ ? 6 : 10) * max_task, max_task));
         }
         JKT.push_back(JK2);
     }
@@ -573,7 +578,7 @@ void DirectJK::build_JK(std::vector<std::shared_ptr<TwoBodyAOInt> >& ints,
     }
 
     if (bench_) {
-       std::shared_ptr<OutFile> printer(new OutFile("bench.dat",APPEND));
+       auto printer = std::make_shared<PsiOutStream>("bench.dat",std::ostream::app);
         size_t ntri = nshell * (nshell + 1L) / 2L;
         size_t possible_shells = ntri * (ntri + 1L) / 2L;
         printer->Printf( "Computed %20zu Shell Quartets out of %20zu, (%11.3E ratio)\n", computed_shells, possible_shells, computed_shells / (double) possible_shells);
@@ -612,8 +617,8 @@ void DirectJK::print_header() const
 }
 void DirectJK::preiterations()
 {
-    sieve_ = std::shared_ptr<ERISieve>(new ERISieve(primary_, cutoff_));
-    factory_= std::shared_ptr<IntegralFactory>(new IntegralFactory(primary_,primary_,primary_,primary_));
+    sieve_ = std::make_shared<ERISieve>(primary_, cutoff_);
+    factory_= std::make_shared<IntegralFactory>(primary_,primary_,primary_,primary_);
     eri_.clear();
     for (int thread = 0; thread < omp_nthread_; thread++) {
         eri_.push_back(std::shared_ptr<TwoBodyAOInt>(factory_->erd_eri()));
@@ -673,12 +678,12 @@ void DirectJK::compute_JK()
     /**
     sieve_->set_sieve(cutoff_);
     const std::vector<std::pair<int,int> >& shell_pairs = sieve_->shell_pairs();
-    unsigned long int nMN = shell_pairs.size();
-    unsigned long int nMNRS = nMN * nMN;
+    size_t nMN = shell_pairs.size();
+    size_t nMNRS = nMN * nMN;
     int nthread = eri_.size();
 
     #pragma omp parallel for schedule(dynamic,30) num_threads(nthread)
-    for (unsigned long int index = 0L; index < nMNRS; ++index) {
+    for (size_t index = 0L; index < nMNRS; ++index) {
 
         int thread = 0;
         #ifdef _OPENMP
@@ -687,8 +692,8 @@ void DirectJK::compute_JK()
 
         const double* buffer = eri_[thread]->buffer();
 
-        unsigned long int MN = index / nMN;
-        unsigned long int RS = index % nMN;
+        size_t MN = index / nMN;
+        size_t RS = index % nMN;
         if (MN < RS) continue;
 
         int M = shell_pairs[MN].first;

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -46,12 +47,11 @@
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/psifiles.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 
 #include "moinfo.h"
 
-
-
-using namespace std;
 
 namespace psi {
 
@@ -88,7 +88,7 @@ MOInfo::MOInfo(Wavefunction& ref_wfn_, Options& options_, bool silent_)
 
     no_damp_convergence = 1.0e-9;
     dgemm_timing        = 0.0;
-    scf                 = NULL;
+    scf                 = nullptr;
 
     nfocc = 0;
     nfvir = 0;
@@ -126,8 +126,8 @@ void MOInfo::read_info()
     mopi           = convert_int_array_to_vector(nirreps, ref_wfn.nmopi());
     SharedMatrix matCa = ref_wfn.Ca();
     scf            = block_matrix(nso, nmo);
-    unsigned int soOffset = 0;
-    unsigned int moOffset = 0;
+    size_t soOffset = 0;
+    size_t moOffset = 0;
     for(int h = 0; h < nirreps; ++h){
         for(int so = 0; so < sopi[h]; ++so){
             for(int mo = 0; mo < mopi[h]; ++mo){
@@ -149,13 +149,13 @@ void MOInfo::read_info()
     // Determine the wave function irrep
     // The defalut irrep is 0 (A)
     wfn_sym = 0;
-    string wavefunction_sym_str = options.get_str("WFN_SYM");
+    std::string wavefunction_sym_str = options.get_str("WFN_SYM");
     bool wfn_sym_found = false;
 
     std::shared_ptr<PointGroup> old_pg = Process::environment.parent_symmetry();
     if(old_pg){
         for(int h = 0; h < nirreps; ++h){
-            string irr_label_str = old_pg->char_table().gamma(h).symbol_ns();
+            std::string irr_label_str = old_pg->char_table().gamma(h).symbol_ns();
             trim_spaces(irr_label_str);
             to_upper(irr_label_str);
             if(wavefunction_sym_str == irr_label_str){
@@ -171,7 +171,7 @@ void MOInfo::read_info()
         }
     }else{
         for(int h = 0; h < nirreps; ++h){
-            string irr_label_str = irr_labs[h];
+            std::string irr_label_str = irr_labs[h];
             trim_spaces(irr_label_str);
             to_upper(irr_label_str);
             if(wavefunction_sym_str == irr_label_str){
@@ -349,7 +349,7 @@ void MOInfo::read_mo_spaces()
     nvir        = nactv + nextr;
 
     bool active_space_problem = false;
-    string error_msg;
+    std::string error_msg;
     if(nactv < nactive_ael){
         error_msg += "\n  - the number of active orbitals (nactv = " + to_string(nactv) + ")";
         error_msg += " is smaller than the number of active alpha electrons (nactive_ael =" + to_string(nactive_ael) +")",
@@ -431,7 +431,7 @@ void MOInfo::print_mo()
     for(int i=nirreps;i<8;i++)
         outfile->Printf("     ");
     for(int i=0;i<nirreps;i++)
-        outfile->Printf("  %s",irr_labs[i]);
+        outfile->Printf("  %s",irr_labs[i].c_str());
     outfile->Printf(" Total");
     outfile->Printf("\n  ------------------------------------------------------------------------------");
     print_mo_space(nmo,mopi,"Total                           ");
@@ -451,7 +451,7 @@ void MOInfo::print_mo()
  */
 void MOInfo::free_memory()
 {
-    if(scf != NULL)
+    if(scf != nullptr)
         free_block(scf);
     for(int i=0;i<nirreps;i++)
         free_block(scf_irrep[i]);

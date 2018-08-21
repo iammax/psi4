@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,6 +35,8 @@
 #include <string>
 #include <cmath>
 #include <cstdlib>
+
+#include "psi4/libpsi4util/process.h"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/psi4-dec.h"
 #include "psi4/psifiles.h"
@@ -43,6 +46,8 @@
 #include "psi4/libmints/factory.h"
 #include "psi4/libmints/integral.h"
 #include "psi4/libmints/multipolesymmetry.h"
+#include "psi4/liboptions/liboptions.h"
+
 #include "MOInfo.h"
 #include "Params.h"
 #include "Local.h"
@@ -203,10 +208,10 @@ void get_params(std::shared_ptr<Wavefunction> wfn, Options &options)
 
   outfile->Printf( "\n\tInput parameters:\n");
   outfile->Printf( "\t-----------------\n");
-  if(params.prop == "ALL")
-    outfile->Printf( "\tProperty         =    POLARIZABILITY + ROTATION\n");
-  else
-    outfile->Printf( "\tProperty         =    %s\n", params.prop.c_str());
+  //if(params.prop == "ALL")
+  //  outfile->Printf( "\tProperty               =    POLARIZABILITY + ROTATION\n");
+  //else
+  outfile->Printf( "\tProperty         =    %s\n", params.prop.c_str());
   outfile->Printf( "\tReference wfn    =    %s\n",
           (params.ref == 0) ? "RHF" : ((params.ref == 1) ? "ROHF" : "UHF"));
   outfile->Printf( "\tMemory (Mbytes)  =    %5.1f\n",params.memory/1e6);
@@ -219,18 +224,25 @@ void get_params(std::shared_ptr<Wavefunction> wfn, Options &options)
   outfile->Printf( "\tModel III        =    %s\n", params.sekino ? "Yes" : "No");
   outfile->Printf( "\tLinear Model     =    %s\n", params.linear ? "Yes" : "No");
   outfile->Printf( "\tABCD             =    %s\n", params.abcd.c_str());
-  outfile->Printf( "\tIrrep X          =    %s\n", moinfo.labels[moinfo.mu_irreps[0]]);
-  outfile->Printf( "\tIrrep Y          =    %s\n", moinfo.labels[moinfo.mu_irreps[1]]);
-  outfile->Printf( "\tIrrep Z          =    %s\n", moinfo.labels[moinfo.mu_irreps[2]]);
-  outfile->Printf( "\tIrrep RX         =    %s\n", moinfo.labels[moinfo.l_irreps[0]]);
-  outfile->Printf( "\tIrrep RY         =    %s\n", moinfo.labels[moinfo.l_irreps[1]]);
-  outfile->Printf( "\tIrrep RZ         =    %s\n", moinfo.labels[moinfo.l_irreps[2]]);
+  outfile->Printf( "\tIrrep X          =    %s\n", moinfo.labels[moinfo.mu_irreps[0]].c_str());
+  outfile->Printf( "\tIrrep Y          =    %s\n", moinfo.labels[moinfo.mu_irreps[1]].c_str());
+  outfile->Printf( "\tIrrep Z          =    %s\n", moinfo.labels[moinfo.mu_irreps[2]].c_str());
+  outfile->Printf( "\tIrrep RX         =    %s\n", moinfo.labels[moinfo.l_irreps[0]].c_str());
+  outfile->Printf( "\tIrrep RY         =    %s\n", moinfo.labels[moinfo.l_irreps[1]].c_str());
+  outfile->Printf( "\tIrrep RZ         =    %s\n", moinfo.labels[moinfo.l_irreps[2]].c_str());
+  /*  Only length gauge calculations for polarizabilities */
+  if (params.prop == "POLARIZABILITY")
+  outfile->Printf( "\tGauge            =    LENGTH\n");
+  else { 
   outfile->Printf( "\tGauge            =    %s\n", params.gauge.c_str());
+  }
+
   for(i=0; i < params.nomega; i++) {
     if(params.omega[i] == 0.0)
-      outfile->Printf( "\tApplied field %2d =  0.000\n", i);
+       outfile->Printf( "\tApplied field %2d =  0.000\n", i);
+
     else
-      outfile->Printf( "\tApplied field %2d =    %5.3f E_h (%6.2f nm, %5.3f eV, %8.2f cm-1)\n", i, params.omega[i],
+       outfile->Printf( "\tApplied field %2d =    %5.3f E_h (%6.2f nm, %5.3f eV, %8.2f cm-1)\n", i, params.omega[i],
               (pc_c*pc_h*1e9)/(pc_hartree2J*params.omega[i]), pc_hartree2ev*params.omega[i],
               pc_hartree2wavenumbers*params.omega[i]);
   }

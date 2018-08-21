@@ -3,29 +3,29 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-#include "psi4/lib3index/3index.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libpsio/psio.h"
 #include "psi4/libpsio/aiohandler.h"
@@ -36,24 +36,18 @@
 #include "psi4/libiwl/iwl.hpp"
 #include "jk.h"
 #include "PKmanagers.h"
-#include "jk_independent.h"
-#include "link.h"
-#include "direct_screening.h"
-#include "cubature.h"
-#include "points.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/mintshelper.h"
 #include "psi4/libmints/sobasis.h"
-#include "psi4/lib3index/cholesky.h"
 
 #include <sstream>
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #ifdef _OPENMP
 #include <omp.h>
+#include "psi4/libpsi4util/process.h"
 #endif
 
-using namespace std;
 using namespace psi;
 
 namespace psi {
@@ -75,7 +69,7 @@ void PKJK::common_init()
     pk_file_ = PSIF_SO_PK;
     nthreads_ = 1;
 #ifdef _OPENMP
-    nthreads_ = omp_get_max_threads();
+    nthreads_ = Process::environment.get_n_threads();
 #endif
 }
 
@@ -95,7 +89,7 @@ void PKJK::print_header() const
             outfile->Printf( "    Omega:             %11.3E\n", omega_);
         outfile->Printf( "    Memory (MB):       %11ld\n", (memory_ *8L) / (1024L * 1024L));
         outfile->Printf( "    Schwarz Cutoff:    %11.0E\n\n", cutoff_);
-        outfile->Printf( "    OpenMP threads:    %11d\n", nthreads_);
+        outfile->Printf( "    OpenMP threads:    %11d\n\n", nthreads_);
     }
 }
 

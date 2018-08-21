@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -29,9 +30,19 @@
 
 .. _`sec:tutorial`:
 
-====================
-A |PSIfour| Tutorial
-====================
+==================================================
+Psithon Tutorial: Using |PSIfour| as an Executable
+==================================================
+
+.. note:: Psithon and PsiAPI refer to two modes of interacting with |PSIfour|. In
+   Psithon mode, you write an input file in our domain-specific language
+   (not quite Python) where commands don't have ``psi4.`` in front, then
+   submit it to the executable ``psi4`` which processes the Psithon into
+   pure Python and runs it internally. In PsiAPI mode, you write a pure
+   Python script with ``import psi4`` at the top and commands are behind
+   the ``psi4.`` namespace, then submit it to the ``python`` interpreter.
+   Both modes are equally powerful. This tutorial covers the Psithon
+   mode.
 
 .. note:: Some |PSIfour| functions and keywords have aliases.  For example,
           ``frequency()``, ``frequencies()``, and ``freq()`` all work to 

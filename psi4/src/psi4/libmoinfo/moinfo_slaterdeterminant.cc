@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -28,9 +29,6 @@
 #include <iostream>
 #include "moinfo.h"
 
-
-
-using namespace std;
 
 namespace psi {
 
@@ -100,8 +98,8 @@ std::string MOInfo::SlaterDeterminant::get_label()
  * @fn MOInfo::SlaterDeterminant::get_internal_excitations(...)
  */
 void MOInfo::SlaterDeterminant::get_internal_excitations(SlaterDeterminant& det,double& sign,
-                                                 vector<pair<int,int> >& alpha_operators,
-                                                 vector<pair<int,int> >& beta_operators)
+                                                 std::vector<std::pair<int,int> >& alpha_operators,
+                                                 std::vector<std::pair<int,int> >& beta_operators)
 {
   int ann, cre;
   int nall = moinfo->get_nall();
@@ -116,7 +114,7 @@ void MOInfo::SlaterDeterminant::get_internal_excitations(SlaterDeterminant& det,
     while(++cre<nall)
       if(!bits[cre] && bits_exc[cre]) break;
     if(cre<nall){
-      alpha_operators.push_back(make_pair(moinfo->get_all_to_occ(ann),moinfo->get_all_to_vir(cre)));
+      alpha_operators.push_back(std::make_pair(moinfo->get_all_to_occ(ann),moinfo->get_all_to_vir(cre)));
       sign *= annihilate(bits_tmp,ann);
       sign *=     create(bits_tmp,cre);
     }
@@ -128,7 +126,7 @@ void MOInfo::SlaterDeterminant::get_internal_excitations(SlaterDeterminant& det,
     while(++cre<nall)
       if(!bits[cre+nall] && bits_exc[cre+nall]) break;
     if(cre<nall){
-      beta_operators.push_back(make_pair(moinfo->get_all_to_occ(ann),moinfo->get_all_to_vir(cre)));
+      beta_operators.push_back(std::make_pair(moinfo->get_all_to_occ(ann),moinfo->get_all_to_vir(cre)));
       sign *= annihilate(bits_tmp,ann+nall);
       sign *=     create(bits_tmp,cre+nall);
     }
@@ -161,43 +159,43 @@ double MOInfo::SlaterDeterminant::create(bitdet& bits_det,int so)
     return(0.0);
 }
 
-vector<int> MOInfo::SlaterDeterminant::get_aocc()
+std::vector<int> MOInfo::SlaterDeterminant::get_aocc()
 {
-  vector<int> aocc;
+  std::vector<int> aocc;
   for(int i=0;i<moinfo->get_nall();i++)
     if(bits[i])
       aocc.push_back(moinfo->get_all_to_occ(i));
   return(aocc);
 }
 
-vector<int> MOInfo::SlaterDeterminant::get_bocc()
+std::vector<int> MOInfo::SlaterDeterminant::get_bocc()
 {
-  vector<int> bocc;
+  std::vector<int> bocc;
   for(int i=0;i<moinfo->get_nall();i++)
     if(bits[i+moinfo->get_nall()])
       bocc.push_back(moinfo->get_all_to_occ(i));
   return(bocc);
 }
 
-vector<int> MOInfo::SlaterDeterminant::get_avir()
+std::vector<int> MOInfo::SlaterDeterminant::get_avir()
 {
-  vector<int> avir;
+  std::vector<int> avir;
   for(int i=0;i<moinfo->get_nall();i++)
     if(!bits[i])
       avir.push_back(moinfo->get_all_to_vir(i));
   return(avir);
 }
 
-vector<int> MOInfo::SlaterDeterminant::get_bvir()
+std::vector<int> MOInfo::SlaterDeterminant::get_bvir()
 {
-  vector<int> bvir;
+  std::vector<int> bvir;
   for(int i=0;i<moinfo->get_nall();i++)
     if(!bits[i+moinfo->get_nall()])
       bvir.push_back(moinfo->get_all_to_vir(i));
   return(bvir);
 }
 
-vector<bool> MOInfo::SlaterDeterminant::get_is_aocc()
+std::vector<bool> MOInfo::SlaterDeterminant::get_is_aocc()
 {
   std::vector<int>  aocc = get_aocc();
   std::vector<bool> is_aocc(moinfo->get_nocc(),false);
@@ -205,7 +203,7 @@ vector<bool> MOInfo::SlaterDeterminant::get_is_aocc()
   return(is_aocc);
 }
 
-vector<bool> MOInfo::SlaterDeterminant::get_is_bocc()
+std::vector<bool> MOInfo::SlaterDeterminant::get_is_bocc()
 {
   std::vector<int>  bocc = get_bocc();
   std::vector<bool> is_bocc(moinfo->get_nocc(),false);
@@ -213,7 +211,7 @@ vector<bool> MOInfo::SlaterDeterminant::get_is_bocc()
   return(is_bocc);
 }
 
-vector<bool> MOInfo::SlaterDeterminant::get_is_avir()
+std::vector<bool> MOInfo::SlaterDeterminant::get_is_avir()
 {
   std::vector<int>  avir = get_avir();
   std::vector<bool> is_avir(moinfo->get_nvir(),false);
@@ -221,7 +219,7 @@ vector<bool> MOInfo::SlaterDeterminant::get_is_avir()
   return(is_avir);
 }
 
-vector<bool> MOInfo::SlaterDeterminant::get_is_bvir()
+std::vector<bool> MOInfo::SlaterDeterminant::get_is_bvir()
 {
   std::vector<int>  bvir = get_bvir();
   std::vector<bool> is_bvir(moinfo->get_nvir(),false);

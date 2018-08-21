@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,12 +34,12 @@
 #include <vector>
 #include <memory>
 //#include <utility>
+#include "psi4/pragma.h"
 #include "psi4/libmints/vector3.h"
 
 namespace psi {
 
 class BasisSet;
-class TwoBodyAOInt;
 
 /**
  * ERISieve
@@ -91,7 +92,7 @@ class TwoBodyAOInt;
  *
  *
  */
-class ERISieve {
+class PSI_API ERISieve {
 
 protected:
 
@@ -184,21 +185,21 @@ public:
 
     /// Square of ceiling of shell quartet (MN|RS)
     inline double shell_ceiling2(int M, int N, int R, int S) {
-        return shell_pair_values_[N * (unsigned long int) nshell_ + M] *
-               shell_pair_values_[R * (unsigned long int) nshell_ + S]; }
+        return shell_pair_values_[N * (size_t) nshell_ + M] *
+               shell_pair_values_[R * (size_t) nshell_ + S]; }
 
     /// Square of ceiling of integral (mn|rs)
     inline double function_ceiling2(int m, int n, int r, int s) {
-        return function_pair_values_[m * (unsigned long int) nbf_ + n] *
-               function_pair_values_[r * (unsigned long int) nbf_ + s]; }
+        return function_pair_values_[m * (size_t) nbf_ + n] *
+               function_pair_values_[r * (size_t) nbf_ + s]; }
 
     /// Is the shell quartet (MN|RS) significant according to sieve? (no restriction on MNRS order)
 
     //inline bool shell_significant(int M, int N, int R, int S) {
     bool shell_significant(int M, int N, int R, int S) {
 
-      bool schwarz_bound =  shell_pair_values_[N * (unsigned long int) nshell_ + M] *
-                 shell_pair_values_[R * (unsigned long int) nshell_ + S] >= sieve2_;
+      bool schwarz_bound =  shell_pair_values_[N * (size_t) nshell_ + M] *
+                 shell_pair_values_[R * (size_t) nshell_ + S] >= sieve2_;
       if (do_qqr_ && schwarz_bound) {
         bool res = shell_significant_qqr(M, N, R, S);
         //std::cout << "QQR prune: " << res << "\n";
@@ -214,18 +215,18 @@ public:
 
     /// Is the integral (mn|rs) significant according to sieve? (no restriction on mnrs order)
     inline bool function_significant(int m, int n, int r, int s) {
-        return function_pair_values_[m * (unsigned long int) nbf_ + n] *
-               function_pair_values_[r * (unsigned long int) nbf_ + s] >= sieve2_; }
+        return function_pair_values_[m * (size_t) nbf_ + n] *
+               function_pair_values_[r * (size_t) nbf_ + s] >= sieve2_; }
 
 
     /// Is the shell pair (MN| ever significant according to sieve (no restriction on MN order)
     inline bool shell_pair_significant(int M, int N) {
-        return shell_pair_values_[M * (unsigned long int) nshell_ + N] *
+        return shell_pair_values_[M * (size_t) nshell_ + N] *
                max_ >= sieve2_; }
 
     /// Is the function pair (mn| ever significant according to sieve (no restriction on mn order)
     inline bool function_pair_significant(int m, int n) {
-        return function_pair_values_[m * (unsigned long int) nbf_ + n] *
+        return function_pair_values_[m * (size_t) nbf_ + n] *
                max_ >= sieve2_; }
     // => Indexing [these change after a call to sieve()] <= //
 
@@ -242,14 +243,14 @@ public:
     /// Significant shell pairs, indexes by shell
     const std::vector<std::vector<int> >& shell_to_shell() const { return shell_to_shell_; }
 
-  //void shell_pair_values(std::vector<std::vector<std::pair<double, int> > >& values) const;
+    //void shell_pair_values(std::vector<std::vector<std::pair<double, int> > >& values) const;
 
-  // just return the value of the bound for pair m and n
-  double shell_pair_value(int m, int n) const;
-  // return the vector of
-  std::vector<double> shell_pair_values() { return shell_pair_values_;}
-  // return the vector of function pairs
-  std::vector<double> function_pair_values() {return function_pair_values_;}
+    // just return the value of the bound for pair m and n
+    double shell_pair_value(int m, int n) const;
+    // return the vector of
+    std::vector<double> shell_pair_values() { return shell_pair_values_;}
+    // return the vector of function pairs
+    std::vector<double> function_pair_values() {return function_pair_values_;}
 
     /// Set debug flag (defaults to 0)
     void set_debug(int debug) { debug_ = debug; }

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -137,11 +138,11 @@ void CIWavefunction::sigma_init(CIvect& C, CIvect &S)
    int i,j;
    int maxcols=0, maxrows=0;
    int nsingles, max_dim=0;
-   unsigned long int bufsz=0;
+   size_t bufsz=0;
 
-   SigmaData_->transp_tmp = NULL;
-   SigmaData_->cprime = NULL;
-   SigmaData_->sprime = NULL;
+   SigmaData_->transp_tmp = nullptr;
+   SigmaData_->cprime = nullptr;
+   SigmaData_->sprime = nullptr;
 
    if (CalcInfo_->sigma_initialized) {
        //outfile->Printf("(sigma_init): sigma_initialized already set to 1\n");
@@ -207,14 +208,14 @@ void CIWavefunction::sigma_init(CIvect& C, CIvect &S)
        }
        if (maxcols > maxrows) maxrows = maxcols;
        SigmaData_->transp_tmp = (double **)malloc(maxrows * sizeof(double *));
-       if (SigmaData_->transp_tmp == NULL) {
+       if (SigmaData_->transp_tmp == nullptr) {
           outfile->Printf(
                "(sigma_init): Trouble with malloc'ing "
                "SigmaData_->transp_tmp\n");
        }
        bufsz = C.get_max_blk_size();
        SigmaData_->transp_tmp[0] = init_array(bufsz);
-       if (SigmaData_->transp_tmp[0] == NULL) {
+       if (SigmaData_->transp_tmp[0] == nullptr) {
           outfile->Printf(
                "(sigma_init): Trouble with malloc'ing "
                "SigmaData_->transp_tmp[0]\n");
@@ -233,26 +234,26 @@ void CIWavefunction::sigma_init(CIvect& C, CIvect &S)
    bufsz = C.get_max_blk_size();
 
    SigmaData_->cprime = (double **)malloc(maxrows * sizeof(double *));
-   if (SigmaData_->cprime == NULL) {
+   if (SigmaData_->cprime == nullptr) {
       outfile->Printf("(sigma_init): Trouble with malloc'ing SigmaData_->cprime\n");
    }
-   if (C.icore_ == 0 && C.Ms0_ && SigmaData_->transp_tmp != NULL &&
-       SigmaData_->transp_tmp[0] != NULL)
+   if (C.icore_ == 0 && C.Ms0_ && SigmaData_->transp_tmp != nullptr &&
+       SigmaData_->transp_tmp[0] != nullptr)
        SigmaData_->cprime[0] = SigmaData_->transp_tmp[0];
    else
        SigmaData_->cprime[0] = init_array(bufsz);
 
-   if (SigmaData_->cprime[0] == NULL) {
+   if (SigmaData_->cprime[0] == nullptr) {
       outfile->Printf("(sigma_init): Trouble with malloc'ing SigmaData_->cprime[0]\n");
    }
 
    if (Parameters_->bendazzoli) {
        SigmaData_->sprime = (double **)malloc(maxrows * sizeof(double *));
-       if (SigmaData_->sprime == NULL) {
+       if (SigmaData_->sprime == nullptr) {
           outfile->Printf("(sigma_init): Trouble with malloc'ing SigmaData_->sprime\n");
        }
        SigmaData_->sprime[0] = init_array(bufsz);
-       if (SigmaData_->sprime[0] == NULL) {
+       if (SigmaData_->sprime[0] == nullptr) {
           outfile->Printf(
                "(sigma_init): Trouble with malloc'ing SigmaData_->sprime[0]\n");
        }
@@ -376,7 +377,7 @@ void CIWavefunction::sigma_a(struct stringwr **alplist, struct stringwr **betlis
       nas = S.Ia_size_[sblock];
       nbs = S.Ib_size_[sblock];
       sbirr = sbc / BetaG_->subgr_per_irrep;
-      if (SigmaData_->sprime != NULL) set_row_ptrs(nas, nbs, SigmaData_->sprime);
+      if (SigmaData_->sprime != nullptr) set_row_ptrs(nas, nbs, SigmaData_->sprime);
 
       for (cbuf=0; cbuf<C.buf_per_vect_; cbuf++) {
          do_cblock=0; do_cblock2=0;
@@ -401,7 +402,7 @@ void CIWavefunction::sigma_a(struct stringwr **alplist, struct stringwr **betlis
          C.read(C.cur_vect_, cbuf);
 
          if (do_cblock) {
-            if (SigmaData_->cprime != NULL) set_row_ptrs(cnas, cnbs, SigmaData_->cprime);
+            if (SigmaData_->cprime != nullptr) set_row_ptrs(cnas, cnbs, SigmaData_->cprime);
             sigma_block(alplist, betlist, C.blocks_[cblock], S.blocks_[sblock],
                oei, tei, fci, cblock, sblock, nas, nbs, sac, sbc, cac, cbc,
                cnas, cnbs, C.num_alpcodes_, C.num_betcodes_, sbirr, cbirr,
@@ -419,7 +420,7 @@ void CIWavefunction::sigma_a(struct stringwr **alplist, struct stringwr **betlis
             memcpy((void *) C.blocks_[cblock][0], (void *) SigmaData_->transp_tmp[0],
               cnas * cnbs * sizeof(double));
             /* set_row_ptrs(cnbs, cnas, C.blocks_[cblock]); */
-            if (SigmaData_->cprime != NULL) set_row_ptrs(cnbs, cnas, SigmaData_->cprime);
+            if (SigmaData_->cprime != nullptr) set_row_ptrs(cnbs, cnas, SigmaData_->cprime);
             sigma_block(alplist, betlist, C.blocks_[cblock2], S.blocks_[sblock],
                oei, tei, fci, cblock2, sblock, nas, nbs, sac, sbc,
                cbc, cac, cnbs, cnas, C.num_alpcodes_, C.num_betcodes_, sbirr,
@@ -497,7 +498,7 @@ void CIWavefunction::sigma_b(struct stringwr **alplist, struct stringwr **betlis
       if (nas==0 || nbs==0) continue;
       if (S.Ms0_ && sbc > sac) continue;
       sbirr = sbc / BetaG_->subgr_per_irrep;
-      if (SigmaData_->sprime != NULL) set_row_ptrs(nas, nbs, SigmaData_->sprime);
+      if (SigmaData_->sprime != nullptr) set_row_ptrs(nas, nbs, SigmaData_->sprime);
 
       for (cblock=0; cblock<C.num_blocks_; cblock++) {
          if (C.check_zero_block(cblock)) continue;
@@ -508,7 +509,7 @@ void CIWavefunction::sigma_b(struct stringwr **alplist, struct stringwr **betlis
          cbirr = cbc / BetaG_->subgr_per_irrep;
          if (s1_contrib_[sblock][cblock] || s2_contrib_[sblock][cblock] ||
              s3_contrib_[sblock][cblock]) {
-            if (SigmaData_->cprime != NULL) set_row_ptrs(cnas, cnbs, SigmaData_->cprime);
+            if (SigmaData_->cprime != nullptr) set_row_ptrs(cnas, cnbs, SigmaData_->cprime);
             sigma_block(alplist, betlist, C.blocks_[cblock], S.blocks_[sblock],
                oei, tei, fci, cblock, sblock, nas, nbs, sac, sbc,
                cac, cbc, cnas, cnbs, C.num_alpcodes_, C.num_betcodes_, sbirr,
@@ -588,7 +589,7 @@ void CIWavefunction::sigma_c(struct stringwr **alplist, struct stringwr **betlis
             did_sblock = 0;
 
             if (S.Ms0_ && (sac < sbc)) continue;
-            if (SigmaData_->sprime != NULL) set_row_ptrs(nas, nbs, SigmaData_->sprime);
+            if (SigmaData_->sprime != nullptr) set_row_ptrs(nas, nbs, SigmaData_->sprime);
 
             for (cblock=C.first_ablk_[cairr]; cblock <= C.last_ablk_[cairr];
                   cblock++) {
@@ -601,7 +602,7 @@ void CIWavefunction::sigma_c(struct stringwr **alplist, struct stringwr **betlis
                if ((s1_contrib_[sblock][cblock] || s2_contrib_[sblock][cblock] ||
                     s3_contrib_[sblock][cblock]) &&
                     !C.check_zero_block(cblock)) {
-      if (SigmaData_->cprime != NULL) set_row_ptrs(cnas, cnbs, SigmaData_->cprime);
+      if (SigmaData_->cprime != nullptr) set_row_ptrs(cnas, cnbs, SigmaData_->cprime);
                   sigma_block(alplist, betlist, C.blocks_[cblock],
                      S.blocks_[sblock], oei, tei, fci, cblock,
                      sblock, nas, nbs, sac, sbc, cac, cbc, cnas, cnbs,
@@ -616,7 +617,7 @@ void CIWavefunction::sigma_c(struct stringwr **alplist, struct stringwr **betlis
                        s3_contrib_[sblock][cblock2]) &&
                       !C.check_zero_block(cblock2)) {
                      C.transp_block(cblock, SigmaData_->transp_tmp);
-         if (SigmaData_->cprime != NULL) set_row_ptrs(cnbs, cnas, SigmaData_->cprime);
+         if (SigmaData_->cprime != nullptr) set_row_ptrs(cnbs, cnas, SigmaData_->cprime);
                      sigma_block(alplist, betlist, SigmaData_->transp_tmp,S.blocks_[sblock],
                         oei, tei, fci, cblock2, sblock, nas, nbs, sac, sbc,
                         cbc, cac, cnbs, cnas, C.num_alpcodes_, C.num_betcodes_,
@@ -813,8 +814,8 @@ void CIWavefunction::sigma_get_contrib(struct stringwr **alplist, struct stringw
    int sac, sbc, cac, cbc;
    int nas, nbs;
    struct stringwr *Ib, *Ia, *Kb, *Ka;
-   unsigned int Ibidx, Iaidx, Kbidx, Kaidx, Ib_ex, Ia_ex;
-   unsigned int Ibcnt, Iacnt, *Ibridx, *Iaridx;
+   size_t Ibidx, Iaidx, Kbidx, Kaidx, Ib_ex, Ia_ex;
+   size_t Ibcnt, Iacnt, *Ibridx, *Iaridx;
    int Kb_list, Ka_list;
    int found,i,j;
 

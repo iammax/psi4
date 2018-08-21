@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -37,7 +38,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <sstream>
 #include <cmath>
+#include "psi4/libpsi4util/process.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/libpsio/psio.h"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/libqt/qt.h"
@@ -167,7 +171,7 @@ timer_off("HBAR_EXTRA");
   if (params.wfn == "EOM_CC3")
     cc3_stage = 0; /* do EOM_CCSD first */
 
-  outfile->Printf("Symmetry of ground state: %s\n", moinfo.irr_labs[moinfo.sym]);
+  outfile->Printf("Symmetry of ground state: %s\n", moinfo.irr_labs[moinfo.sym].c_str());
   /* loop over symmetry of C's */
   for (C_irr=0; C_irr<moinfo.nirreps; ++C_irr) {
 
@@ -180,8 +184,8 @@ timer_off("HBAR_EXTRA");
 #ifdef TIME_CCEOM
 timer_on("INIT GUESS");
 #endif
-    outfile->Printf("Symmetry of excited state: %s\n", moinfo.irr_labs[moinfo.sym ^ C_irr]);
-    outfile->Printf("Symmetry of right eigenvector: %s\n",moinfo.irr_labs[C_irr]);
+    outfile->Printf("Symmetry of excited state: %s\n", moinfo.irr_labs[moinfo.sym ^ C_irr].c_str());
+    outfile->Printf("Symmetry of right eigenvector: %s\n",moinfo.irr_labs[C_irr].c_str());
     if (params.eom_ref == 0)
       outfile->Printf("Seeking states with multiplicity of %d\n", eom_params.mult);
 
@@ -776,7 +780,7 @@ timer_off("INIT GUESS");
         outfile->Printf("%22d%15.10lf%11.2e%12.2e",k+1,lambda[k], lambda[k]-lambda_old[k], norm);
 
         /* Check for convergence and add new vector if not converged */
-        if ( (norm > eom_params.residual_tol) || (fabs(lambda[k]-lambda_old[k]) > eom_params.eval_tol) ) {
+        if ( (norm > eom_params.residual_tol) || (std::fabs(lambda[k]-lambda_old[k]) > eom_params.eval_tol) ) {
           outfile->Printf("%7s\n","N");
 
           if(params.eom_ref == 0) precondition_RHF(&RIA, &RIjAb, lambda[k]);
@@ -912,7 +916,7 @@ timer_off("INIT GUESS");
           vectors_per_root = eom_params.vectors_cc3;
         }
         else if( (params.wfn == "EOM_CC3") && /* can't trust sigmas yet */
-               ( (cc3_stage == 1) || fabs(cc3_eval-cc3_last_converged_eval)>eom_params.eval_tol)) {
+               ( (cc3_stage == 1) || std::fabs(cc3_eval-cc3_last_converged_eval)>eom_params.eval_tol)) {
           /* for CC3: restart one time if no cc3_restarts have yet been done */
           if (cc3_stage == 1) outfile->Printf( "Forcing one restart with sigma recomputation.\n");
           else outfile->Printf("Forcing restart to make sure new sigma vectors give same eigenvalue.\n");
@@ -978,7 +982,7 @@ timer_off("INIT GUESS");
 
     if (num_converged > 0) {
       outfile->Printf("\nFinal Energetic Summary for Converged Roots of Irrep %s\n",
-	      moinfo.irr_labs[moinfo.sym^C_irr]);
+	      moinfo.irr_labs[moinfo.sym^C_irr].c_str());
       outfile->Printf("                     Excitation Energy              Total Energy\n");
       outfile->Printf("                (eV)     (cm^-1)     (au)             (au)\n");
       for (i=0;i<eom_params.cs_per_irrep[C_irr];++i) {

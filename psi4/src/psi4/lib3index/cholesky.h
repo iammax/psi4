@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -27,21 +28,23 @@
 
 #ifndef THREE_INDEX_CHOLESKY
 #define THREE_INDEX_CHOLESKY
-#include "psi4/libmints/sieve.h"
+
+#include "psi4/pragma.h"
+#include "psi4/libmints/typedefs.h"
 
 namespace psi {
 
-class Matrix;
 class Vector;
 class TwoBodyAOInt;
 class BasisSet;
+
 class Cholesky {
 
 protected:
     /// Maximum Chebyshev error allowed in the decomposition
     double delta_;
     /// Maximum memory to use, in doubles
-    unsigned long int memory_;
+    size_t memory_;
     /// Full L (Q x n), if choleskify() called()
     SharedMatrix L_;
     /// Number of columns required, if choleskify() called
@@ -53,7 +56,7 @@ public:
      * \param delta maximum Chebyshev error allowed in the decomposition
      * \param memory maximum memory allowed, in doubles
      **/
-    Cholesky(double delta, unsigned long int memory);
+    Cholesky(double delta, size_t memory);
     /// Destructor, resets L_
     virtual ~Cholesky();
 
@@ -81,7 +84,7 @@ class CholeskyMatrix : public Cholesky {
 protected:
     SharedMatrix A_;
 public:
-    CholeskyMatrix(SharedMatrix A, double delta, unsigned long int memory);
+    CholeskyMatrix(SharedMatrix A, double delta, size_t memory);
     virtual ~CholeskyMatrix();
 
     virtual size_t N();
@@ -89,14 +92,14 @@ public:
     virtual void compute_row(int row, double* target);
 };
 
-class CholeskyERI : public Cholesky {
+class PSI_API CholeskyERI : public Cholesky {
 
 protected:
     double schwarz_;
     std::shared_ptr<BasisSet> basisset_;
     std::shared_ptr<TwoBodyAOInt> integral_;
 public:
-    CholeskyERI(std::shared_ptr<TwoBodyAOInt> integral, double schwarz, double delta, unsigned long int memory);
+    CholeskyERI(std::shared_ptr<TwoBodyAOInt> integral, double schwarz, double delta, size_t memory);
     virtual ~CholeskyERI();
 
     virtual size_t N();
@@ -114,7 +117,7 @@ protected:
 public:
     CholeskyMP2(SharedMatrix Qia, std::shared_ptr<Vector> eps_aocc,
         std::shared_ptr<Vector> eps_avir, bool symmetric,
-        double delta, unsigned long int memory);
+        double delta, size_t memory);
     virtual ~CholeskyMP2();
 
     virtual size_t N();
@@ -130,7 +133,7 @@ protected:
 public:
     CholeskyDelta(std::shared_ptr<Vector> eps_aocc,
         std::shared_ptr<Vector> eps_avir,
-        double delta, unsigned long int memory);
+        double delta, size_t memory);
     virtual ~CholeskyDelta();
 
     virtual size_t N();
@@ -144,7 +147,7 @@ protected:
     SharedMatrix C_;
 public:
     CholeskyLocal(SharedMatrix C,
-        double delta, unsigned long int memory);
+        double delta, size_t memory);
     virtual ~CholeskyLocal();
 
     virtual size_t N();

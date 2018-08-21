@@ -8,10 +8,9 @@ nirrep = 4
 
 
 
-memory 500 mb
-
 
 molecule cn {
+0 2
    C
    N 1 R
 

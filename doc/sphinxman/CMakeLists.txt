@@ -14,24 +14,79 @@ if(NOT (LATEX_COMPILER AND PDFLATEX_COMPILER))
    message(STATUS "No LaTeX (incl. pdflatex), no PDF docs. Pre-built documentation at http://psicode.org/psi4manual/master/index.html")
 endif()
 
+if(SPHINX_THEME STREQUAL sphinx_psi_theme)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
+        "import sphinx_psi_theme; import cloud_sptheme; import sphinx_automodapi; import graphviz"
+        OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE _exec_python_err)
+else()
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
+        "import ${SPHINX_THEME}; import sphinx_automodapi; import graphviz"
+        OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE _exec_python_err)
+endif()
+if(_exec_python_err)
+    message(STATUS "No theme, no docs (try: conda install sphinx-psi-theme cloud_sptheme sphinx-automodapi graphviz python-graphviz -c conda-forge -c psi4)")
+    set(SPHINX_STUFF_FOUND "OFF")
+
+else()
+    set(SPHINX_STUFF_FOUND "ON")
+endif()
+
 
 # Setup and build Sphinx documentation
-if(PERL_FOUND AND SPHINX_FOUND)
+if(PERL_FOUND AND SPHINX_FOUND AND SPHINX_STUFF_FOUND)
     set(CCSD "${CMAKE_CURRENT_SOURCE_DIR}")
     set(CCBD "${CMAKE_CURRENT_BINARY_DIR}")
 
-    # Configure Sphinx build
-    configure_file(
-        "${CCSD}/source/conf.py.in"
-        "${CCBD}/source/conf.py"
-        @ONLY)
-
     # Static-doc reST files
-    set(STATICDOC abbr_accents.rst adc.rst appendices.rst basissets.rst basissets_byelement.rst bibliography.rst cbs.rst cbs_eqn.rst contributing.rst nbody.rst customizing.rst db.rst detci.rst dfmp2.rst diatomic.rst documentation.rst energy.rst external.rst fchk.rst freq.rst gdma.rst glossary_psivariables.rst index.rst intercalls.rst interfacing.rst introduction.rst methods.rst notes_c.rst notes_py.rst oeprop.rst opt.rst optking.rst plugins.rst programming.rst prop.rst psithonfunc.rst psithoninput.rst quickaddalias.rst basissets_tables.rst quickadddatabase.rst sapt.rst sowreap.rst testsuite.rst tutorial.rst dft_byfunctional.rst scf.rst mrcc.rst psimrcc.rst cc.rst dft.rst fnocc.rst optionshandling.rst basissets_byfamily.rst psipep.rst pep0001.rst dftd3.rst occ.rst molden.rst cubeprop.rst dcft.rst relativistic.rst dkh.rst proc_py.rst psithonmol.rst cfour.rst mrcc_table_energy.rst cfour_table_energy.rst cfour_table_grad.rst libefp.rst conda.rst pcmsolver.rst thermo.rst chemps2.rst fisapt.rst plugin_v2rdm_casscf.rst psi4api.rst addon.rst numpy.rst build_planning.rst build_faq.rst build_obtaining.rst libint.rst erd.rst)
+    set(STATICDOC abbr_accents.rst adc.rst appendices.rst basissets.rst
+    basissets_byelement.rst bibliography.rst cbs.rst cbs_eqn.rst
+    nbody.rst customizing.rst db.rst detci.rst dfmp2.rst
+    diatomic.rst documentation.rst energy.rst external.rst fchk.rst
+    freq.rst gdma.rst glossary_psivariables.rst index.rst intercalls.rst
+    interfacing.rst introduction.rst methods.rst notes_c.rst notes_py.rst
+    oeprop.rst opt.rst optking.rst plugins.rst prog_corelibs.rst prop.rst
+    psithonfunc.rst psithoninput.rst quickaddalias.rst
+    basissets_tables.rst quickadddatabase.rst sapt.rst sowreap.rst
+    testsuite.rst tutorial.rst dft_byfunctional.rst scf.rst mrcc.rst
+    psimrcc.rst cc.rst dft.rst fnocc.rst optionshandling.rst
+    basissets_byfamily.rst psipep.rst pep0001.rst dftd3.rst occ.rst
+    molden.rst cubeprop.rst dcft.rst relativistic.rst dkh.rst proc_py.rst
+    psithonmol.rst cfour.rst mrcc_table_energy.rst cfour_table_energy.rst
+    cfour_table_grad.rst libefp.rst conda.rst pcmsolver.rst thermo.rst
+    chemps2.rst fisapt.rst plugin_v2rdm_casscf.rst psi4api.rst
+    manage_addon.rst numpy.rst build_planning.rst build_faq.rst
+    build_obtaining.rst libint.rst erd.rst simint.rst gcp.rst
+    index_tutorials.rst prog_faq.rst manage_index.rst manage_git.rst
+    prog_style_c.rst prog_blas.rst add_tests.rst plugin_snsmp2.rst dftnl.rst
+    libxc.rst gau2grid.rst prog_conduct.rst prog_intro.rst prog_newcode.rst
+    prog_setup.rst prog_welcome.rst prog_ways_to_add.rst
+    prog_full_integration.rst prog_style_py.rst prog_help.rst
+    prog_code_intro.rst prog_debug_profile.rst
+    )
+
     # * compute relative path btwn top_srcdir and objdir/doc/sphinxman
     execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
         "import sys; import os; print('/' + os.path.relpath('${psi4_SOURCE_DIR}', '${CCBD}') + '/../')"
         OUTPUT_VARIABLE SFNX_INCLUDE OUTPUT_STRIP_TRAILING_WHITESPACE)
+    # * add ipynb doc if build env can handle it
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
+        "import nbsphinx; import jupyter_client; import ipykernel"
+        OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE _exec_python_err)
+    if(_exec_python_err)
+        message(STATUS "Some ipynb docs require extra modules (try: conda install nbsphinx jupyter_client ipykernel -c conda-forge)")
+        list(APPEND STATICDOC "psiapi.rst")
+        set(_jupy "")
+        set(_jupyconf "")
+    else()
+        list(APPEND STATICDOC "psiapi.ipynb")
+        set(_jupy "w/Jupyter ")
+        set(_jupyconf "'nbsphinx',")
+    endif()
+    # configure Sphinx build
+    configure_file(
+        "${CCSD}/source/conf.py.in"
+        "${CCBD}/source/conf.py"
+        @ONLY)
     # * copy all over to objdir, substituting literalinclude along the way
     foreach(rst ${STATICDOC})
        configure_file(
@@ -43,7 +98,7 @@ if(PERL_FOUND AND SPHINX_FOUND)
     execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CCBD}/source/index.rst ${CCBD}/source/contents.rst)
 
     # Static resource png and pdf files
-    set(STATICRES psi4square.png favicon-psi4.ico AlphaMOs.png gdma-2.2.06.pdf Total.png VA.png prflow.001.jpeg prflow.002.jpeg)
+    set(STATICRES psi4square.png favicon-psi4.ico AlphaMOs.png gdma-2.2.06.pdf Total.png VA.png prflow.001.jpeg prflow.002.jpeg prflow.003.jpeg)
     # * copy image and pdf files all over to objdir (configure_file corrupts file)
     foreach(fl ${STATICRES})
         execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CCSD}/source/resources/${fl} ${CCBD}/source)
@@ -177,7 +232,7 @@ if(PERL_FOUND AND SPHINX_FOUND)
                 ${CCBD}/source/autodoc_dft_dhybrid.rst
                 #${CCBD}/source/autodoc_dft_scsdhybrid.rst  # commented until populated again to appease Sphinx
                 ${CCBD}/source/autodoc_dft_disp.rst
-        DEPENDS ${psi4_SOURCE_DIR}/psi4/driver/procedures/dft_functional.py
+        DEPENDS ${psi4_SOURCE_DIR}/psi4/driver/procrouting/dft_funcs/superfuncs.py
                 ${psi4_SOURCE_DIR}/tests/docs-dft/input.dat
                 ${STAGED_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/psi4
         COMMENT "Autodoc functionals")
@@ -213,12 +268,16 @@ if(PERL_FOUND AND SPHINX_FOUND)
 
 
     # Autodoc efp fragments
-    add_custom_command(
-        COMMAND ${PYTHON_EXECUTABLE} ${CCSD}/document_efpfrag.py ${CCSD}
-        OUTPUT  ${CCBD}/source/autodoc_available_efpfrag.rst
-        DEPENDS ${CCSD}/document_efpfrag.py
-                ${STAGED_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/psi4/efpfrag/*efp
-        COMMENT "Autodoc efp fragments")
+    if(${ENABLE_libefp})
+        add_custom_command(
+            COMMAND ${PYTHON_EXECUTABLE} ${CCSD}/document_efpfrag.py ${CCSD}
+            OUTPUT  ${CCBD}/source/autodoc_available_efpfrag.rst
+            DEPENDS ${CCSD}/document_efpfrag.py
+                    ${STAGED_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/psi4/efpfrag/*efp
+            COMMENT "Autodoc efp fragments")
+    else()
+        file(WRITE ${CCBD}/source/autodoc_available_efpfrag.rst "")
+    endif()
 
 
     # Format git log for feed
@@ -240,9 +299,9 @@ if(PERL_FOUND AND SPHINX_FOUND)
 
     # * announcement
     if (LATEX_COMPILER AND PDFLATEX_COMPILER)
-        message(STATUS "Documentation targets available: sphinxman (html), sphinxmini (quick html), sphinxpdf (LaTeX --> PDF)")
+        message(STATUS "Documentation targets ${_jupy}available: sphinxman (html), sphinxmini (quick html), sphinxpdf (LaTeX --> PDF)")
     else()
-        message(STATUS "Documentation targets available: sphinxman (html), sphinxmini (quick html)")
+        message(STATUS "Documentation targets ${_jupy}available: sphinxman (html), sphinxmini (quick html)")
     endif()
 
     # * quick mini-build for docs development
@@ -348,5 +407,5 @@ if(PERL_FOUND AND SPHINX_FOUND)
             ${CCBD}/html
         COMMENT "Building abridged html documentation ...")
 
-endif(PERL_FOUND AND SPHINX_FOUND)
+endif(PERL_FOUND AND SPHINX_FOUND AND SPHINX_STUFF_FOUND)
 

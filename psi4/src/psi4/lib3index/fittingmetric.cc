@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -54,10 +55,9 @@
 //_OPENMP is defined by the compiler if it exists
 #ifdef _OPENMP
 #include <omp.h>
+#include "psi4/libpsi4util/process.h"
 #endif
 
-
-using namespace std;
 
 namespace psi {
 
@@ -84,13 +84,13 @@ void FittingMetric::form_fitting_metric()
     algorithm_ = "NONE";
 
     // Sizing/symmetry indexing
-    std::shared_ptr<IntegralFactory> auxfact(new IntegralFactory(aux_, aux_, aux_, aux_));
-    std::shared_ptr<PetiteList> auxpet(new PetiteList(aux_, auxfact));
+    auto auxfact = std::make_shared<IntegralFactory>(aux_, aux_, aux_, aux_);
+    auto auxpet = std::make_shared<PetiteList>(aux_, auxfact);
     std::shared_ptr<IntegralFactory> poisfact;
     std::shared_ptr<PetiteList> poispet;
     if (is_poisson_) {
-        poisfact = std::shared_ptr<IntegralFactory>(new IntegralFactory(pois_, pois_, pois_, pois_));
-        poispet = std::shared_ptr<PetiteList>(new PetiteList(pois_, poisfact));
+        poisfact = std::make_shared<IntegralFactory>(pois_, pois_, pois_, pois_);
+        poispet = std::make_shared<PetiteList>(pois_, poisfact);
     }
 
     int naux = 0;
@@ -110,7 +110,7 @@ void FittingMetric::form_fitting_metric()
     Dimension ngauspi = auxpet->SO_basisdim();
 
     // Build the full DF/Poisson matrix in the AO basis first
-    SharedMatrix AOmetric(new Matrix("AO Basis DF Metric", naux, naux));
+    auto AOmetric = std::make_shared<Matrix>("AO Basis DF Metric", naux, naux);
     double** W = AOmetric->pointer(0);
     std::shared_ptr<BasisSet> zero = BasisSet::zero_ao_basis_set();
 
@@ -118,7 +118,7 @@ void FittingMetric::form_fitting_metric()
     int nthread = 1;
     #ifdef _OPENMP
         if (!omp_in_parallel()) {
-            nthread = omp_get_max_threads();
+            nthread = Process::environment.get_n_threads();
         }
     #endif
 
@@ -251,8 +251,8 @@ void FittingMetric::form_fitting_metric()
     if (auxpet->nirrep() == 1 || force_C1_ == true) {
         metric_ = AOmetric;
         metric_->set_name("SO Basis Fitting Metric");
-        pivots_ = std::shared_ptr<IntVector>(new IntVector(naux));
-        rev_pivots_ = std::shared_ptr<IntVector>(new IntVector(naux));
+        pivots_ = std::make_shared<IntVector>(naux);
+        rev_pivots_ = std::make_shared<IntVector>(naux);
         int* piv = pivots_->pointer();
         int* rpiv = pivots_->pointer();
         for (int Q = 0; Q < naux; Q++) {
@@ -272,7 +272,7 @@ void FittingMetric::form_fitting_metric()
     }
 
     // Allocate the fitting metric
-    metric_ = SharedMatrix(new Matrix("SO Basis Fitting Metric", nauxpi, nauxpi));
+    metric_ = std::make_shared<Matrix>("SO Basis Fitting Metric", nauxpi, nauxpi);
     SharedMatrix Temp;
     double** Temp1;
 
@@ -284,7 +284,7 @@ void FittingMetric::form_fitting_metric()
         double** auxU = auxAO2USO->pointer(h);
 
         if (ngauspi[h] != 0) {
-            Temp = SharedMatrix(new Matrix("Temp", ngauspi[h], ngaussian));
+            Temp = std::make_shared<Matrix>("Temp", ngauspi[h], ngaussian);
             Temp1 = Temp->pointer();
             C_DGEMM('N', 'N', ngauspi[h], ngaussian, ngaussian, 1.0, auxU[0], ngaussian, W[0], naux, 0.0, Temp1[0], ngaussian);
             C_DGEMM('N', 'T', ngauspi[h], ngauspi[h], ngaussian, 1.0, Temp1[0], ngaussian, auxU[0], ngaussian, 0.0, J[0], nauxpi[h]);
@@ -297,7 +297,7 @@ void FittingMetric::form_fitting_metric()
 
             // Gaussian-Poisson part
             if (ngauspi[h] != 0) {
-                Temp = SharedMatrix(new Matrix("Temp", ngauspi[h], npoisson));
+                Temp = std::make_shared<Matrix>("Temp", ngauspi[h], npoisson);
                 Temp1 = Temp->pointer();
                 C_DGEMM('N', 'N', ngauspi[h], npoisson, ngaussian, 1.0, auxU[0], ngaussian, &W[0][ngaussian], naux, 0.0, Temp1[0], npoisson);
                 C_DGEMM('N', 'T', ngauspi[h], npoispi[h], npoisson, 1.0, Temp1[0], npoisson, poisU[0], npoisson, 0.0, &J[0][ngauspi[h]], nauxpi[h]);
@@ -308,9 +308,9 @@ void FittingMetric::form_fitting_metric()
             }
 
             // Poisson-Poisson part
-            unsigned long int AOoffset = ngaussian*(unsigned long int)naux + (unsigned long int) ngaussian;
-            unsigned long int SOoffset = ngauspi[h]*(unsigned long int)nauxpi[h] + (unsigned long int) ngauspi[h];
-            Temp = SharedMatrix(new Matrix("Temp", npoispi[h], npoisson));
+            size_t AOoffset = ngaussian*(size_t)naux + (size_t) ngaussian;
+            size_t SOoffset = ngauspi[h]*(size_t)nauxpi[h] + (size_t) ngauspi[h];
+            Temp = std::make_shared<Matrix>("Temp", npoispi[h], npoisson);
             Temp1 = Temp->pointer();
             C_DGEMM('N', 'N', npoispi[h], npoisson, npoisson, 1.0, poisU[0], npoisson, &W[0][AOoffset], naux, 0.0, Temp1[0], npoisson);
             C_DGEMM('N', 'T', npoispi[h], npoispi[h], npoisson, 1.0, Temp1[0], npoisson, poisU[0], npoisson, 0.0, &J[0][SOoffset], nauxpi[h]);
@@ -320,8 +320,8 @@ void FittingMetric::form_fitting_metric()
     }
 
     // Form indexing
-    pivots_ = std::shared_ptr<IntVector>(new IntVector(nauxpi.n(), nauxpi));
-    rev_pivots_ = std::shared_ptr<IntVector>(new IntVector(nauxpi.n(), nauxpi));
+    pivots_ = std::make_shared<IntVector>(nauxpi.n(), nauxpi);
+    rev_pivots_ = std::make_shared<IntVector>(nauxpi.n(), nauxpi);
     for (int h = 0; h < auxpet->nirrep(); h++) {
         int* piv = pivots_->pointer(h);
         int* rpiv = pivots_->pointer(h);
@@ -372,9 +372,9 @@ void FittingMetric::form_QR_inverse(double tol)
         int n = metric_->colspi()[h];
 
         // Copy the J matrix to R (actually R')
-        SharedMatrix R(new Matrix("R", n, n));
+        auto R = std::make_shared<Matrix>("R", n, n);
         double** Rp = R->pointer();
-        C_DCOPY(n*(unsigned long int)n, J[0], 1, Rp[0], 1);
+        C_DCOPY(n*(size_t)n, J[0], 1, Rp[0], 1);
 
         // QR Decomposition
         double* tau = new double[n];
@@ -390,9 +390,9 @@ void FittingMetric::form_QR_inverse(double tol)
         delete[] work;
 
         // Copy Jcopy to Q (actually Q')
-        SharedMatrix Q(new Matrix("Q", n, n));
+        auto Q = std::make_shared<Matrix>("Q", n, n);
         double** Qp = Q->pointer();
-        C_DCOPY(n*(unsigned long int)n, Rp[0], 1, Qp[0], 1);
+        C_DCOPY(n*(size_t)n, Rp[0], 1, Qp[0], 1);
 
         // Put R in the upper triangle where it belongs
         for (int i = 1; i < n; i++)
@@ -414,9 +414,9 @@ void FittingMetric::form_QR_inverse(double tol)
 
         // Find the number of significant basis functions
         int nsig = 0;
-        double R_max = fabs(Rp[0][0]);
+        double R_max = std::fabs(Rp[0][0]);
         for (int A = 0; A < n; A++) {
-            if ((fabs(Rp[A][A]) / R_max) < tol)
+            if ((std::fabs(Rp[A][A]) / R_max) < tol)
                 break;
             nsig++;
         }
@@ -433,10 +433,10 @@ void FittingMetric::form_QR_inverse(double tol)
         C_DTRSM('L','U','N','N',nsig,n,1.0,J[0],nsig,Qp[0],n);
 
         // Zero out the metric
-        memset(static_cast<void*>(J[0]), '\0', n*(unsigned long int)n);
+        memset(static_cast<void*>(J[0]), '\0', n*(size_t)n);
 
         // Copy the top bit in
-        C_DCOPY(n*(unsigned long int)nsig, Qp[0], 1, J[0], 1);
+        C_DCOPY(n*(size_t)nsig, Qp[0], 1, J[0], 1);
 
         delete[] tau;
     }
@@ -459,9 +459,9 @@ void FittingMetric::form_eig_inverse(double tol)
         int n = metric_->colspi()[h];
 
         // Copy J to W
-        SharedMatrix W(new Matrix("W", n, n));
+        auto W = std::make_shared<Matrix>("W", n, n);
         double** Wp = W->pointer();
-        C_DCOPY(n*(unsigned long int)n,J[0],1,Wp[0],1);
+        C_DCOPY(n*(size_t)n,J[0],1,Wp[0],1);
 
         double* eigval = new double[n];
         int lwork = n * 3;
@@ -469,10 +469,10 @@ void FittingMetric::form_eig_inverse(double tol)
         int stat = C_DSYEV('v','u',n,Wp[0],n,eigval,work,lwork);
         delete[] work;
 
-        SharedMatrix Jcopy(new Matrix("Jcopy", n, n));
+        auto Jcopy = std::make_shared<Matrix>("Jcopy", n, n);
         double** Jcopyp = Jcopy->pointer();
 
-        C_DCOPY(n*(unsigned long int)n,Wp[0],1,Jcopyp[0],1);
+        C_DCOPY(n*(size_t)n,Wp[0],1,Jcopyp[0],1);
 
         // Now form Jp^{-1/2} = U(T)*j'^{-1/2}*U,
         // where j'^{-1/2} is the diagonal matrix of the inverse square roots
@@ -514,9 +514,9 @@ void FittingMetric::form_full_eig_inverse(double tol)
         int n = metric_->colspi()[h];
 
         // Copy J to W
-        SharedMatrix W(new Matrix("W", n, n));
+        auto W = std::make_shared<Matrix>("W", n, n);
         double** Wp = W->pointer();
-        C_DCOPY(n*(unsigned long int)n,J[0],1,Wp[0],1);
+        C_DCOPY(n*(size_t)n,J[0],1,Wp[0],1);
 
         double* eigval = new double[n];
         int lwork = n * 3;
@@ -524,10 +524,10 @@ void FittingMetric::form_full_eig_inverse(double tol)
         int stat = C_DSYEV('v','u',n,Wp[0],n,eigval,work,lwork);
         delete[] work;
 
-        SharedMatrix Jcopy(new Matrix("Jcopy", n, n));
+        auto Jcopy = std::make_shared<Matrix>("Jcopy", n, n);
         double** Jcopyp = Jcopy->pointer();
 
-        C_DCOPY(n*(unsigned long int)n,Wp[0],1,Jcopyp[0],1);
+        C_DCOPY(n*(size_t)n,Wp[0],1,Jcopyp[0],1);
 
         // Now form Jp^{-1/2} = U(T)*j'^{-1/2}*U,
         // where j'^{-1/2} is the diagonal matrix of the inverse square roots
@@ -613,8 +613,8 @@ void FittingMetric::pivot()
             max = 0.0;
             //Where's the pivot diagonal?
             for (int j = i; j<norbs; j++)
-                if (max <= fabs(J[j][j])) {
-                    max = fabs(J[j][j]);
+                if (max <= std::fabs(J[j][j])) {
+                    max = std::fabs(J[j][j]);
                     pivot = j;
                 }
 

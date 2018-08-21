@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -64,8 +65,8 @@ void OverlapOrthog::compute_overlap_eig(Matrix& overlap_eigvec,
                                         Vector& isqrt_eigval,
                                         Vector& sqrt_eigval)
 {
-    SharedMatrix U(new Matrix("U", overlap_->rowspi(), overlap_->colspi()));
-    SharedVector m(new Vector(overlap_->colspi()));
+    auto U = std::make_shared<Matrix>("U", overlap_->rowspi(), overlap_->colspi());
+    auto m = std::make_shared<Vector>(overlap_->colspi());
 
     overlap_->diagonalize(U, m);
 
@@ -162,14 +163,14 @@ void OverlapOrthog::compute_symmetric_orthog()
                         overlap_isqrt_eigval,
                         overlap_sqrt_eigval);
 
-    SharedMatrix overlap_isqrt_eigval_mat(new Matrix(orthog_dim_, orthog_dim_));
+    auto overlap_isqrt_eigval_mat = std::make_shared<Matrix>(orthog_dim_, orthog_dim_);
     overlap_isqrt_eigval_mat->set_diagonal(overlap_isqrt_eigval);
-    SharedMatrix overlap_sqrt_eigval_mat(new Matrix(orthog_dim_, orthog_dim_));
+    auto overlap_sqrt_eigval_mat = std::make_shared<Matrix>(orthog_dim_, orthog_dim_);
     overlap_sqrt_eigval_mat->set_diagonal(overlap_sqrt_eigval);
 
-    orthog_trans_ = SharedMatrix(new Matrix("Orthogonal Transformation", dim_, dim_));
+    orthog_trans_ = std::make_shared<Matrix>("Orthogonal Transformation", dim_, dim_);
     orthog_trans_->transform(*overlap_isqrt_eigval_mat.get(), overlap_eigvec);
-    orthog_trans_inverse_ = SharedMatrix(new Matrix("Orthogonal Inverse Transformation", dim_, dim_));
+    orthog_trans_inverse_ = std::make_shared<Matrix>("Orthogonal Inverse Transformation", dim_, dim_);
     orthog_trans_inverse_->transform(*overlap_sqrt_eigval_mat.get(), overlap_eigvec);
 
 //    overlap_eigvec.print();
@@ -189,14 +190,14 @@ void OverlapOrthog::compute_canonical_orthog()
                         overlap_isqrt_eigval,
                         overlap_sqrt_eigval);
 
-    SharedMatrix overlap_isqrt_eigval_mat(new Matrix(orthog_dim_, orthog_dim_));
+    auto overlap_isqrt_eigval_mat = std::make_shared<Matrix>(orthog_dim_, orthog_dim_);
     overlap_isqrt_eigval_mat->set_diagonal(overlap_isqrt_eigval);
-    SharedMatrix overlap_sqrt_eigval_mat(new Matrix(orthog_dim_, orthog_dim_));
+    auto overlap_sqrt_eigval_mat = std::make_shared<Matrix>(orthog_dim_, orthog_dim_);
     overlap_sqrt_eigval_mat->set_diagonal(overlap_sqrt_eigval);
 
-    orthog_trans_ = SharedMatrix(new Matrix("Orthogonal Transformation", orthog_dim_, dim_));
+    orthog_trans_ = std::make_shared<Matrix>("Orthogonal Transformation", orthog_dim_, dim_);
     orthog_trans_->gemm(false, true, 1.0, overlap_isqrt_eigval_mat, overlap_eigvec, 0.0);
-    orthog_trans_inverse_ = SharedMatrix(new Matrix("Orthogonal Inverse Transformation", dim_, orthog_dim_));
+    orthog_trans_inverse_ = std::make_shared<Matrix>("Orthogonal Inverse Transformation", dim_, orthog_dim_);
     orthog_trans_inverse_->gemm(false, false, 1.0, overlap_eigvec, overlap_sqrt_eigval_mat, 0.0);
 }
 

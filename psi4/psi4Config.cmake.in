@@ -17,12 +17,14 @@
 #
 # Available components::
 #
+#   ambit - tensor library active
 #   chemps2 - dmrg library active
 #   dkh - relativistic library active
 #   libefp - fragment library active
 #   erd - integrals library active
 #   gdma - multipole library active
 #   pcmsolver - solvation library active
+#   simint - integrals library active
 #
 #
 # Exported targets::
@@ -51,12 +53,14 @@
 
 set(PN psi4)
 set (_valid_components
+    ambit
     chemps2
     dkh
     libefp
     erd
     gdma
     pcmsolver
+    simint
 )
 
 # location of script psi4
@@ -67,6 +71,7 @@ set(${PN}_INCLUDE_DIR "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
 
 # location of psi4/core.so
 set(${PN}_LIBRARY "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@@PYMOD_INSTALL_LIBDIR@/psi4/@PYTHON_MODULE_PREFIX@core.so")
+set(${PN}_SYS_PATH "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@@PYMOD_INSTALL_LIBDIR@")
 
 # presence of external addons
 macro(psi4_component name on)
@@ -76,13 +81,14 @@ macro(psi4_component name on)
     endif()
 endmacro()
 
-#psi4_component(ambit @ENABLE_AMBIT@)
+psi4_component(ambit @ENABLE_ambit@)
 psi4_component(chemps2 @ENABLE_CheMPS2@)
 psi4_component(dkh @ENABLE_dkh@)
 psi4_component(libefp @ENABLE_libefp@)
 psi4_component(erd @ENABLE_erd@)
 psi4_component(gdma @ENABLE_gdma@)
 psi4_component(pcmsolver @ENABLE_PCMSolver@)
+psi4_component(simint @ENABLE_simint@)
 
 foreach(_comp ${${PN}_FIND_COMPONENTS})
     if(${${PN}_${_comp}_FOUND})
@@ -96,9 +102,10 @@ endforeach()
 check_required_components(${PN})
 
 if(NOT CMAKE_REQUIRED_QUIET)
-    message(STATUS "Psi4 script:  ${${PN}_EXECUTABLE}")
-    message(STATUS "Psi4 headers: ${${PN}_INCLUDE_DIR}")
-    message(STATUS "Psi4 library: ${${PN}_LIBRARY}")
+    message(STATUS "Psi4 script:   ${${PN}_EXECUTABLE}")
+    message(STATUS "Psi4 headers:  ${${PN}_INCLUDE_DIR}")
+    message(STATUS "Psi4 library:  ${${PN}_LIBRARY}")
+    message(STATUS "Psi4 sys.path: ${${PN}_SYS_PATH}")
     message(STATUS "Psi4 components: ${${PN}_FOUND_COMPONENTS}")
     message(STATUS "Python executable: @PYTHON_EXECUTABLE@")
 endif()
@@ -111,6 +118,10 @@ if(NOT TARGET ${PN}::core)
     include("${CMAKE_CURRENT_LIST_DIR}/${PN}Targets.cmake")
     set(PYBIND11_CPP_STANDARD -std=c++@CMAKE_CXX_STANDARD@)
     find_package(pybind11 CONFIG REQUIRED)
+    if(NOT DEFINED ENABLE_OPENMP)
+        set(ENABLE_OPENMP "@ENABLE_OPENMP@")
+    endif()
+    find_package(TargetLAPACK CONFIG REQUIRED)
     # No more ${PN} since defined in above find_package
 endif()
 
@@ -123,6 +134,7 @@ function(add_psi4_plugin TARGET SOURCES)
 
     add_library(${TARGET} MODULE ${ARGV})
     target_link_libraries(${TARGET} PRIVATE psi4::core)
+    target_link_libraries(${TARGET} PRIVATE tgt::MathOpenMP)
     set_target_properties(${TARGET} PROPERTIES PREFIX "")
     if (APPLE)
         set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")

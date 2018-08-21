@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -35,8 +36,8 @@
 Vibrational and Thermochemical Analysis
 =======================================
 
-.. codeauthor:: Rollin A. King
-.. comment.. sectionauthor:: Rollin A. King and Lori A. Burns
+.. codeauthor:: Rollin A. King and Lori A. Burns
+.. sectionauthor:: Lori A. Burns
 
 *Module:* :ref:`Keywords <apdx:thermo>`, :ref:`PSI Variables <apdx:thermo_psivar>`, :source:`THERMO <psi4/src/psi4/thermo>`
 
@@ -68,6 +69,21 @@ Keywords
 
 Examples
 ^^^^^^^^
+
+A thermochemical analysis is performed after any full (not just specific
+symmetry subgroups). If the wavefunction is retained, it may be reused
+at a different temperature, pressure, rotational symmetry number, or
+isotopic substitution through the function :py:func:`qcdb.vib.thermo`
+as is shown in :srcsample:`freq-isotope2`.
+
+A few summary psivars are set: "ZPVE", "THERMAL ENERGY CORRECTION",
+"ENTHALPY CORRECTION", "GIBBS FREE ENERGY CORRECTION", "ZERO K
+ENTHALPHY", "THERMAL ENERGY", "ENTHALPY", "GIBBS FREE ENERGY".
+But additionally, every valid combination of {S, Cv, Cp, ZPE, E, H, G}
+with {elec, trans, rot, vib, corr, tot} (e.g., vibrational entropy,
+S_vib, and enthalpy correction, H_corr) is returned by dictionary
+from the ``thermo`` function. See :srcsamplepy:`python/vibanalysis`
+(near the end) for an example.
 
 
 .. index::

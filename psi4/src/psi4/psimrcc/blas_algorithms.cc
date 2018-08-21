@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -41,13 +42,11 @@ namespace psi{
 
 extern MemoryManager* memory_manager;
 
-using namespace std;
-
 void CCBLAS::zero(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   // To zero diagonals of things like "Fae[v][v]{u}"
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(size_t n = 0; n < names.size(); ++n){
     CCMatrix* Matrix = get_Matrix(names[n]);
     Matrix->zero_matrix();
@@ -59,9 +58,9 @@ void CCBLAS::zero(const char* cstr)
 
 void CCBLAS::zero_right_four_diagonal(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   // To zero diagonals of things like "Fae[v][v]{u}"
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(size_t n = 0; n < names.size(); ++n){
     CCMatrix* Matrix = get_Matrix(names[n]);
     Matrix->zero_right_four_diagonal();
@@ -73,9 +72,9 @@ void CCBLAS::zero_right_four_diagonal(const char* cstr)
 
 void CCBLAS::zero_non_doubly_occupied(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   // To zero non-doubly occupied MOs of things like "Fae[v][v]{u}"
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(size_t n = 0; n < names.size(); ++n){
     CCMatrix* Matrix = get_Matrix(names[n]);
     Matrix->zero_non_doubly_occupied();
@@ -87,9 +86,9 @@ void CCBLAS::zero_non_doubly_occupied(const char* cstr)
 
 void CCBLAS::zero_non_external(const char* cstr)
 {
-  string str(cstr);
+  std::string str(cstr);
   // To zero non-external MOs of things like "Fae[v][v]{u}"
-  vector<string> names = moinfo->get_matrix_names(str);
+  std::vector<std::string> names = moinfo->get_matrix_names(str);
   for(size_t n = 0; n < names.size(); ++n){
     CCMatrix* Matrix = get_Matrix(names[n]);
     Matrix->zero_non_external();
@@ -101,13 +100,13 @@ void CCBLAS::zero_non_external(const char* cstr)
 
 void CCBLAS::scale(const char* cstr,int reference,double value)
 {
-  string str(cstr);
+  std::string str(cstr);
   scale(str,reference,value);
 }
 
-void CCBLAS::scale(string& str,int reference,double value)
+void CCBLAS::scale(std::string& str,int reference,double value)
 {
-  string matrix_str = add_reference(str,reference);
+  std::string matrix_str = add_reference(str,reference);
   // Make sure that the element that we are retrieving is present
   MatrixMap::iterator iter = matrices.find(matrix_str);
   if(iter!=matrices.end()){
@@ -120,11 +119,11 @@ void CCBLAS::scale(string& str,int reference,double value)
 
 void CCBLAS::reduce_spaces(const char* out,const char* in)
 {
-  string  in_str(in);
-  string out_str(out);
+  std::string  in_str(in);
+  std::string out_str(out);
   // To zero diagonals of things like "Fae[v][v]{u}"
-  vector<string>  in_names = moinfo->get_matrix_names(in_str);
-  vector<string> out_names = moinfo->get_matrix_names(out_str);
+  std::vector<std::string>  in_names = moinfo->get_matrix_names(in_str);
+  std::vector<std::string> out_names = moinfo->get_matrix_names(out_str);
   if(in_names.size()!=out_names.size())
     throw PSIEXCEPTION("CCBLAS::map_spaces, number of references mismatch");
   for(size_t n = 0; n < in_names.size(); ++n){
@@ -140,8 +139,8 @@ void CCBLAS::process_reduce_spaces(CCMatrix* out_Matrix,CCMatrix* in_Matrix)
   const intvec&  act_to_occ = moinfo->get_actv_to_occ();
   const intvec&  act_to_vir = moinfo->get_actv_to_vir();
 
-  string& out_index_label = out_Matrix->get_index_label();
-  string&  in_index_label =  in_Matrix->get_index_label();
+  std::string& out_index_label = out_Matrix->get_index_label();
+  std::string&  in_index_label =  in_Matrix->get_index_label();
 
   int index_label_size = out_index_label.size();
 
@@ -192,11 +191,11 @@ void CCBLAS::process_reduce_spaces(CCMatrix* out_Matrix,CCMatrix* in_Matrix)
 
 void CCBLAS::expand_spaces(const char* out,const char* in)
 {
-  string  in_str(in);
-  string out_str(out);
+  std::string  in_str(in);
+  std::string out_str(out);
 
-  vector<string>  in_names = moinfo->get_matrix_names(in_str);
-  vector<string> out_names = moinfo->get_matrix_names(out_str);
+  std::vector<std::string>  in_names = moinfo->get_matrix_names(in_str);
+  std::vector<std::string> out_names = moinfo->get_matrix_names(out_str);
   if(in_names.size()!=out_names.size())
     throw PSIEXCEPTION("CCBLAS::map_spaces, number of references mismatch");
   for(size_t n = 0; n < in_names.size(); ++n){
@@ -212,8 +211,8 @@ void CCBLAS::process_expand_spaces(CCMatrix* out_Matrix,CCMatrix* in_Matrix)
   const intvec&    act_to_occ = moinfo->get_actv_to_occ();
   const intvec&    act_to_vir = moinfo->get_actv_to_vir();
 
-  string& out_index_label = out_Matrix->get_index_label();
-  string&  in_index_label =  in_Matrix->get_index_label();
+  std::string& out_index_label = out_Matrix->get_index_label();
+  std::string&  in_index_label =  in_Matrix->get_index_label();
 
   int index_label_size = out_index_label.size();
 

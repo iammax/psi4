@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -39,7 +40,6 @@
 
 
 using namespace psi;
-using namespace std;
 
 namespace psi{ namespace occwave{
 
@@ -100,7 +100,7 @@ if (reference_ == "RESTRICTED") {
 	}
 
 	// Read in nuclear repulsion energy
-	Enuc = reference_wavefunction_->molecule()->nuclear_repulsion_energy();
+    Enuc = reference_wavefunction_->molecule()->nuclear_repulsion_energy(reference_wavefunction_->get_dipole_field_strength());
 
 	// Read SCF energy
     Escf=reference_wavefunction_->reference_energy();
@@ -375,7 +375,7 @@ if (reference_ == "RESTRICTED") {
 /********************************************************************************************/
         // read orbital coefficients from reference
 	Ca_ = SharedMatrix(reference_wavefunction_->Ca());
-	Ca_ref = std::shared_ptr<Matrix>(new Matrix("Ref alpha MO coefficients", nirrep_, nsopi_, nmopi_));
+	Ca_ref = std::make_shared<Matrix>("Ref alpha MO coefficients", nirrep_, nsopi_, nmopi_);
 
 	// read orbital coefficients from external files
 	if (read_mo_coeff == "TRUE"){
@@ -385,8 +385,8 @@ if (reference_ == "RESTRICTED") {
 	  memset(C_pitzerA[0], 0, sizeof(double)*nso_*nmo_);
 
 	  // read binary data
-	  ifstream InFile1;
-	  InFile1.open("CmoA.psi", ios::in | ios::binary);
+	  std::ifstream InFile1;
+	  InFile1.open("CmoA.psi", std::ios::in | std::ios::binary);
 	  InFile1.read( (char*)C_pitzerA[0], sizeof(double)*nso_*nmo_);
 	  InFile1.close();
 
@@ -469,7 +469,7 @@ else if (reference_ == "UNRESTRICTED") {
 
 
 	// Read in nuclear repulsion energy
-	Enuc = reference_wavefunction_->molecule()->nuclear_repulsion_energy();
+    Enuc = reference_wavefunction_->molecule()->nuclear_repulsion_energy(reference_wavefunction_->get_dipole_field_strength());
 
 	// Read SCF energy
     Escf=reference_wavefunction_->reference_energy();
@@ -740,8 +740,8 @@ else if (reference_ == "UNRESTRICTED") {
         // read orbital coefficients from reference
 	Ca_ = SharedMatrix(reference_wavefunction_->Ca());
         Cb_ = SharedMatrix(reference_wavefunction_->Cb());
-	Ca_ref = std::shared_ptr<Matrix>(new Matrix("Ref alpha MO coefficients", nirrep_, nsopi_, nmopi_));
-	Cb_ref = std::shared_ptr<Matrix>(new Matrix("Ref beta MO coefficients", nirrep_, nsopi_, nmopi_));
+	Ca_ref = std::make_shared<Matrix>("Ref alpha MO coefficients", nirrep_, nsopi_, nmopi_);
+	Cb_ref = std::make_shared<Matrix>("Ref beta MO coefficients", nirrep_, nsopi_, nmopi_);
 
 	// read orbital coefficients from external files
 	if (read_mo_coeff == "TRUE"){
@@ -753,14 +753,14 @@ else if (reference_ == "UNRESTRICTED") {
 	  memset(C_pitzerB[0], 0, sizeof(double)*nso_*nmo_);
 
 	  // read binary data
-	  ifstream InFile1;
-	  InFile1.open("CmoA.psi", ios::in | ios::binary);
+	  std::ifstream InFile1;
+	  InFile1.open("CmoA.psi", std::ios::in | std::ios::binary);
 	  InFile1.read( (char*)C_pitzerA[0], sizeof(double)*nso_*nmo_);
 	  InFile1.close();
 
 	  // read binary data
-	  ifstream InFile2;
-	  InFile2.open("CmoB.psi", ios::in | ios::binary);
+	  std::ifstream InFile2;
+	  InFile2.open("CmoB.psi", std::ios::in | std::ios::binary);
 	  InFile2.read( (char*)C_pitzerB[0], sizeof(double)*nso_*nmo_);
 	  InFile2.close();
 
@@ -787,9 +787,9 @@ else if (reference_ == "UNRESTRICTED") {
 /************************** Create all required matrice *************************************/
 /********************************************************************************************/
         // Build Hso
-	Hso = std::shared_ptr<Matrix>(new Matrix("SO-basis One-electron Ints", nirrep_, nsopi_, nsopi_));
-	Tso = std::shared_ptr<Matrix>(new Matrix("SO-basis Kinetic Energy Ints", nirrep_, nsopi_, nsopi_));
-	Vso = std::shared_ptr<Matrix>(new Matrix("SO-basis Potential Energy Ints", nirrep_, nsopi_, nsopi_));
+	Hso = std::make_shared<Matrix>("SO-basis One-electron Ints", nirrep_, nsopi_, nsopi_);
+	Tso = std::make_shared<Matrix>("SO-basis Kinetic Energy Ints", nirrep_, nsopi_, nsopi_);
+	Vso = std::make_shared<Matrix>("SO-basis Potential Energy Ints", nirrep_, nsopi_, nsopi_);
 	Hso->zero();
 	Tso->zero();
 	Vso->zero();

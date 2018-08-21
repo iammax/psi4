@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -57,8 +58,6 @@ namespace psi{
     extern MemoryManager* memory_manager;
 
 
-using namespace std;
-
 /**
  * Allocate the effective Hamiltonian matrices and eigenvectors
  * @todo wrap the current operations in an init() function
@@ -79,7 +78,7 @@ CCManyBody::CCManyBody(SharedWavefunction ref_wfn, Options &options):
   norm_amps = 0.0;
   delta_t1_amps = 0.0;
   delta_t2_amps = 0.0;
-  d3_ooo = d3_ooO = d3_oOO = d3_OOO =  d3_vvv = d3_vvV = d3_vVV = d3_VVV = NULL;
+  d3_ooo = d3_ooO = d3_oOO = d3_OOO =  d3_vvv = d3_vvV = d3_vVV = d3_VVV = nullptr;
 }
 
 /**
@@ -386,9 +385,9 @@ void CCManyBody::print_eigensystem(int ndets, double** Heff,double*& eigenvector
 
   std::vector<std::pair<double,int> > eigenvector_index_pair;
   for(int i = 0; i < ndets; ++i){
-    eigenvector_index_pair.push_back(make_pair(eigenvector[i]*eigenvector[i],i));
+    eigenvector_index_pair.push_back(std::make_pair(eigenvector[i]*eigenvector[i],i));
   }
-  sort(eigenvector_index_pair.begin(),eigenvector_index_pair.end(),greater<pair<double,int> >());
+  sort(eigenvector_index_pair.begin(),eigenvector_index_pair.end(),std::greater<std::pair<double,int> >());
   int max_size_list = std::min(10,static_cast<int>(eigenvector_index_pair.size()));
   outfile->Printf("\n\n  Most important determinants in the wave function");
   outfile->Printf("\n\n  determinant  eigenvector   eigenvector^2\n");
@@ -497,7 +496,7 @@ double CCManyBody::diagonalize_Heff(int root,int ndets, double** Heff,double*& r
     energy = real[root];
     // Eliminate the triplet solution if required
     if((options_.get_bool("LOCK_SINGLET")==1)&&(ndets==4)){
-      if((fabs(right_eigenvector[0])<5.0e-2)&& (fabs(right_eigenvector[3])<5.0e-2) && ((right_eigenvector[1]/right_eigenvector[2])<-0.5)){
+      if((std::fabs(right_eigenvector[0])<5.0e-2)&& (std::fabs(right_eigenvector[3])<5.0e-2) && ((right_eigenvector[1]/right_eigenvector[2])<-0.5)){
         outfile->Printf("\n\tSelecting root %d since original root is a triplet\n",root+1);
         root++;
         for(int k=0;k<ndets;k++){
@@ -554,7 +553,7 @@ void CCManyBody::sort_eigensystem(int ndets,double*& real,double*& imaginary,dou
 {
   std::vector<std::pair<double, int> > pairs;
   for(int i=0;i<ndets;i++)
-    pairs.push_back(make_pair(real[i],i));
+    pairs.push_back(std::make_pair(real[i],i));
   sort(pairs.begin(),pairs.end());
 
   double*  tempv;

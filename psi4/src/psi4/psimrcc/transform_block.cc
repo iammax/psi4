@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -60,8 +61,6 @@ namespace psi{ namespace psimrcc{
     extern MOInfo *moinfo;
     extern MemoryManager *memory_manager;
 
-using namespace std;
-
 /**
  * Read at least one block of the two electron MO integrals from an iwl buffer assuming Pitzer ordering and store them in the packed array tei_mo
  */
@@ -97,11 +96,11 @@ int CCTransform::allocate_tei_mo_block(int first_irrep)
 
   int last_irrep = first_irrep;
 
-  if(tei_mo == NULL){
+  if(tei_mo == nullptr){
     // Allocate the tei_mo matrix blocks
     allocate1(double*,tei_mo,moinfo->get_nirreps());
     for(int h = 0; h < moinfo->get_nirreps(); ++h)
-      tei_mo[h] = NULL;
+      tei_mo[h] = nullptr;
   }
 
   // Find how many irreps we can store in 95% of the free memory
@@ -136,13 +135,13 @@ int CCTransform::allocate_tei_mo_block(int first_irrep)
 void CCTransform::free_tei_mo_integrals_block(int first_irrep, int last_irrep)
 {
   for(int h = first_irrep; h < last_irrep; ++h){
-    if(tei_mo[h] != NULL){
+    if(tei_mo[h] != nullptr){
       release1(tei_mo[h]);
     }
   }
   if(last_irrep >= moinfo->get_nirreps()){
     release1(tei_mo);
-    tei_mo = NULL;
+    tei_mo = nullptr;
   }
 }
 

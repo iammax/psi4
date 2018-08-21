@@ -1,8 +1,6 @@
 #! Double-hybrid density functional B2PYLP. Reproduces portion of Table I
 #! in S. Grimme's J. Chem. Phys 124 034108 (2006) paper defining the functional.
 
-memory 250 mb
-
 molecule h2o {
   0 1
   O
@@ -44,6 +42,7 @@ set reference rks
 set freeze_core false
 set dft_radial_points 99
 set dft_spherical_points 302
+set dft_block_scheme naive
 
 #activate(h2)
 #eb2plyp = energy('dsd-pbep86')
@@ -52,6 +51,8 @@ set dft_spherical_points 302
 activate(h2)
 eb2plyp = energy('b2plyp')
 clean()
+
+set dft_block_scheme octree
 
 activate(h2o)
 eb2plyp = energy('b2plyp')

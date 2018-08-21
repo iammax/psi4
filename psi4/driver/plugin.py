@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -28,6 +29,7 @@
 import os
 import sys
 
+from psi4 import core
 from psi4.driver.util.filesystem import *
 from psi4.driver.util import tty
 
@@ -86,7 +88,7 @@ def sanitize_name(name):
 
 # Determine the available plugins
 available_plugins = []
-psidatadir = os.environ.get('PSIDATADIR', None)
+psidatadir = core.get_datadir()
 plugin_path = join_path(psidatadir, "plugin")
 for dir in os.listdir(plugin_path):
     if os.path.isdir(join_path(plugin_path, dir)):
@@ -120,12 +122,18 @@ def create_plugin(name, template):
     os.mkdir(name)
     created_files = []
     for source_file in template_files:
+
+        # Skip swp files
+        if source_file.endswith(".swp"):
+            continue
+
         target_file = source_file
 
         if source_file.endswith('.template'):
             target_file = source_file[0:-9]
 
         try:
+            print(join_path(template_path, source_file))
             with open(join_path(template_path, source_file), 'r') as temp_file:
                 contents = temp_file.read()
         except IOError as err:

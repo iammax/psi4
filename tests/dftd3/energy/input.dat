@@ -8,8 +8,6 @@ ref_pbe_d2     = [-0.00278650, -0.00118051, -0.00041513]  #TEST
 ref_pbe_d3zero = [-0.00175474, -0.00045421, -0.00016839]  #TEST
 ref_pbe_d3bj   = [-0.00475937, -0.00235265, -0.00131239]  #TEST
 
-memory 200 mb
-
 molecule eneyne {
 C   0.000000  -0.667578  -2.124659
 C   0.000000   0.667578  -2.124659
@@ -154,4 +152,10 @@ eneyne.run_dftd3('b3lyp', 'd', {'s6': 0.75})
 compare_values(ref_pbe_d2[0], get_variable('DISPERSION CORRECTION ENERGY'), 7, 'Ethene-Ethyne -D (alias)')       #TEST
 eneyne.run_dftd3('b3lyp', 'd2', {'s6': 0.75})
 compare_values(ref_pbe_d2[0], get_variable('DISPERSION CORRECTION ENERGY'), 7, 'Ethene-Ethyne -D2 (alias)')      #TEST
+
+print_stdout('  cast-up, -D correction from C-side')                                                         #TEST
+set basis_guess sto-3g
+energy('b3lyp-d3bj')
+compare_values(ref_pbe_d3bj[2], get_variable('DISPERSION CORRECTION ENERGY'), 7, 'Ethene -D3 (calling dftd3 -bj)')      #TEST
+
 

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,19 +31,23 @@
     \brief Enter brief description of file here
 */
 
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/vector.h"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libmints/oeprop.h"
+#include "psi4/libfock/soscf.h"
 #include "psi4/psifiles.h"
 #include "psi4/physconst.h"
+#include "psi4/libpsi4util/process.h"
+
 #include "psi4/detci/structs.h"
 #include "psi4/detci/civect.h"
 #include "psi4/detci/ciwave.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 
 namespace psi { namespace detci {
 
@@ -134,9 +139,9 @@ void CIWavefunction::form_opdm(void) {
     // Figure out which OPDM should be current
     if (Parameters_->opdm_ave) {
         Dimension act_dim = get_dimension("ACT");
-        opdm_a_ = SharedMatrix(new Matrix("MO-basis Alpha OPDM", nirrep_, act_dim, act_dim));
-        opdm_b_ = SharedMatrix(new Matrix("MO-basis Beta OPDM", nirrep_, act_dim, act_dim));
-        opdm_ = SharedMatrix(new Matrix("MO-basis OPDM", nirrep_, act_dim, act_dim));
+        opdm_a_ = std::make_shared<Matrix>("MO-basis Alpha OPDM", nirrep_, act_dim, act_dim);
+        opdm_b_ = std::make_shared<Matrix>("MO-basis Beta OPDM", nirrep_, act_dim, act_dim);
+        opdm_ = std::make_shared<Matrix>("MO-basis OPDM", nirrep_, act_dim, act_dim);
 
         for (int i = 0; i < Parameters_->average_num; i++) {
             int croot = Parameters_->average_states[i];
@@ -160,7 +165,7 @@ void CIWavefunction::form_opdm(void) {
     opdm_called_ = true;
 }
 /*
-** Resizes an act by act OPDM matrix to include the inactive porition.
+** Resizes an act by act OPDM matrix to include the inactive portion.
 ** The diagonal of the inactive portion is set to value. If virt is true
 ** the return OPDM with of size nmo x nmo.
 */
@@ -177,7 +182,7 @@ SharedMatrix CIWavefunction::opdm_add_inactive(SharedMatrix opdm, double value,
         dim_ret = dim_ia;
     }
 
-    SharedMatrix ret(new Matrix(opdm->name(), dim_ret, dim_ret));
+    auto ret = std::make_shared<Matrix>(opdm->name(), dim_ret, dim_ret);
 
     for (int h = 0; h < nirrep_; h++) {
         if (!dim_ia[h]) continue;
@@ -242,7 +247,7 @@ std::vector<std::vector<SharedMatrix> > CIWavefunction::opdm(SharedCIVector Ivec
     if (transp_tmp == nullptr || transp_tmp2 == nullptr) {
      outfile->Printf("(opdm): Trouble with malloc'ing transp_tmp\n");
     }
-    unsigned long bufsz = Ivec->get_max_blk_size();
+    size_t bufsz = Ivec->get_max_blk_size();
     transp_tmp[0] = init_array(bufsz);
     transp_tmp2[0] = init_array(bufsz);
     if (transp_tmp[0] == nullptr || transp_tmp2[0] == nullptr) {
@@ -252,8 +257,8 @@ std::vector<std::vector<SharedMatrix> > CIWavefunction::opdm(SharedCIVector Ivec
 
   int nci = CalcInfo_->num_ci_orbs;
   Dimension act_dim = get_dimension("ACT");
-  SharedMatrix scratch_a(new Matrix("OPDM A Scratch", nci, nci));
-  SharedMatrix scratch_b(new Matrix("OPDM B Scratch", nci, nci));
+  auto scratch_a = std::make_shared<Matrix>("OPDM A Scratch", nci, nci);
+  auto scratch_b = std::make_shared<Matrix>("OPDM B Scratch", nci, nci);
   double** scratch_ap = scratch_a->pointer();
   double** scratch_bp = scratch_b->pointer();
 
@@ -458,15 +463,15 @@ std::vector<std::vector<SharedMatrix> > CIWavefunction::opdm(SharedCIVector Ivec
 
     std::stringstream opdm_name;
     opdm_name << "MO-basis Alpha OPDM <" << Iroot << "| Etu |" << Jroot << ">";
-    SharedMatrix new_OPDM_a(new Matrix(opdm_name.str(), nirrep_, act_dim, act_dim));
+    auto new_OPDM_a = std::make_shared<Matrix>(opdm_name.str(), nirrep_, act_dim, act_dim);
 
     opdm_name.str(std::string());
     opdm_name << "MO-basis Beta OPDM <" << Iroot << "| Etu |" << Jroot << ">";
-    SharedMatrix new_OPDM_b(new Matrix(opdm_name.str(), nirrep_, act_dim, act_dim));
+    auto new_OPDM_b = std::make_shared<Matrix>(opdm_name.str(), nirrep_, act_dim, act_dim);
 
     opdm_name.str(std::string());
     opdm_name << "MO-basis OPDM <" << Iroot << "| Etu |" << Jroot << ">";
-    SharedMatrix new_OPDM(new Matrix(opdm_name.str(), nirrep_, act_dim, act_dim));
+    auto new_OPDM = std::make_shared<Matrix>(opdm_name.str(), nirrep_, act_dim, act_dim);
 
     int offset = 0;
     for (int h=0; h<nirrep_; h++){
@@ -517,7 +522,7 @@ void CIWavefunction::opdm_block(struct stringwr **alplist, struct stringwr **bet
   int Ia_idx, Ib_idx, Ja_idx, Jb_idx, Ja_ex, Jb_ex, Jbcnt, Jacnt;
   struct stringwr *Jb, *Ja;
   signed char *Jbsgn, *Jasgn;
-  unsigned int *Jbridx, *Jaridx;
+  size_t *Jbridx, *Jaridx;
   double C1, C2, Ib_sgn, Ia_sgn;
   int i, j, oij, *Jboij, *Jaoij;
 
@@ -572,18 +577,67 @@ void CIWavefunction::opdm_block(struct stringwr **alplist, struct stringwr **bet
 }// End OPDM Block
 
 void CIWavefunction::ci_nat_orbs() {
-  // We can only do restricted orbitals
   outfile->Printf("\n   Computing CI Natural Orbitals\n");
-  outfile->Printf("   !Warning: New orbitals will be sorted by occuption number,\n");
-  outfile->Printf("   orbital spaces (occ/act/vir) may change.\n");
 
-  SharedMatrix NO_vecs(new Matrix("OPDM Eigvecs", Da_->rowspi(), Da_->colspi()));
-  SharedVector NO_occ(new Vector("OPDM Occuption", Da_->rowspi()));
+  // Grab orbital dimensions
+  Dimension zero_dim(nirrep_);
+  Dimension noccpi = get_dimension("DOCC");
+  Dimension nactpi = get_dimension("ACT");
+  Dimension nvirpi = get_dimension("VIR");
 
-  SharedMatrix D = opdm_add_inactive(opdm_, 2.0, true);
-  D->diagonalize(NO_vecs, NO_occ, descending);
+  // Diagonalize the OPDM in the active space
+  auto NO_vecs = std::make_shared<Matrix>("OPDM Eigvecs", opdm_->rowspi(), opdm_->colspi());
+  auto NO_occ = std::make_shared<Vector>("OPDM Occuption", opdm_->rowspi());
+  opdm_->diagonalize(NO_vecs, NO_occ, descending);
 
-  Ca_ = Matrix::doublet(Ca_, NO_vecs);
+  // get a copy of the active orbitals and rotate them
+  SharedMatrix Cactv = get_orbitals("ACT");
+  SharedMatrix Cnat = Matrix::doublet(Cactv, NO_vecs);
+
+  // set the active block of Ca_
+  set_orbitals("ACT",Cnat);
+
+  // semicanonicalize the DOCC and VIR blocks only for CASSCF
+  if (options_.get_str("WFN") == "CASSCF"){
+      if (!somcscf_){
+          throw PSIEXCEPTION("CIWavefunction::ci_nat_orbs: SOMCSCF object is not allocated!");
+      }else{
+          // Grab Fock matrices and build the average Fock operator
+          SharedMatrix AFock = somcscf_->current_AFock();
+          SharedMatrix IFock = somcscf_->current_IFock();
+          SharedMatrix Favg = AFock->clone();
+          Favg->add(IFock);
+
+          // Diagonalize the doubly occupied block of Favg
+          Slice noccpi_slice(zero_dim,noccpi);
+          SharedMatrix Fo = Favg->get_block(noccpi_slice,noccpi_slice);
+          auto evals_o = std::make_shared<Vector>("F Evals", noccpi);
+          auto evecs_o = std::make_shared<Matrix>("F Evecs", noccpi, noccpi);
+          Fo->diagonalize(evecs_o, evals_o, ascending);
+
+          // get a copy of the doubly occupied orbitals and rotate them
+          SharedMatrix Cocc = get_orbitals("DOCC");
+          SharedMatrix Cocc_semi = Matrix::doublet(Cocc, evecs_o);
+
+          // set the doubly occupied orbitals block of Ca_
+          set_orbitals("DOCC",Cocc_semi);
+
+          // Diagonalize the virtual block of Favg
+          Slice nvirpi_slice(noccpi + nactpi, noccpi + nactpi + nvirpi);
+          SharedMatrix Fv = Favg->get_block(nvirpi_slice,nvirpi_slice);
+          auto evals_v = std::make_shared<Vector>("F Evals", nvirpi);
+          auto evecs_v = std::make_shared<Matrix>("F Evecs", nvirpi, nvirpi);
+          Fv->diagonalize(evecs_v, evals_v, ascending);
+
+          // get a copy of the virtual orbitals and rotate them
+          SharedMatrix Cvir = get_orbitals("VIR");
+          SharedMatrix Cvir_semi = Matrix::doublet(Cvir, evecs_v);
+
+          // set the virtual orbitals block of Ca_
+          set_orbitals("VIR",Cvir_semi);
+      }
+  }
+
   Cb_ = Ca_;
 }
 

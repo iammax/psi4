@@ -6,8 +6,6 @@
 # The latter is somewhat dicey, you never know what 
 # you are going to find.
 
-memory 250 mb
-
 
 # Standard water molecule
 molecule water {
@@ -17,7 +15,6 @@ H 1 1.0
 H 1 1.0 2 104.5
 }
 
-water.update_geometry() # TEST
 
 # => Ground state SCF <= #
 

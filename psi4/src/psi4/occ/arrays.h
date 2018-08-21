@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -35,7 +36,6 @@
 
 
 using namespace psi;
-using namespace std;
 
 namespace psi{ namespace occwave{
 
@@ -51,22 +51,22 @@ class Array1d
   private:
   double *A1d_;
   int dim1_;
-  string name_;      // Name of the array
+  std::string name_;      // Name of the array
 
   public:
   Array1d(int d1);
-  Array1d(string name, int d1);
+  Array1d(std::string name, int d1);
   Array1d();			   //default constructer
   ~Array1d(); 		   	   //destructer
 
   Array1d* generate(int d1);
-  Array1d* generate(string name, int d1);
-  void init(string name, int d1);
+  Array1d* generate(std::string name, int d1);
+  void init(std::string name, int d1);
   void init(int d1);
   void memalloc();
   void zero();
   void print();
-  void print(std::string OutFileRMR);
+  void print(std::string out_fname);
   void release();
   void set(int i, double value);
   void set(double *vec);
@@ -110,23 +110,23 @@ class Array2d
   private:
   double **A2d_;
   int dim1_,dim2_;
-  string name_;      // Name of the array
+  std::string name_;      // Name of the array
 
   public:
   Array2d(int d1,int d2);
-  Array2d(string name, int d1,int d2);
+  Array2d(std::string name, int d1,int d2);
   Array2d();			   //default constructer
   ~Array2d(); 		   	   //destructer
 
   Array2d* generate(int d1,int d2);
-  Array2d* generate(string name, int d1,int d2);
-  void init(string name, int d1,int d2);
+  Array2d* generate(std::string name, int d1,int d2);
+  void init(std::string name, int d1,int d2);
   void init(int d1,int d2);
   void memalloc();
   void zero();
   void zero_diagonal();
   void print();
-  void print(std::string OutFileRMR);
+  void print(std::string out_fname);
   void release();
   void set(int i, int j, double value);
   void set(double **A);
@@ -193,11 +193,11 @@ class Array2d
   int dim1() const { return dim1_; }
   int dim2() const { return dim2_; }
   /*
-  void write(psi::PSIO* psio, unsigned int fileno);
-  void write(shared_ptr<psi::PSIO> psio, unsigned int fileno);
-  void write(psi::PSIO& psio, unsigned int fileno);
-  void read(psi::PSIO* psio, unsigned int fileno);
-  void read(psi::PSIO& psio, unsigned int fileno);
+  void write(psi::PSIO* psio, size_t fileno);
+  void write(shared_ptr<psi::PSIO> psio, size_t fileno);
+  void write(psi::PSIO& psio, size_t fileno);
+  void read(psi::PSIO* psio, size_t fileno);
+  void read(psi::PSIO& psio, size_t fileno);
   bool read(PSIO* psio, int itap, const char *label, int dim);
   bool read(shared_ptr<psi::PSIO> psio, int itap, const char *label, int dim);
   */
@@ -212,17 +212,17 @@ class Array3d
   private:
   double ***A3d_;
   int dim1_,dim2_,dim3_;
-  string name_;      // Name of the array
+  std::string name_;      // Name of the array
 
   public:
   Array3d(int d1,int d2, int d3);
-  Array3d(string name, int d1,int d2, int d3);
+  Array3d(std::string name, int d1,int d2, int d3);
   Array3d();			   //default constructer
   ~Array3d(); 		   	   //destructer
 
   Array3d* generate(int d1,int d2, int d3);
-  Array3d* generate(string name, int d1,int d2, int d3);
-  void init(string name, int d1,int d2, int d3);
+  Array3d* generate(std::string name, int d1,int d2, int d3);
+  void init(std::string name, int d1,int d2, int d3);
   void init(int d1,int d2, int d3);
   void memalloc();
   void zero();
@@ -241,17 +241,17 @@ class Array1i
   private:
   int *A1i_;
   int dim1_;
-  string name_;      // Name of the array
+  std::string name_;      // Name of the array
 
   public:
   Array1i(int d1);
-  Array1i(string name, int d1);
+  Array1i(std::string name, int d1);
   Array1i();			   //default constructer
   ~Array1i(); 		   	   //destructer
 
   Array1i* generate(int d1);
-  Array1i* generate(string name, int d1);
-  void init(string name, int d1);
+  Array1i* generate(std::string name, int d1);
+  void init(std::string name, int d1);
   void init(int d1);
   void memalloc();
   void zero();
@@ -272,17 +272,17 @@ class Array3i
   private:
   int ***A3i_;
   int dim1_,dim2_,dim3_;
-  string name_;      // Name of the array
+  std::string name_;      // Name of the array
 
   public:
   Array3i(int d1,int d2, int d3);
-  Array3i(string name, int d1,int d2, int d3);
+  Array3i(std::string name, int d1,int d2, int d3);
   Array3i();			   //default constructer
   ~Array3i(); 		           //destructer
 
   Array3i* generate(int d1,int d2, int d3);
-  Array3i* generate(string name, int d1,int d2, int d3);
-  void init(string name, int d1,int d2, int d3);
+  Array3i* generate(std::string name, int d1,int d2, int d3);
+  void init(std::string name, int d1,int d2, int d3);
   void init(int d1,int d2, int d3);
   void memalloc();
   void zero();

@@ -6,8 +6,6 @@
 # The latter is somewhat dicey, you never know what 
 # you are going to find.
 
-memory 250 mb
-
 Enuc        =   8.80146552997207 #TEST
 E0          = -76.02141844515498 #TEST 
 E56_singlet = -75.27755067036694 #TEST
@@ -22,7 +20,7 @@ H 1 1.0
 H 1 1.0 2 104.5
 }
 
-water.update_geometry() # TEST
+water.update_geometry()  #TEST
 compare_values(Enuc, water.nuclear_repulsion_energy(), 9, "Nuclear Repulsion Energy") #TEST
 
 # => Ground state SCF <= #

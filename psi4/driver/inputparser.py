@@ -3,28 +3,28 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
 #
-
 """Module with functions to parse the input file and convert
 Psithon into standard Python. Particularly, forms psi4
 module calls that access the C++ side of Psi4.
@@ -35,17 +35,15 @@ module calls that access the C++ side of Psi4.
 #if sys.hexversion < 0x03000000:
 from __future__ import print_function
 from __future__ import absolute_import
-
 import re
 import os
 import sys
-import random
-from psi4.driver import pubchem
-from psi4.driver.p4util.exceptions import *
-from psi4 import core
+import uuid
 
-# globally available regex strings
-pubchemre = re.compile(r'^(\s*pubchem\s*:\s*(.*)\n)$', re.MULTILINE | re.IGNORECASE)
+from psi4 import core
+from psi4.driver.p4util.util import set_memory
+from psi4.driver.p4util.exceptions import *
+
 
 # inputfile contents to be preserved from the processor
 literals = {}
@@ -97,6 +95,7 @@ def quotify(string, isbasis=False):
         wordre = re.compile(r'(([$]?)([-+()*.\w\"\'/\\]+))')
     string = wordre.sub(process_word_quotes, string)
     return string
+
 
 def dequotify(string):
     if string[0] == '"' and string[-1] == '"':
@@ -178,53 +177,14 @@ def process_set_commands(matchobj):
 def process_from_file_command(matchobj):
     """Function that process a match of ``from_file`` in molecule block."""
     string = matchobj.group(2)
-    mol=core.mol_from_file(string,1)
-    tempmol=[line for line in mol.split('\n') if line.strip() != '']
-    mol2=set(tempmol)
-    mol=""
+    mol = core.mol_from_file(string, 1)
+    tempmol = [line for line in mol.split('\n') if line.strip() != '']
+    mol2 = set(tempmol)
+    mol = ""
     for i in mol2:
-           mol+=i
-           mol+="\n"
+        mol += i
+        mol += "\n"
     return mol
-
-
-def process_pubchem_command(matchobj):
-    """Function to process match of ``pubchem`` in molecule block."""
-    string = matchobj.group(2)
-    if re.match(r'^\s*[0-9]+\s*$', string):
-        # This is just a number - must be a CID
-        pcobj = pubchem.PubChemObj(int(string), '', '')
-        try:
-            return pcobj.getMoleculeString()
-        except Exception as e:
-            return e.message
-    else:
-        # Search pubchem for the provided string
-        try:
-            results = pubchem.getPubChemResults(string)
-        except Exception as e:
-            return e.message
-
-        # N.B. Anything starting with PubchemError will be handled correctly by the molecule parser
-        # in libmints, which will just print the rest of the string and exit gracefully.
-        if not results:
-            # Nothing!
-            return "PubchemError\n\tNo results were found when searching PubChem for %s.\n" % (string)
-        elif len(results) == 1:
-            # There's only 1 result - use it
-            return results[0].getMoleculeString()
-        else:
-            # There are multiple results. Print and exit
-            msg = "\tPubchemError\n"
-            msg += "\tMultiple pubchem results were found. Replace\n\n\t\tpubchem:%s\n\n" % (string)
-            msg += "\twith the Chemical ID number or exact name from one of the following and re-run.\n\n"
-            msg += "\t Chemical ID     IUPAC Name\n\n"
-            for result in results:
-                msg += "%s" % (result)
-                if result.name().lower() == string.lower():
-                    #We've found an exact match!
-                    return result.getMoleculeString()
-            return msg
 
 
 def process_molecule_command(matchobj):
@@ -232,13 +192,17 @@ def process_molecule_command(matchobj):
     spaces = matchobj.group(1)
     name = matchobj.group(2)
     geometry = matchobj.group(3)
-    geometry = pubchemre.sub(process_pubchem_command, geometry)
     from_filere = re.compile(r'^(\s*from_file\s*:\s*(.*)\n)$', re.MULTILINE | re.IGNORECASE)
-    geometry = from_filere.sub(process_from_file_command,geometry)
+    geometry = from_filere.sub(process_from_file_command, geometry)
     molecule = spaces
 
-    molecule += 'core.efp_init()\n'  # clear EFP object before Molecule read in
-    molecule += spaces
+    if name != "":
+        if sys.version_info >= (3, 0):
+            if not name.isidentifier():
+                raise ValidationError('Molecule name not valid Python identifier: ' + name)
+        else:
+            if not re.match(r'^[^\d\W]\w*\Z', name):
+                raise ValidationError('Molecule name not valid Python identifier: ' + name)
 
     if name != "":
         molecule += '%s = ' % (name)
@@ -264,7 +228,7 @@ def process_cfour_command(matchobj):
     name = matchobj.group(2)
     cfourblock = matchobj.group(3)
 
-    literalkey = str(random.randint(0, 99999))
+    literalkey = str(uuid.uuid4())[:8]
     literals[literalkey] = cfourblock
     return "%score.set_global_option(\"%s\", \"\"\"%s\n\"\"\")\n" % \
         (spaces, 'LITERAL_CFOUR', 'literals_psi4_yo-' + literalkey)
@@ -299,17 +263,9 @@ def process_memory_command(matchobj):
     sig = str(matchobj.group(2))
     units = str(matchobj.group(3))
 
-    val = float(sig)
-    memory_amount = val
+    mem_in_bytes = set_memory(sig + units, execute=False)
 
-    if units.upper() == 'KB':
-        memory_amount = val * 1000
-    elif units.upper() == 'MB':
-        memory_amount = val * 1000000
-    elif units.upper() == 'GB':
-        memory_amount = val * 1000000000
-
-    return "%score.set_memory(%d)\n" % (spaces, int(memory_amount))
+    return "%score.set_memory_bytes(%d)\n" % (spaces, mem_in_bytes)
 
 
 def basname(name):
@@ -322,12 +278,14 @@ def process_basis_block(matchobj):
     spaces = matchobj.group(1)
     basistype = matchobj.group(2).upper()
     name = matchobj.group(3)
-    name = ('anonymous' + str(random.randint(0, 999))) if name == '' else name
+    name = ('anonymous' + str(uuid.uuid4())[:8]) if name == '' else name
     cleanbas = basname(name).replace('-', '')  # further remove hyphens so can be function name
     command_lines = re.split('\n', matchobj.group(4))
 
     symbol_re = re.compile(r'^\s*assign\s+(?P<symbol>[A-Z]{1,3})\s+(?P<basis>[-+*\(\)\w]+)\s*$', re.IGNORECASE)
-    label_re = re.compile(r'^\s*assign\s+(?P<label>(?P<symbol>[A-Z]{1,3})(?:(_\w+)|(\d+))?)\s+(?P<basis>[-+*\(\)\w]+)\s*$', re.IGNORECASE)
+    label_re = re.compile(
+        r'^\s*assign\s+(?P<label>(?P<symbol>[A-Z]{1,3})(?:(_\w+)|(\d+))?)\s+(?P<basis>[-+*\(\)\w]+)\s*$',
+        re.IGNORECASE)
     all_re = re.compile(r'^\s*assign\s+(?P<basis>[-+*\(\)\w]+)\s*$', re.IGNORECASE)
     basislabel = re.compile(r'\s*\[\s*([-*\(\)\w]+)\s*\]\s*')
 
@@ -384,15 +342,23 @@ def process_basis_block(matchobj):
 
 def process_pcm_command(matchobj):
     """Function to process match of ``pcm name? { ... }``."""
-    spacing = str(matchobj.group(1)) # Ignore..
-    name = str(matchobj.group(2)) # Ignore..
-    block = str(matchobj.group(3))
-    fp = open('pcmsolver.inp', 'w')
-    fp.write(block)
-    fp.close()
+    spacing = str(matchobj.group(1))  # Ignore..
+    name = str(matchobj.group(2))  # Ignore..
+    block = str(matchobj.group(3))  # Get input to PCMSolver
+    suffix = str(os.getpid()) + '.' + str(uuid.uuid4())[:8]
+    pcmsolver_fname = 'pcmsolver.' + suffix + '.inp'
+    with open(pcmsolver_fname, 'w') as handle:
+        handle.write(block)
     import pcmsolver
-    pcmsolver.parse_pcm_input('pcmsolver.inp')
-    return "" # The file has been written to disk; nothing needed in Psi4 input
+    parsed_pcm = pcmsolver.parse_pcm_input(pcmsolver_fname).splitlines()
+    os.remove(pcmsolver_fname)
+    pcmsolver_parsed_fname = '@pcmsolver.' + suffix
+    write_input_for_pcm = "parsedFile = os.path.join(os.getcwd(), '{}')\n".format(pcmsolver_parsed_fname)
+    write_input_for_pcm += "with open(parsedFile, 'w') as tmp:\n"
+    write_input_for_pcm += "    tmp.write('\\n'.join({}))\n\n".format(parsed_pcm)
+    write_input_for_pcm += "core.set_local_option(\'PCM\', \'PCMSOLVER_PARSED_FNAME\', \'{}\')\n\n".format(
+        pcmsolver_parsed_fname)
+    return write_input_for_pcm
 
 
 def process_external_command(matchobj):
@@ -462,9 +428,11 @@ def process_external_command(matchobj):
         mobj = charge_re.match(line)
         if mobj:
             if units == 'ang':
-                extern += '%sqmmm.addChargeAngstrom(%s,%s,%s,%s)\n' % (spaces, mobj.group(1), mobj.group(2), mobj.group(3), mobj.group(4))
+                extern += '%sqmmm.addChargeAngstrom(%s,%s,%s,%s)\n' % (spaces, mobj.group(1), mobj.group(2),
+                                                                       mobj.group(3), mobj.group(4))
             if units == 'bohr':
-                extern += '%sqmmm.addChargeBohr(%s,%s,%s,%s)\n' % (spaces, mobj.group(1), mobj.group(2), mobj.group(3), mobj.group(4))
+                extern += '%sqmmm.addChargeBohr(%s,%s,%s,%s)\n' % (spaces, mobj.group(1), mobj.group(2), mobj.group(3),
+                                                                   mobj.group(4))
         else:
             lines2.append(line)
     lines = lines2
@@ -666,8 +634,7 @@ def process_input(raw_input, print_level=1):
     #   Must be stored then subbed in the end to escape the normal processing
 
     # Process "cfour name? { ... }"
-    cfour = re.compile(r'^(\s*?)cfour[=\s]*(\w*?)\s*\{(.*?)\}',
-                          re.MULTILINE | re.DOTALL | re.IGNORECASE)
+    cfour = re.compile(r'^(\s*?)cfour[=\s]*(\w*?)\s*\{(.*?)\}', re.MULTILINE | re.DOTALL | re.IGNORECASE)
     temp = re.sub(cfour, process_cfour_command, raw_input)
 
     # Return from handling literal blocks to normal processing
@@ -696,31 +663,28 @@ def process_input(raw_input, print_level=1):
     temp = process_multiline_arrays(temp)
 
     # Process all "set name? { ... }"
-    set_commands = re.compile(r'^(\s*?)set\s*([-,\w]*?)[\s=]*\{(.*?)\}',
-                              re.MULTILINE | re.DOTALL | re.IGNORECASE)
+    set_commands = re.compile(r'^(\s*?)set\s*([-,\w]*?)[\s=]*\{(.*?)\}', re.MULTILINE | re.DOTALL | re.IGNORECASE)
     temp = re.sub(set_commands, process_set_commands, temp)
 
     # Process all individual "set (module_list) key  {[value_list] or $value or value}"
     # N.B. We have to be careful here, because \s matches \n, leading to potential problems
     # with undesired multiline matches.  Better the double-negative [^\S\n] instead, which
     # will match any space, tab, etc., except a newline
-    set_command = re.compile(r'^(\s*?)set\s+(?:([-,\w]+)[^\S\n]+)?(\w+)(?:[^\S\n]|=)+((\[.*\])|(\$?[-+,*()\.\w]+))\s*$',
-                             re.MULTILINE | re.IGNORECASE)
+    set_command = re.compile(
+        r'^(\s*?)set\s+(?:([-,\w]+)[^\S\n]+)?(\w+)(?:[^\S\n]|=)+((\[.*\])|(\$?[-+,*()\.\w]+))\s*$',
+        re.MULTILINE | re.IGNORECASE)
     temp = re.sub(set_command, process_set_command, temp)
 
     # Process "molecule name? { ... }"
-    molecule = re.compile(r'^(\s*?)molecule[=\s]*(\w*?)\s*\{(.*?)\}',
-                          re.MULTILINE | re.DOTALL | re.IGNORECASE)
+    molecule = re.compile(r'^(\s*?)molecule[=\s]*(\S*?)\s*\{(.*?)\}', re.MULTILINE | re.DOTALL | re.IGNORECASE)
     temp = re.sub(molecule, process_molecule_command, temp)
 
     # Process "external name? { ... }"
-    external = re.compile(r'^(\s*?)external[=\s]*(\w*?)\s*\{(.*?)\}',
-                          re.MULTILINE | re.DOTALL | re.IGNORECASE)
+    external = re.compile(r'^(\s*?)external[=\s]*(\w*?)\s*\{(.*?)\}', re.MULTILINE | re.DOTALL | re.IGNORECASE)
     temp = re.sub(external, process_external_command, temp)
 
     # Process "pcm name? { ... }"
-    pcm = re.compile(r'^(\s*?)pcm[=\s]*(\w*?)\s*\{(.*?)^\}',
-                          re.MULTILINE | re.DOTALL | re.IGNORECASE)
+    pcm = re.compile(r'^(\s*?)pcm[=\s]*(\w*?)\s*\{(.*?)^\}', re.MULTILINE | re.DOTALL | re.IGNORECASE)
     temp = re.sub(pcm, process_pcm_command, temp)
 
     # Then remove repeated newlines
@@ -728,8 +692,7 @@ def process_input(raw_input, print_level=1):
     temp = re.sub(multiplenewlines, '\n', temp)
 
     # Process " extract"
-    extract = re.compile(r'(\s*?)(\w+)\s*=\s*\w+\.extract_subsets.*',
-                         re.IGNORECASE)
+    extract = re.compile(r'(\s*?)(\w+)\s*=\s*\w+\.extract_subsets.*', re.IGNORECASE)
     temp = re.sub(extract, process_extract_command, temp)
 
     # Process "print" and transform it to "core.print_out()"
@@ -737,20 +700,21 @@ def process_input(raw_input, print_level=1):
     #temp = re.sub(print_string, process_print_command, temp)
 
     # Process "memory ... "
-    memory_string = re.compile(r'(\s*?)memory\s+([+-]?\d*\.?\d+)\s+([KMG]i?B)',
-                               re.IGNORECASE)
+    memory_string = re.compile(r'(\s*?)memory\s+(\d*\.?\d+)\s*([KMGTPBE]i?B)', re.IGNORECASE)
     temp = re.sub(memory_string, process_memory_command, temp)
 
     # Process "basis name? { ... }"
-    basis_block = re.compile(r'^(\s*?)(basis|df_basis_scf|df_basis_mp2|df_basis_cc|df_basis_sapt)[=\s]*(\w*?)\s*\{(.*?)\}',
-                             re.MULTILINE | re.DOTALL | re.IGNORECASE)
+    basis_block = re.compile(
+        r'^(\s*?)(basis|df_basis_scf|df_basis_mp2|df_basis_cc|df_basis_sapt)[=\s]*(\w*?)\s*\{(.*?)\}',
+        re.MULTILINE | re.DOTALL | re.IGNORECASE)
     temp = re.sub(basis_block, process_basis_block, temp)
 
     # Process literal blocks by substituting back in
-    lit_block = re.compile(r'literals_psi4_yo-(\d*\d)')
+    lit_block = re.compile(r'literals_psi4_yo-(\w{8})')
     temp = re.sub(lit_block, process_literal_blocks, temp)
 
     future_imports = []
+
     def future_replace(m):
         future_imports.append(m.group(0))
         return ''
@@ -765,11 +729,12 @@ def process_input(raw_input, print_level=1):
     imports += 'from psi4.core import *\n'
     imports += 'from psi4.driver.diatomic import anharmonicity\n'
     imports += 'from psi4.driver.gaussian_n import *\n'
+    imports += 'from psi4.driver.frac import ip_fitting, frac_traverse\n'
     imports += 'from psi4.driver.aliases import *\n'
-    imports += 'from psi4.driver.driver_cbs import xtpl_highest_1, scf_xtpl_helgaker_2, scf_xtpl_helgaker_3, corl_xtpl_helgaker_2\n'
+    imports += 'from psi4.driver.driver_cbs import *\n'
     imports += 'from psi4.driver.wrapper_database import database, db, DB_RGT, DB_RXN\n'
     imports += 'from psi4.driver.wrapper_autofrag import auto_fragments\n'
-    imports += 'from psi4.driver.p4const.physconst import *\n'
+    imports += 'from psi4.driver.constants.physconst import *\n'
     imports += 'psi4_io = core.IOManager.shared_object()\n'
 
     # psirc (a baby PSIthon script that might live in ~/.psi4rc)
@@ -782,21 +747,21 @@ def process_input(raw_input, print_level=1):
     else:
         psirc = ''
 
-    # Override scratch directory if user specified via env_var
-    scratch = ''
-    scratch_env = core.get_environment('PSI_SCRATCH')
-    if len(scratch_env):
-        scratch += 'psi4_io.set_default_path("%s")\n' % (scratch_env)
-
     blank_mol = 'geometry("""\n'
-    blank_mol += '0 1\nH\nH 1 0.74\n'
+    blank_mol += '0 1\nH 0 0 0\nH 0.74 0 0\n'
     blank_mol += '""","blank_molecule_psi4_yo")\n'
 
-    temp = imports + psirc + scratch + blank_mol + temp
+    temp = imports + psirc + blank_mol + temp
 
     # Move up the psi4.core namespace
     for func in dir(core):
         temp = temp.replace("psi4." + func, "psi4.core." + func)
+
+    # Move pseudonamespace for physconst into proper namespace
+    from psi4.driver.p4util import constants
+    for pc in dir(constants.physconst):
+        if not pc.startswith('__'):
+            temp = temp.replace('psi_' + pc, 'psi4.constants.' + pc)
 
     return temp
 

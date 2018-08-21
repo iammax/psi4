@@ -5,23 +5,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -56,7 +57,7 @@ sub read_file {
 # Now, grab the physical constants
 #
 my $PhysconstFile = $DriverPath . "../../psi4/include/psi4/physconst.h";
-my $PyPhysconstFile = $DriverPath . "../../psi4/driver/p4const/physconst.py";
+my $PyPhysconstFile = $DriverPath . "../../psi4/driver/constants/physconst.py";
 open(PHYSCONST, "<$PhysconstFile") or die "I can't open $PhysconstFile\n";
 open(TEXOUT, ">physconst.tex") or die "I can't write to physconst.tex\n";
 open(PYOUT, ">$PyPhysconstFile") or die "I can't write to $PyPhysconstFile\n";
@@ -73,12 +74,12 @@ printf RSTOUT "   +-%-23s-+-%-20s-+-%-100s-+\n", ('-' x 23), ('-' x 20), ('-' x 
 printf RSTOUT "   | %-23s | %-20s | %-100s |\n", "Label", "Value", "Description";
 printf RSTOUT "   +=%23s=+=%20s=+=%100s=+\n", ('=' x 23), ('=' x 20), ('=' x 100);
 while(<PHYSCONST>){
-    next unless /\s*#define\s+pc(\w+)\s+([-Ee0-9.]+)\s+\/\*-(.*)-\*\//;
+    next unless /\s*#define\s+pc_(\w+)\s+([-Ee0-9.]+)\s+\/\*-(.*)-\*\//;
     my $Var     = $1;
     my $Val     = $2;
     my $Comment = $3;
-    printf PYOUT "psi%-25s = %-20s #%-40s\n", $Var, $Val, $Comment;
-    printf RSTOUT "   | %23s | %-20s | %-100s |\n", "psi" . $Var, $Val, $Comment;
+    printf PYOUT "%-25s = %-20s #%-40s\n", $Var, $Val, $Comment;
+    printf RSTOUT "   | %23s | %-20s | %-100s |\n", $Var, $Val, $Comment;
     printf RSTOUT "   +-%-23s-+-%-20s-+-%-100s-+\n", ('-' x 23), ('-' x 20), ('-' x 100);
     $Var =~ s/_/\\_/g; # Make things TeX-friendly
     $Comment =~ s/_/\\_/g; # Make things TeX-friendly

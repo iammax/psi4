@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -164,8 +165,8 @@ void MOLECULE::rfo_step(void) {
     // During the course of an optimization some evects may appear that are bogus leads
     // - the root following can avoid them.
     for (i=0; i<dim+1; ++i) {
-      tval = abs( array_abs_max(SRFO[i], dim)/ SRFO[i][dim] ); // how big is dividing going to make it?
-      if (fabs(tval) < Opt_params.rfo_normalization_max) { // same check occurs below for acceptability
+      tval = std::abs( array_abs_max(SRFO[i], dim)/ SRFO[i][dim] ); // how big is dividing going to make it?
+      if (std::fabs(tval) < Opt_params.rfo_normalization_max) { // same check occurs below for acceptability
         for (j=0;j<dim+1;++j)
           SRFO[i][j] /= SRFO[i][dim];
       }
@@ -191,8 +192,8 @@ void MOLECULE::rfo_step(void) {
           ++rfo_root;
         }
         else {
-          tval = abs( array_abs_max(SRFO[rfo_root], dim)/ SRFO[rfo_root][dim] );
-          if (fabs(tval) > Opt_params.rfo_normalization_max) { // matching test in code above
+          tval = std::abs( array_abs_max(SRFO[rfo_root], dim)/ SRFO[rfo_root][dim] );
+          if (std::fabs(tval) > Opt_params.rfo_normalization_max) { // matching test in code above
             if (iter == 0)
               oprintf_out("\tRejecting RFO root %d because normalization gives large value.\n", rfo_root+1);
             symm_rfo_step = false;
@@ -272,7 +273,7 @@ void MOLECULE::rfo_step(void) {
     // get norm |dq| and unit vector in the step direction
     dqtdq = array_dot(dq, dq, dim);
 
-    if (fabs(alpha) > Opt_params.rsrfo_alpha_max) { // don't call it converged if alpha explodes, and give up
+    if (std::fabs(alpha) > Opt_params.rsrfo_alpha_max) { // don't call it converged if alpha explodes, and give up
       converged = false;
       iter = max_projected_rfo_iter - 1;
     }

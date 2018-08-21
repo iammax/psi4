@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,9 +32,9 @@
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/libdiis/diismanager.h"
 #include "psi4/libdpd/dpd.h"
-#include "arrays.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
-using namespace std;
+#include "arrays.h"
 
 namespace psi{
 
@@ -224,10 +225,10 @@ protected:
      int itr_ep;
      int ep_maxiter;
 
-     ULI memory;
-     ULI memory_mb_;
-     ULI cost_iabc_;            // Mem required for the <ia|bc> integrals
-     ULI cost_abcd_;            // Mem required for the <ab|cd> integrals
+     size_t memory;
+     size_t memory_mb_;
+     size_t cost_iabc_;            // Mem required for the <ia|bc> integrals
+     size_t cost_abcd_;            // Mem required for the <ab|cd> integrals
 
      // Common
      double Enuc;
@@ -359,44 +360,44 @@ protected:
      double cepa_sos_scale_;
      double sos_scale_ocepa;
 
-     string wfn;
-     string reference;
-     string reference_;
-     string jobtype;
-     string dertype;
-     string basis;
-     string level_shift;
-     string lineq;
-     string orth_type;
-     string natorb;
-     string semicanonic;
-     string opt_method;
-     string hess_type;
-     string occ_orb_energy;
-     string do_scs;		// Spin-Component-Scaling
-     string do_sos;		// Spin-Opposite-Scaling
-     string write_mo_coeff;	// Write CmoA to CmoA.psi and CmoB to CmoB.psi
-     string read_mo_coeff;	// Read CmoA from CmoA.psi and CmoB from CmoB.psi
-     string scs_type_;
-     string sos_type_;
-     string pcg_beta_type_;
-     string compute_mp3l;	// Do compute mp3l energy during iterations?
-     string compute_cepal;	// Do compute cepal energy during iterations?
-     string twopdm_abcd_type;	// How to handle G_abcd
-     string wfn_type_;
-     string compute_ccl;
-     string orb_resp_solver_;
-     string ip_poles;
-     string ea_poles;
-     string ep_ip_poles;
-     string ep_ea_poles;
-     string ekt_ip_;
-     string ekt_ea_;
-     string orb_opt_;
-     string relaxed_;
-     string sym_gfm_;
-     string oeprop_;
-     string comput_s2_;
+     std::string wfn;
+     std::string reference;
+     std::string reference_;
+     std::string jobtype;
+     std::string dertype;
+     std::string basis;
+     std::string level_shift;
+     std::string lineq;
+     std::string orth_type;
+     std::string natorb;
+     std::string semicanonic;
+     std::string opt_method;
+     std::string hess_type;
+     std::string occ_orb_energy;
+     std::string do_scs;		// Spin-Component-Scaling
+     std::string do_sos;		// Spin-Opposite-Scaling
+     std::string write_mo_coeff;	// Write CmoA to CmoA.psi and CmoB to CmoB.psi
+     std::string read_mo_coeff;	// Read CmoA from CmoA.psi and CmoB from CmoB.psi
+     std::string scs_type_;
+     std::string sos_type_;
+     std::string pcg_beta_type_;
+     std::string compute_mp3l;	// Do compute mp3l energy during iterations?
+     std::string compute_cepal;	// Do compute cepal energy during iterations?
+     std::string twopdm_abcd_type;	// How to handle G_abcd
+     std::string wfn_type_;
+     std::string compute_ccl;
+     std::string orb_resp_solver_;
+     std::string ip_poles;
+     std::string ea_poles;
+     std::string ep_ip_poles;
+     std::string ep_ea_poles;
+     std::string ekt_ip_;
+     std::string ekt_ea_;
+     std::string orb_opt_;
+     std::string relaxed_;
+     std::string sym_gfm_;
+     std::string oeprop_;
+     std::string comput_s2_;
 
 
      int *mopi; 		/* number of all MOs per irrep */
@@ -449,8 +450,8 @@ protected:
      int *vv_pairpiAB;
      int *vv_pairpiBB;
 
-     ULI *cost_ov_;
-     ULI *cost_vv_;
+     size_t *cost_ov_;
+     size_t *cost_vv_;
 
      double *evalsA;
      double *evalsB;

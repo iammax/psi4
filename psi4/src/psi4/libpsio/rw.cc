@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,23 +32,31 @@
  */
 
 #include <cstdio>
+#ifdef _MSC_VER
+#include <io.h>
+#define SYSTEM_READ ::_read
+#define SYSTEM_WRITE ::_write
+#else
 #include <unistd.h>
+#define SYSTEM_READ ::read
+#define SYSTEM_WRITE ::write
+#endif
 #include "psi4/libpsio/psio.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/psi4-dec.h"
 
 namespace psi {
 
-void PSIO::rw(unsigned int unit, char *buffer, psio_address address, ULI size,
+void PSIO::rw(size_t unit, char *buffer, psio_address address, size_t size,
               int wrt) {
   int errcod;
-  unsigned int i;
-  ULI errcod_uli;
-  ULI page, offset;
-  ULI buf_offset;
-  ULI this_page, this_page_max, this_page_total;
-  unsigned int first_vol, this_vol, numvols;
-  ULI bytes_left, num_full_pages;
+  size_t i;
+  size_t errcod_uli;
+  size_t page, offset;
+  size_t buf_offset;
+  size_t this_page, this_page_max, this_page_total;
+  size_t first_vol, this_vol, numvols;
+  size_t bytes_left, num_full_pages;
   psio_ud *this_unit;
 
   this_unit = &(psio_unit[unit]);
@@ -62,7 +71,7 @@ void PSIO::rw(unsigned int unit, char *buffer, psio_address address, ULI size,
     psio_error(unit, PSIO_ERROR_LSEEK);
   for (i=1, this_page=page+1; i < numvols; i++, this_page++) {
     this_vol = this_page % numvols;
-    errcod = psio_volseek(&(this_unit->vol[this_vol]), this_page, (ULI) 0,
+    errcod = psio_volseek(&(this_unit->vol[this_vol]), this_page, (size_t) 0,
                           numvols);
     if (errcod == -1)
       psio_error(unit, PSIO_ERROR_LSEEK);
@@ -78,12 +87,12 @@ void PSIO::rw(unsigned int unit, char *buffer, psio_address address, ULI size,
     this_page_total = this_page_max;
   buf_offset = 0;
   if (wrt) {
-      errcod_uli =:: write(this_unit->vol[first_vol].stream, &(buffer[buf_offset]),
+      errcod_uli = SYSTEM_WRITE(this_unit->vol[first_vol].stream, &(buffer[buf_offset]),
           this_page_total);
     if(errcod_uli != this_page_total) psio_error(unit,PSIO_ERROR_WRITE);
   }
   else {
-      errcod_uli = ::read(this_unit->vol[first_vol].stream, &(buffer[buf_offset]),
+      errcod_uli = SYSTEM_READ(this_unit->vol[first_vol].stream, &(buffer[buf_offset]),
           this_page_total);
     if(errcod_uli != this_page_total)
       psio_error(unit,PSIO_ERROR_READ);
@@ -99,12 +108,12 @@ void PSIO::rw(unsigned int unit, char *buffer, psio_address address, ULI size,
     this_vol = this_page % numvols;
     this_page_total = PSIO_PAGELEN;
     if(wrt) {
-        errcod_uli = ::write(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
+        errcod_uli = SYSTEM_WRITE(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
             this_page_total);
       if(errcod_uli != this_page_total) psio_error(unit,PSIO_ERROR_WRITE);
     }
     else {
-        errcod_uli = ::read(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
+        errcod_uli = SYSTEM_READ(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
             this_page_total);
       if(errcod_uli != this_page_total)
         psio_error(unit,PSIO_ERROR_READ);
@@ -117,12 +126,12 @@ void PSIO::rw(unsigned int unit, char *buffer, psio_address address, ULI size,
   this_vol = this_page % numvols;
   if(bytes_left) {
     if(wrt) {
-        errcod_uli = ::write(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
+        errcod_uli = SYSTEM_WRITE(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
             bytes_left);
       if(errcod_uli != bytes_left) psio_error(unit,PSIO_ERROR_WRITE);
     }
     else {
-        errcod_uli = ::read(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
+        errcod_uli = SYSTEM_READ(this_unit->vol[this_vol].stream, &(buffer[buf_offset]),
             bytes_left);
       if(errcod_uli != bytes_left)
         psio_error(unit,PSIO_ERROR_READ);
@@ -142,7 +151,7 @@ void PSIO::rw(unsigned int unit, char *buffer, psio_address address, ULI size,
    ** \ingroup PSIO
    */
 
-  int psio_rw(unsigned int unit, char *buffer, psio_address address, ULI size,
+  int psio_rw(size_t unit, char *buffer, psio_address address, size_t size,
               int wrt) {
     _default_psio_lib_->rw(unit, buffer, address, size, wrt);
     return 1;

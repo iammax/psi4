@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -178,7 +179,7 @@ void SAPT2p::natural_orbitalify_ccd()
   double **tARAR = block_matrix(occA*nvirA_,occA*nvirA_);
 
   psio_->read_entry(PSIF_SAPT_CCD,"T ARAR Amplitudes",(char *) tARAR[0],
-    occA*nvirA_*occA*nvirA_*(ULI) sizeof(double));
+    occA*nvirA_*occA*nvirA_*(size_t) sizeof(double));
 
   double **tARAr = block_matrix(occA*nvirA_,occA*no_nvirA_);
 
@@ -199,14 +200,14 @@ void SAPT2p::natural_orbitalify_ccd()
   free_block(tARAr);
 
   psio_->write_entry(PSIF_SAPT_CCD,"T ARAR Natorb Amplitudes",(char *)
-    tArAr[0],occA*no_nvirA_*occA*no_nvirA_*(ULI) sizeof(double));
+    tArAr[0],occA*no_nvirA_*occA*no_nvirA_*(size_t) sizeof(double));
 
   free_block(tArAr);
 
   double **tBSBS = block_matrix(occB*nvirB_,occB*nvirB_);
 
   psio_->read_entry(PSIF_SAPT_CCD,"T BSBS Amplitudes",(char *) tBSBS[0],
-    occB*nvirB_*occB*nvirB_*(ULI) sizeof(double));
+    occB*nvirB_*occB*nvirB_*(size_t) sizeof(double));
 
   double **tBSBs = block_matrix(occB*nvirB_,occB*no_nvirB_);
 
@@ -227,14 +228,14 @@ void SAPT2p::natural_orbitalify_ccd()
   free_block(tBSBs);
 
   psio_->write_entry(PSIF_SAPT_CCD,"T BSBS Natorb Amplitudes",(char *)
-    tBsBs[0],occB*no_nvirB_*occB*no_nvirB_*(ULI) sizeof(double));
+    tBsBs[0],occB*no_nvirB_*occB*no_nvirB_*(size_t) sizeof(double));
 
   free_block(tBsBs);
 
   double **tARBS = block_matrix(occA*nvirA_,occB*nvirB_);
 
   psio_->read_entry(PSIF_SAPT_CCD,"T ARBS Amplitudes",(char *) tARBS[0],
-    occA*nvirA_*occB*nvirB_*(ULI) sizeof(double));
+    occA*nvirA_*occB*nvirB_*(size_t) sizeof(double));
 
   double **tARBs = block_matrix(occA*nvirA_,occB*no_nvirB_);
 
@@ -264,9 +265,9 @@ void SAPT2p::natural_orbitalify_ccd()
   }}}}
 
   psio_->write_entry(PSIF_SAPT_CCD,"T ARBS Natorb Amplitudes",(char *)
-    tArBs[0],occA*no_nvirA_*occB*no_nvirB_*(ULI) sizeof(double));
+    tArBs[0],occA*no_nvirA_*occB*no_nvirB_*(size_t) sizeof(double));
   psio_->write_entry(PSIF_SAPT_CCD,"T BSAR Natorb Amplitudes",(char *)
-    tBsAr[0],occA*no_nvirA_*occB*no_nvirB_*(ULI) sizeof(double));
+    tBsAr[0],occA*no_nvirA_*occB*no_nvirB_*(size_t) sizeof(double));
 
   free_block(tArBs);
   free_block(tBsAr);
@@ -303,7 +304,7 @@ double SAPT2p::disp220t(int AAfile, const char *AAlabel, const char *ARlabel,
   C_DGEMM('N','T',aoccA*nvirA,aoccA*aoccA,ndf_+3,1.0,&(B_p_AR[0][0]),
     ndf_+3,&(B_p_AA[0][0]),ndf_+3,0.0,&(vARAA[0][0]),aoccA*aoccA);
 
-  time_t start = time(NULL);
+  time_t start = time(nullptr);
   time_t stop;
 
   for(int b=0,bs=0; b<aoccB; b++) {
@@ -354,7 +355,7 @@ double SAPT2p::disp220t(int AAfile, const char *AAlabel, const char *ARlabel,
       }}
     }}
    }
-  stop = time(NULL);
+  stop = time(nullptr);
   if (print_) {
     outfile->Printf("    (i = %3d of %3d) %10ld seconds\n",b+1,aoccB,
       stop-start);
@@ -405,7 +406,7 @@ double SAPT2p::disp220tccd(int AAnum, const char *AA_label, int Rnum, const char
   if (ampnum == PSIF_SAPT_CCD)  {
     t_ARAR = block_matrix(noccA*nvirA,noccA*nvirA);
     psio_->read_entry(ampnum,tarar,(char *) t_ARAR[0],noccA*nvirA*noccA*
-      nvirA*(ULI) sizeof(double));
+      nvirA*(size_t) sizeof(double));
   }
   else if (ampnum)  {
     t_ARAR = block_matrix(noccA*nvirA,noccA*nvirA);
@@ -414,7 +415,7 @@ double SAPT2p::disp220tccd(int AAnum, const char *AA_label, int Rnum, const char
       next_ARAR = psio_get_address(PSIO_ZERO,
         ((foccA*nvirA+ar)*(noccA+foccA)*nvirA+foccA*nvirA)*sizeof(double));
       psio_->read(ampnum,tarar,(char *) t_ARAR[ar],noccA*nvirA*
-        (ULI) sizeof(double),next_ARAR,&next_ARAR);
+        (size_t) sizeof(double),next_ARAR,&next_ARAR);
     }}
   }
   else {
@@ -442,14 +443,14 @@ double SAPT2p::disp220tccd(int AAnum, const char *AA_label, int Rnum, const char
 
   psio_address next_BSAR;
 
-  time_t start = time(NULL);
+  time_t start = time(nullptr);
   time_t stop;
 
   for(int b=0,bs=0; b<noccB; b++) {
   for(int s=0; s<nvirB; s++,bs++) {
 
     psio_address next_DF_BS = psio_get_address(PSIO_ZERO,((foccB + b)*nvirB + s)*
-      (ndf_+3)*(ULI) sizeof(double));
+      (ndf_+3)*(size_t) sizeof(double));
     psio_->read(BBnum,BS_label,(char *) &(B_p_bs[0]),sizeof(double)*
       ndf_,next_DF_BS,&next_DF_BS);
 
@@ -510,7 +511,7 @@ double SAPT2p::disp220tccd(int AAnum, const char *AA_label, int Rnum, const char
       }}
     }}
    }
-  stop = time(NULL);
+  stop = time(nullptr);
     outfile->Printf("    (i = %3d of %3d) %10ld seconds\n",b+1,noccB,stop-start);
   
   }

@@ -1,8 +1,6 @@
 #! MP2/cc-PVDZ computation of formic acid dimer binding energy
 #! using automatic counterpoise correction.  Monomers are specified using Cartesian coordinates.
 
-memory 250 mb
-
 
 molecule formic_dim {
    0 1
@@ -26,5 +24,5 @@ set globals {
    d_convergence 11
 }
 
-e_cp = cp('c4-mp2')
+e_cp = energy('c4-mp2', bsse_type='cp')
 

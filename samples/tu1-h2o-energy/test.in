@@ -1,7 +1,7 @@
 # Any line starting with the # character is a comment line
 #! Sample HF/cc-pVDZ H2O computation
 
-memory 250 mb
+memory 600 mb
 
 molecule h2o {
   O 
@@ -12,6 +12,9 @@ molecule h2o {
 set basis cc-pVDZ
 energy('scf')
 
+
 compare_values(-76.0266327341067125, get_variable('SCF TOTAL ENERGY'), 6, 'SCF energy')  #TEST
 compare_csx()  #TEST
+
+
 

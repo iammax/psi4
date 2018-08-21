@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,12 +35,11 @@
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/liboptions/liboptions.h"
 #include "psi4/libpsi4util/libpsi4util.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 #include "moinfo_base.h"
 
 
-
-using namespace std;
 
 namespace psi {
 
@@ -69,7 +69,7 @@ void MOInfoBase::startup()
   wfn_sym = 0;
 
   guess_occupation = true;
-  PSI_NULL(ioff);
+  PSI_nullptr(ioff);
   compute_ioff();
 }
 
@@ -86,7 +86,7 @@ void MOInfoBase::read_data()
     // Read sopi and save as a STL vector
     sopi           = convert_int_array_to_vector(nirreps, ref_wfn.nsopi());
     irr_labs       = ref_wfn.molecule()->irrep_labels();
-    nuclear_energy = ref_wfn.molecule()->nuclear_repulsion_energy();
+    nuclear_energy = ref_wfn.molecule()->nuclear_repulsion_energy(ref_wfn.get_dipole_field_strength());
 }
 
 void MOInfoBase::compute_number_of_electrons()
@@ -114,12 +114,12 @@ void MOInfoBase::compute_ioff()
     ioff[i] = ioff[i-1] + i;
 }
 
-void MOInfoBase::read_mo_space(int nirreps_ref, int& n, intvec& mo, string labels)
+void MOInfoBase::read_mo_space(int nirreps_ref, int& n, intvec& mo, std::string labels)
 {
     bool read = false;
 
-    vector<string> label_vec = split(labels);
-    for(unsigned int k = 0; k < label_vec.size(); ++k){
+    std::vector<std::string> label_vec = split(labels);
+    for(size_t k = 0; k < label_vec.size(); ++k){
         // Does the array exist in the input?
         std::string &label = label_vec[k];
         if(!options[label].has_changed()) continue; // The user didn't specify this, it's just the default

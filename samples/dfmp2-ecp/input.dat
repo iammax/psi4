@@ -1,0 +1,26 @@
+#! He-Ne dimer MP2 energies with ECP, Ne electrons correlated then frozen.
+
+
+molecule dimer {
+    Ne
+    Xe 1 3.0
+}
+
+set {
+    basis def2-svp
+    print 2
+}
+
+# All electrons on Ne correlated, all non-ECP electrons on Xe correlated
+Eall = energy('mp2')
+
+set freeze_core true
+set guess read
+# [He] electrons on Ne frozen, [Kr] electrons on Xe frozen
+Efzc = energy('mp2')
+
+set freeze_core false
+set num_frozen_docc 1
+set guess read
+# [He] electrons on Ne frozen,  only ECP electrons on Xe frozen
+EfHe = energy('mp2')

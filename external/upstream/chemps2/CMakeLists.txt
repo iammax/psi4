@@ -5,7 +5,14 @@ if(${ENABLE_CheMPS2})
         get_property(_loc TARGET CheMPS2::chemps2 PROPERTY LOCATION)
         message(STATUS "${Cyan}Found CheMPS2${ColourReset}: ${_loc} (found version ${CheMPS2_VERSION})")
         add_library(chemps2_external INTERFACE)  # dummy
+
+        # reset below necessary as find_package clears it. better solution sought
+        set(TargetHDF5_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/TargetHDF5 CACHE PATH "path to externally detected CheMPS2Config.cmake" FORCE)
     else()
+        if(${CMAKE_INSIST_FIND_PACKAGE_CheMPS2})
+            message(FATAL_ERROR "Suitable CheMPS2 could not be externally located as user insists")
+        endif()
+
         include(ExternalProject)
         message(STATUS "Suitable CheMPS2 could not be located, ${Magenta}Building CheMPS2${ColourReset} instead.")
 
@@ -20,10 +27,8 @@ if(${ENABLE_CheMPS2})
         ExternalProject_Add(chemps2_external
             DEPENDS lapack_external
                     hdf5_external
-            GIT_REPOSITORY https://github.com/loriab/CheMPS2
-            GIT_TAG config6
-            #GIT_REPOSITORY https://github.com/SebWouters/CheMPS2
-            #GIT_TAG v1.8.3
+            GIT_REPOSITORY https://github.com/SebWouters/CheMPS2
+            GIT_TAG v1.8.7
             UPDATE_COMMAND ""
             CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -42,12 +47,13 @@ if(${ENABLE_CheMPS2})
                        -DCMAKE_AR=${CMAKE_AR}
                        -DCMAKE_NM=${CMAKE_NM}
                        -DENABLE_TESTS=OFF
+                       -DOpenMP_LIBRARY_DIRS=${OpenMP_LIBRARY_DIRS}
                        -DTargetLAPACK_DIR=${STAGED_INSTALL_PREFIX}/share/cmake/TargetLAPACK
                        -DTargetHDF5_DIR=${STAGED_INSTALL_PREFIX}/share/cmake/TargetHDF5
             CMAKE_CACHE_ARGS -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
                              -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
-            INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
-            DESTDIR=${CMAKE_BINARY_DIR}/stage)
+                             -DTargetOpenMP_FIND_COMPONENTS:STRING=C;CXX
+            INSTALL_COMMAND DESTDIR=${CMAKE_BINARY_DIR}/stage ${CMAKE_MAKE_PROGRAM} install)
 
         set(CheMPS2_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/CheMPS2 CACHE PATH "path to internally built CheMPS2Config.cmake" FORCE)
     endif()

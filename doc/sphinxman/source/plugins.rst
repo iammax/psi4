@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -29,8 +30,8 @@
 
 .. _`sec:plugins`:
 
-Plugins: Adding New Functionality to |PSIfour|
-==============================================
+Creating New Plugins
+====================
 
 Modular Approach to Development
 -------------------------------
@@ -61,9 +62,8 @@ If the name you provide is not valid, |PSIfour| will complain.
 
 |PSIfour| will create a new directory with the name you specify for the
 plugin. In this example, a directory named myplugin will be created.
-
-All you need to do is cd into the directory, use |PSIfour| to generate
-a Makefile, and type make. Then execute psi4 in the directory on the
+All you need to do is ``cd`` into the directory, use |PSIfour| to generate
+a Makefile, and type make. Then execute ``psi4`` in the directory on the
 default input file. ::
 
    >>> cd myplugin
@@ -106,39 +106,86 @@ one of the following commands that meets your needs::
 
 .. _`sec:condaplugins`:
 
-.. Creating a New Plugin Using a Conda Pre-compiled Binary
-.. -------------------------------------------------------
-.. 
-.. |PSIfour| plugins can also be created using Conda for both |PSIfour| binary and 
-.. development environment.
-.. To compile a plugin with the default ``Makefile``, it is necessary to have the 
-.. ``gcc`` compiler installed in the Conda distribution or environment (below, 
-.. ``$PSI4CONDA``) used to run |PSIfour|. ::
-.. 
+Creating a New Plugin Using a Conda Pre-compiled Binary
+-------------------------------------------------------
+
 ..     # prepare
 ..     >>> bash
 ..     >>> export PATH=$PSI4CONDA/bin:$PATH  # usually already done from psi4 installation
 ..     >>> cd "$(dirname $(which psi4))"/..  # move into distribution/environment directory, $PSI4CONDA
 ..     >>> conda install gcc                 # install compilers into expected place
-.. 
-..     # check (yes, next line gives empty result. yes, LD_LIBRARY_PATH irrelevant)
-..     >>> echo $PYTHONHOME $PYTHONPATH $DYLD_LIBRARY_PATH $PSIDATADIR
-.. 
-..     >>> which python psi4 gcc
-..     $PSI4CONDA/bin/python
-..     $PSI4CONDA/bin/psi4
-..     $PSI4CONDA/bin/gcc
-.. 
-..     # create and compile plugin
-..     >>> psi4 --plugin-name testplugin     # generate new plugin
-..     >>> cd testplugin                     # move into plugin directory
-..     >>> make                              # compile the plugin to product testplugin.so
-..     >>> psi4                              # run sample input.dat
-..     Attention! This SCF may be density-fitted.
-.. 
-.. Please note that the conda distribution must be in ``$PATH`` or the
-.. conda enviroment must be activated before compilation and execution of
-.. plugins created using this procedure.
+
+|PSIfour| plugins can also be created using Conda for both |PSIfour|
+binary and development environment. On Linux (or Ubuntu shell on Windows), one can use the ``gcc``
+compiler installed alongside ``psi4`` itself in the Conda distribution
+or environment (below, ``$PSI4CONDA``). On Mac, one must use
+``libc++.so`` (*not* ``libstdc++.so``), and this can be accomplished by
+installing XCode from the App Store that provides ``clang`` and
+``clang++`` compilers.
+
+* Check environment ::
+
+    # yes, the following returns a blank line. yes, LD_LIBRARY_PATH irrelevant
+    >>> echo $PYTHONHOME $PYTHONPATH $DYLD_LIBRARY_PATH $PSIDATADIR
+
+    >>> which python psi4 g++ gfortran  # Linux
+    $PSI4CONDA/bin/python
+    $PSI4CONDA/bin/psi4
+    $PSI4CONDA/bin/gcc++
+    $PSI4CONDA/bin/gfortran
+    >>> which python psi4 g++ gfortran clang++  # Mac
+    $PSI4CONDA/bin/python
+    $PSI4CONDA/bin/psi4
+    $PSI4CONDA/bin/g++
+    $PSI4CONDA/bin/gfortran
+    /usr/bin/clang++
+
+    >>> which cmake
+    $PSI4CONDA/bin/cmake
+    # if above empty, ``conda install cmake``
+
+* Create and compile plugin ::
+
+    >>> psi4 --plugin-name testplugin
+    -- Creating "testplugin" with "basic" template. -----------------
+    ==> Created plugin files (in testplugin as basic):
+      __init__.py, CMakeLists.txt, doc.rst, input.dat, plugin.cc, pymodule.py
+
+    # move into plugin directory
+    >>> cd testplugin
+
+    # configure using build info from parent psi4
+    >>> `psi4 --plugin-compile`  # Linux
+    loading initial cache file $PSI4CONDA/share/cmake/psi4/psi4PluginCache.cmake
+    -- The CXX compiler identification is GNU 5.2.0
+    -- Check for working CXX compiler: $PSI4CONDA/bin/g++
+    -- Check for working CXX compiler: $PSI4CONDA/bin/g++ -- works
+    ...
+    -- Generating done
+    -- Build files have been written to: testplugin
+    >>> `psi4 --plugin-compile`  # Mac
+    loading initial cache file $PSI4CONDA/share/cmake/psi4/psi4PluginCache.cmake
+    -- The CXX compiler identification is AppleClang 7.0.0.7000176
+    -- Check for working CXX compiler: /usr/bin/clang++
+    -- Check for working CXX compiler: /usr/bin/clang++ -- works
+    ...
+    -- Generating done
+    -- Build files have been written to: testplugin
+
+    # compile the plugin to produce testplugin.so
+    >>> make
+    Scanning dependencies of target testplugin
+    [ 50%] Building CXX object CMakeFiles/testplugin.dir/plugin.cc.o
+    [100%] Linking CXX shared module testplugin.so
+    [100%] Built target testplugin
+
+    # run sample input.dat
+    >>> psi4
+    Attention! This SCF may be density-fitted.
+
+Please note that the conda distribution must be in ``$PATH`` or the
+conda enviroment must be activated before compilation and execution of
+plugins created using this procedure.
 
 Files in a Plugin Directory
 ---------------------------

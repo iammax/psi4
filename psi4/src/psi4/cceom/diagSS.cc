@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,6 +34,7 @@
 #include <cstdio>
 #include <string>
 #include <cmath>
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/libpsio/psio.h"
 #include "psi4/libqt/qt.h"
@@ -55,7 +57,7 @@ void restart_SS(double **alpha, int L, int num, int C_irr);
 void dgeev_eom(int L, double **G, double *evals, double **alpha);
 double norm_C1(dpdfile2 *C1A, dpdfile2 *C1B);
 double norm_C1_rhf(dpdfile2 *C1A);
-double scm_C1(dpdfile2 *C1A, dpdfile2 *C1B, double a);
+void scm_C1(dpdfile2 *C1A, dpdfile2 *C1B, double a);
 
 void diagSS(int C_irr) {
   dpdfile2 Fmi, FMI, Fae, FAE, Fme, FME;
@@ -243,8 +245,8 @@ void diagSS(int C_irr) {
 
    if (pf) outfile->Printf("%d initial single excitation guesses\n",C_index);
    if (C_index == 0) {
-      outfile->Printf( "No intial guesses obtained for %s state \n",
-	      moinfo.irr_labs[moinfo.sym^C_irr]);
+      outfile->Printf( "No initial guesses obtained for %s state \n",
+	      moinfo.irr_labs[moinfo.sym^C_irr].c_str());
       exit(1);
     }
   }
@@ -426,7 +428,7 @@ void diagSS(int C_irr) {
 		      lambda[k]-lambda_old[k], norm);
 
       if ( (norm > eom_params.residual_tol_SS) ||
-	   (fabs(lambda[k]-lambda_old[k]) > eom_params.eval_tol_SS) ) {
+	   (std::fabs(lambda[k]-lambda_old[k]) > eom_params.eval_tol_SS) ) {
         if (pf) outfile->Printf("%7s\n","N");
 	/*
 	  if (params.eom_ref == 0) precondition_SS_RHF(&RIA, lambda[k]);
@@ -515,7 +517,7 @@ void precondition_SS(dpdfile2 *RIA, dpdfile2 *Ria, double eval)
     for(i=0; i < RIA->params->rowtot[h]; i++)
       for(a=0; a < RIA->params->coltot[h^C_irr]; a++) {
         tval = eval - DIA.matrix[h][i][a];
-        if (fabs(tval) > 0.0001) RIA->matrix[h][i][a] /= tval;
+        if (std::fabs(tval) > 0.0001) RIA->matrix[h][i][a] /= tval;
       }
   global_dpd_->file2_mat_wrt(RIA);
   global_dpd_->file2_mat_close(RIA);
@@ -532,7 +534,7 @@ void precondition_SS(dpdfile2 *RIA, dpdfile2 *Ria, double eval)
     for(i=0; i < Ria->params->rowtot[h]; i++)
       for(a=0; a < Ria->params->coltot[h^C_irr]; a++) {
         tval = eval - Dia.matrix[h][i][a];
-        if (fabs(tval) > 0.0001) Ria->matrix[h][i][a] /= tval;
+        if (std::fabs(tval) > 0.0001) Ria->matrix[h][i][a] /= tval;
       }
   global_dpd_->file2_mat_wrt(Ria);
   global_dpd_->file2_mat_close(Ria);
@@ -616,7 +618,7 @@ void precondition_SS_RHF(dpdfile2 *RIA, double eval)
 
       for(a=0; a < local.pairdom_nrlen[ii]; a++) {
 	tval = eval + local.eps_occ[i] - local.eps_vir[ii][a];
-	if(fabs(tval) > 0.0001) T1bar[a] /= tval;
+	if(std::fabs(tval) > 0.0001) T1bar[a] /= tval;
 	/* else T1bar[a] = 0.0; */
       }
 
@@ -660,7 +662,7 @@ void precondition_SS_RHF(dpdfile2 *RIA, double eval)
       for(i=0; i < RIA->params->rowtot[h]; i++)
 	for(a=0; a < RIA->params->coltot[h^C_irr]; a++) {
 	  tval = eval - DIA.matrix[h][i][a];
-	  if (fabs(tval) > 0.0001) RIA->matrix[h][i][a] /= tval;
+	  if (std::fabs(tval) > 0.0001) RIA->matrix[h][i][a] /= tval;
 	}
     global_dpd_->file2_mat_wrt(RIA);
     global_dpd_->file2_mat_close(RIA);

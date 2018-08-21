@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -46,10 +47,11 @@
 #include "psi4/libqt/qt.h"
 #include "psi4/physconst.h"
 #include "psi4/psi4-dec.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/exception.h"
 
 
 
-using namespace std;
 using namespace psi;
 
 namespace psi {
@@ -80,16 +82,16 @@ namespace psi {
           int num_steps = 0;
           int total;
           double b2a3 = pc_bohr2angstroms * pc_bohr2angstroms * pc_bohr2angstroms;
-          ifstream input;
+          std::ifstream input;
           input.open("potential.dx");
           if (!input.good()) throw PSIEXCEPTION("Error opening potential.dx.");
           while (!input.eof())
           {
             char buf[512];
             input.getline(buf, 512);
-            stringstream cppbuf(buf);
-            string token;
-            vector <string> tokens;
+            std::stringstream cppbuf(buf);
+            std::string token;
+            std::vector <std::string> tokens;
             while(cppbuf >> token) tokens.push_back(token);
             if(tokens.size()) { // skip blank lines
 

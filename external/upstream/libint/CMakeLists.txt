@@ -1,16 +1,19 @@
-find_package(libint CONFIG QUIET COMPONENTS ${MAX_AM_ERI})
+find_package(Libint 1.2.0 CONFIG QUIET COMPONENTS ${MAX_AM_ERI})
 
-if(${libint_FOUND})
-    get_property(_loc TARGET libint::int PROPERTY LOCATION)
-    message(STATUS "${Cyan}Found libint ${libint_MAX_AM_ERI}${ColourReset}: ${_loc} (found version ${libint_VERSION})")
+if(${Libint_FOUND})
+    get_property(_loc TARGET Libint::int PROPERTY LOCATION)
+    message(STATUS "${Cyan}Found Libint ${Libint_MAX_AM_ERI}${ColourReset}: ${_loc} (found version ${Libint_VERSION})")
     add_library(libint_external INTERFACE)  # dummy
 else()
+    if(${CMAKE_INSIST_FIND_PACKAGE_Libint})
+        message(FATAL_ERROR "Suitable Libint could not be externally located as user insists")
+    endif()
+
     include(ExternalProject)
-    message(STATUS "Suitable libint could not be located, ${Magenta}Building libint${ColourReset} instead.")
+    message(STATUS "Suitable Libint could not be located, ${Magenta}Building Libint${ColourReset} instead.")
     ExternalProject_Add(libint_external
-        GIT_REPOSITORY https://github.com/psi4/libint
-        #GIT_TAG v1.7.1  # TODO tag when stable
-        UPDATE_COMMAND ""
+        # "git checkout" fails on Windows, because of "*" in filenames (e.g. basis set files)
+        URL https://github.com/evaleev/libint/archive/b13e71d3cf9960460c4019e5ecf2546a5f361c71.zip
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
@@ -24,11 +27,11 @@ else()
                    -DBUILD_FPIC=${BUILD_FPIC}
                    -DENABLE_GENERIC=${ENABLE_GENERIC}
                    -DLIBC_INTERJECT=${LIBC_INTERJECT}
+                   -DMERGE_LIBDERIV_INCLUDEDIR=ON
         CMAKE_CACHE_ARGS -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
                          -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
-        INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
-        DESTDIR=${CMAKE_BINARY_DIR}/stage)
+        INSTALL_COMMAND DESTDIR=${CMAKE_BINARY_DIR}/stage ${CMAKE_MAKE_PROGRAM} install)
 
-    set(libint_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/libint CACHE PATH "path to internally built libintConfig.cmake" FORCE)
+    set(Libint_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/Libint CACHE PATH "path to internally built LibintConfig.cmake" FORCE)
 endif()
 

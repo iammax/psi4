@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -28,13 +29,9 @@
 #ifndef _psi_src_lib_libmints_matrix_h_
 #define _psi_src_lib_libmints_matrix_h_
 
-#include "psi4/libparallel/serialize.h"
-#include "psi4/libparallel/parallel.h"
 #include "psi4/libmints/dimension.h"
 #include "psi4/libmints/typedefs.h"
 #include "psi4/libpsi4util/exception.h"
-
-#include "psi4/pybind11.h"
 
 #include <cstdio>
 #include <string>
@@ -47,9 +44,6 @@ struct dpdfile2;
 
 class PSIO;
 class Vector;
-class SimpleVector;
-class MatrixFactory;
-class SimpleMatrix;
 class Dimension;
 class Molecule;
 class Vector3;
@@ -68,7 +62,7 @@ enum diagonalize_order {
  *
  * Using a matrix factory makes creating these a breeze.
  */
-class Matrix : public std::enable_shared_from_this<Matrix> {
+class PSI_API Matrix : public std::enable_shared_from_this<Matrix> {
 protected:
     /// Matrix data
     double ***matrix_;
@@ -153,7 +147,6 @@ public:
     /**
      * Constructor, sets up the matrix
      * Convenience case for 1 irrep
-     * Note: You should be using SimpleMatrix
      *
      * @param rows Row dimensionality.
      * @param cols Column dimensionality.
@@ -162,7 +155,6 @@ public:
     /**
      * Constructor, sets up the matrix
      * Convenience case for 1 irrep
-     * Note: You should be using SimpleMatrix
      *
      * @param name Name of the matrix.
      * @param rows Row dimensionality.
@@ -275,8 +267,8 @@ public:
      * @param nso Number of orbitals to use to read in.
      * @returns true if loaded, false otherwise.
      */
-    bool load(psi::PSIO* psio, unsigned int fileno, const std::string& tocentry, int nso);
-    bool load(std::shared_ptr<psi::PSIO>& psio, unsigned int fileno, const std::string& tocentry, int nso);
+    bool load(psi::PSIO* psio, size_t fileno, const std::string& tocentry, int nso);
+    bool load(std::shared_ptr<psi::PSIO>& psio, size_t fileno, const std::string& tocentry, int nso);
     /** @} */
 
     /**
@@ -288,8 +280,8 @@ public:
      * @param fileno File to read from.
      * @param savetype Save information suffixing point group label.
      */
-    void load(psi::PSIO* const psio, unsigned int fileno, SaveType savetype=LowerTriangle);
-    void load(std::shared_ptr<psi::PSIO>& psio, unsigned int fileno, SaveType savetype=LowerTriangle);
+    void load(psi::PSIO* const psio, size_t fileno, SaveType savetype=LowerTriangle);
+    void load(std::shared_ptr<psi::PSIO>& psio, size_t fileno, SaveType savetype=LowerTriangle);
     /** @} */
 
     /**
@@ -327,8 +319,8 @@ public:
      * @param fileno File to write to.
      * @param savetype Save information suffixing point group label.
      */
-    void save(psi::PSIO* const psio, unsigned int fileno, SaveType savetype=LowerTriangle);
-    void save(std::shared_ptr<psi::PSIO>& psio, unsigned int fileno, SaveType savetype=LowerTriangle);
+    void save(psi::PSIO* const psio, size_t fileno, SaveType savetype=LowerTriangle);
+    void save(std::shared_ptr<psi::PSIO>& psio, size_t fileno, SaveType savetype=LowerTriangle);
     /** @} */
 
     /**
@@ -362,16 +354,6 @@ public:
      * @param irrep irrep block into which we copy
      */
     void set(const double * const * const sq, int irrep);
-    /** @} */
-
-    /**
-     * @{
-     * Copies sq to matrix_
-     *
-     * @param sq SimpleMatrix object to set this matrix to.
-     */
-    void set(const SimpleMatrix * const sq);
-    void set(const std::shared_ptr<SimpleMatrix>& sq);
     /** @} */
 
     /**
@@ -460,13 +442,22 @@ public:
     void set_column(int h, int m, SharedVector vec);
 
     /**
-     * Python wrapper for get
+     * Get a matrix block
+     *
+     * @param rows Rows slice
+     * @param cols Columns slice
+     * @return SharedMatrix object
      */
-    double pyget(const py::tuple& key);
+    SharedMatrix get_block(const Slice& rows,const Slice& cols);
+
     /**
-     * Python wrapper for set
+     * Set a matrix block
+     *
+     * @param rows Rows slice
+     * @param cols Columns slice
+     * @param block the SharedMatrix object block to set
      */
-    void pyset(const py::tuple& key, double value);
+    void set_block(const Slice& rows,const Slice& cols,SharedMatrix block);
 
     /**
      * Returns the double** pointer to the h-th irrep block matrix
@@ -535,13 +526,6 @@ public:
     double *to_lower_triangle() const;
 
     /**
-     * Converts this to a full non-symmetry-block matrix
-     *
-     * @returns The SimpleMatrix copy of the current matrix.
-     */
-    SimpleMatrix *to_simple_matrix() const;
-
-    /**
      * Sets the name of the matrix, used in print(...) and save(...)
      *
      * @param name New name to use.
@@ -562,10 +546,10 @@ public:
      * @param outfile File point to use, defaults to Psi4's outfile.
      * @param extra When printing the name of the 'extra' will be printing after the name.
      */
-    void print(std::string outfile = "outfile", const char *extra=NULL) const;
+    void print(std::string outfile = "outfile", const char *extra=nullptr) const;
 
     /// Prints the matrix with atom and xyz styling.
-    void print_atom_vector(std::string OutFileRMR = "outfile");
+    void print_atom_vector(std::string out_fname = "outfile");
 
     /**
      * Prints the matrix so that it can be copied and pasted into Mathematica easily.
@@ -659,6 +643,12 @@ public:
      */
     void symmetrize_gradient(std::shared_ptr<Molecule> mol);
 
+    /**
+     * Symmetrizes the a Hessian like matrix (3 * N, 3 * N) using information
+     * from the given Molecule.
+     */
+    void symmetrize_hessian(std::shared_ptr<Molecule> mol);
+
     /// Set this to identity
     void identity();
     /// Zeros this out
@@ -737,16 +727,14 @@ public:
     /// Scale column n of irrep h by a
     void scale_column(int h, int n, double a);
 
-    /** Special function to transform a SimpleMatrix (no symmetry) into
-     *  a symmetry matrix.
+    /** Special function to add symmetry to a Matrix .
      *
-     *  \param a SimpleMatrix to transform
+     *  \param a Matrix to transform
      *  \param transformer The matrix returned by PetiteList::aotoso() that acts as the transformer
      */
     void apply_symmetry(const SharedMatrix& a, const SharedMatrix& transformer);
 
-    /** Special function to transform a symmetry matrix into
-     *  a SimpleMatrix (no symmetry).
+    /** Special function to remove symmetry from a matrix.
      *
      *  \param a symmetry matrix to transform
      *  \param transformer The matrix returned by PetiteList::sotoao() that acts as the transformer
@@ -903,7 +891,7 @@ public:
 
     ///@{
     /// Matrix of size (m x n) which is the conditioned pseudoinverse of this (m x n)
-    SharedMatrix pseudoinverse(double condition = 0.0, bool* conditioned = NULL);
+    SharedMatrix pseudoinverse(double condition, int &nremoved);
     ///@}
 
     /*! Extract a conditioned orthonormal basis from this SPD matrix
@@ -1101,15 +1089,6 @@ public:
     const double& operator()(int h, int i, int j) const { return matrix_[h][i][j]; }
     /// @}
 
-    // Serializable pure virtual functions:
-    void send();
-    void recv();
-    void bcast(int broadcaster);
-    /**
-     * Performs element-by-element sum of all data from all nodes.
-     */
-    void sum();
-
     /// Writes this to the dpdfile2 given
     void write_to_dpdfile2(dpdfile2 *outFile);
 
@@ -1117,9 +1096,9 @@ public:
     /// Checks matrix equality.
     /// @param rhs Matrix to compare to.
     /// @returns true if equal, otherwise false.
-    bool equal(const Matrix& rhs);
-    bool equal(const SharedMatrix& rhs);
-    bool equal(const Matrix* rhs);
+    bool equal(const Matrix& rhs, double TOL=1.0e-10);
+    bool equal(const SharedMatrix& rhs, double TOL=1.0e-10);
+    bool equal(const Matrix* rhs, double TOL=1.0e-10);
     /// @}
 
     /// @{
@@ -1131,18 +1110,11 @@ public:
     bool equal_but_for_row_order(const Matrix* rhs, double TOL=1.0e-10);
     /// @}
 
-    /**
-     * Takes a Python object (assumes that it is a "matrix" array) and
-     * sets the matrix to that.
-     */
-    void set_by_python_list(const py::list& data);
-
      /**
      * Adds accessability to the matrix shape for numpy
      */
     void set_numpy_shape(std::vector<int> shape) { numpy_shape_ = shape; }
     std::vector<int> numpy_shape() { return numpy_shape_; }
-    std::vector<py::buffer_info> array_interface();
 
     /**
      * Rotates columns i and j in irrep h, by an angle theta

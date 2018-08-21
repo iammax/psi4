@@ -1,29 +1,38 @@
 /*
- *@BEGIN LICENSE
+ * @BEGIN LICENSE
  *
- * PSI4: an ab initio quantum chemistry software package
+ * Psi4: an open-source quantum chemistry software package
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
- * This program is distributed in the hope that it will be useful,
+ * The copyrights for code used from other parties are included in
+ * the corresponding files.
+ *
+ * This file is part of Psi4.
+ *
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- *@END LICENSE
+ * @END LICENSE
  */
 
 #ifndef PKMGR_H
 #define PKMGR_H
 
 //TODO Const correctness of everything
+#include "psi4/libmints/typedefs.h"
+#include <psi4/libpsio/psio.hpp>
+#include <vector>
 
 namespace psi {
 
@@ -206,11 +215,11 @@ public:
 
 
     /// Store the computed integrals in the appropriate buffers
-    void integrals_buffering(const double *buffer, unsigned int P, unsigned int Q,
-                             unsigned int R, unsigned int S);
+    void integrals_buffering(const double *buffer, size_t P, size_t Q,
+                             size_t R, size_t S);
     /// Store the computed wK integrals in the appropriate buffers
-    void integrals_buffering_wK(const double *buffer, unsigned int P, unsigned int Q,
-                             unsigned int R, unsigned int S);
+    void integrals_buffering_wK(const double *buffer, size_t P, size_t Q,
+                             size_t R, size_t S);
 
     /// Write the buffers of integrals to PK storage
     virtual void write() = 0;
@@ -377,7 +386,7 @@ public:
 
 };
 
-/** Yoshimine sorting algoritm: the integrals are divided in
+/** Yoshimine sorting algorithm: the integrals are divided in
  * N batches that can individually fit in memory. Then, all
  * integrals are computed only once, and sorted in N little buffers,
  * one for each batch. As soon as a buffer is full, it gets dumped

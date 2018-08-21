@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,17 +31,13 @@
 #include "dfocc.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libdiis/diismanager.h"
-using namespace std;
 
+namespace psi {
+namespace dfoccwave {
 
-namespace psi{ namespace dfoccwave{
-
-void DFOCC::ccdl_l2_amps()
-{
-
+void DFOCC::ccdl_l2_amps() {
     // defs
     SharedTensor2d K, I, L, Lnew, T, U, Tau, W, X, Y, Z;
-
 
     // l_ij^ab <= X(ia,jb) + X(jb,a) = 2Xt(ia,jb)
     // X(ia,jb) = \sum_{e} l_ij^ae F_eb = \sum_{e} L(ia,je) F_eb
@@ -89,11 +86,14 @@ void DFOCC::ccdl_l2_amps()
 
     // WabefL2
     if (Wabef_type_ == "AUTO") {
-	if (!do_ppl_hm) ccdl_WabefL2();
-	else ccsdl_WabefL2_high_mem();
-    }
-    else if (Wabef_type_ == "LOW_MEM") ccdl_WabefL2();
-    else if (Wabef_type_ == "HIGH_MEM") ccsdl_WabefL2_high_mem();
+        if (!do_ppl_hm)
+            ccdl_WabefL2();
+        else
+            ccsdl_WabefL2_high_mem();
+    } else if (Wabef_type_ == "LOW_MEM")
+        ccdl_WabefL2();
+    else if (Wabef_type_ == "HIGH_MEM")
+        ccsdl_WabefL2_high_mem();
 
     // Denom
     Lnew = SharedTensor2d(new Tensor2d("New L2 (IA|JB)", naoccA, navirA, naoccA, navirA));
@@ -110,10 +110,10 @@ void DFOCC::ccdl_l2_amps()
     Lnew.reset();
 
     // DIIS
-    std::shared_ptr<Matrix> RL2(new Matrix("RL2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> RL2(new Matrix("RL2", naoccA * navirA, naoccA * navirA));
     Tau->to_matrix(RL2);
     Tau.reset();
-    std::shared_ptr<Matrix> L2(new Matrix("L2", naoccA*navirA, naoccA*navirA));
+    std::shared_ptr<Matrix> L2(new Matrix("L2", naoccA * navirA, naoccA * navirA));
     l2->to_matrix(L2);
 
     // add entry
@@ -140,8 +140,9 @@ void DFOCC::ccdl_l2_amps()
     EccdL = Escf + EcorrL;
 
     // print
-    //l2->print();
+    // l2->print();
 
-}// end ccdl_l2_amps
+}  // end ccdl_l2_amps
 
-}} // End Namespaces
+}  // namespace dfoccwave
+}  // namespace psi

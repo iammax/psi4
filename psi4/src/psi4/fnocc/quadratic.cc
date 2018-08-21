@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,8 +30,7 @@
 #include "psi4/libmints/vector.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/wavefunction.h"
-#include"psi4/libqt/qt.h"
-#include<sys/times.h>
+#include "psi4/libqt/qt.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/psifiles.h"
 #ifdef _OPENMP
@@ -54,7 +54,7 @@ void CoupledCluster::CPU_I1ab_quadratic(CCTaskParams params){
   long int v = nvirt;
   long int b,m,n,e,a,id=0;
   // build I1(a,b)
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio->open(PSIF_DCC_IAJB,PSIO_OPEN_OLD);
   psio->read_entry(PSIF_DCC_IAJB,"E2iajb",(char*)&integrals[0],o*o*v*v*sizeof(double));
   psio->close(PSIF_DCC_IAJB,1);
@@ -129,7 +129,7 @@ void CoupledCluster::CPU_I1pij_I1ia_lessmem_quadratic(CCTaskParams params){
   long int m,j,e,f,i,a,b;//,one=1;
   long int ov2 = o*v*v;
   long int id=0;
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
 
   // no singles
   // build I1(i,a). n^4
@@ -239,7 +239,7 @@ void CoupledCluster::I2ijkl_quadratic(CCTaskParams params){
   long int id,i,j,a,b,o,v;
   o = ndoccact;
   v = nvirt;
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
 
   if (t2_on_disk){
      psio->open(PSIF_DCC_T2,PSIO_OPEN_OLD);
@@ -292,7 +292,7 @@ void CoupledCluster::I2iabj_quadratic(CCTaskParams params){
   long int id,i,j,a,b,o,v;
   o = ndoccact;
   v = nvirt;
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio_address addr;
 
   if (t2_on_disk){
@@ -402,7 +402,7 @@ void CoupledCluster::I2iajb_quadratic(CCTaskParams params){
   long int id,i,j,a,b,o,v;
   o = ndoccact;
   v = nvirt;
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio_address addr;
 
   psio->open(PSIF_DCC_IAJB,PSIO_OPEN_OLD);

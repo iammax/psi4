@@ -3,41 +3,44 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-#include <map>
 #include "dcft.h"
-#include <cmath>
+#include "defines.h"
+
 #include "psi4/libiwl/iwl.hpp"
 #include "psi4/libdpd/dpd.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/libtrans/integraltransform.h"
-#include "defines.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/liboptions/liboptions.h"
 
+#include <map>
+#include <cmath>
 
-using namespace std;
 
 namespace psi{ namespace dcft{
 
@@ -50,8 +53,8 @@ void
 DCFTSolver::scf_guess_RHF()
 {
     dcft_timer_on("DCFTSolver::rhf_guess");
-    SharedMatrix T = SharedMatrix(new Matrix("SO basis kinetic energy integrals", nirrep_, nsopi_, nsopi_));
-    SharedMatrix V = SharedMatrix(new Matrix("SO basis potential energy integrals", nirrep_, nsopi_, nsopi_));
+    auto T = std::make_shared<Matrix>("SO basis kinetic energy integrals", nirrep_, nsopi_, nsopi_);
+    auto V = std::make_shared<Matrix>("SO basis potential energy integrals", nirrep_, nsopi_, nsopi_);
     double *ints = init_array(ntriso_);
 
     IWL::read_one(psio_.get(), PSIF_OEI, PSIF_SO_T, ints, ntriso_, 0, 0, "outfile");
@@ -220,7 +223,7 @@ DCFTSolver::process_so_ints_RHF()
           lastBuffer = iwl->last_buffer();
           for(int index = 0; index < iwl->buffer_count(); ++index){
               labelIndex = 4*index;
-              p = abs((int) lblptr[labelIndex++]);
+              p = std::abs((int) lblptr[labelIndex++]);
               q = (int) lblptr[labelIndex++];
               r = (int) lblptr[labelIndex++];
               s = (int) lblptr[labelIndex++];
@@ -517,8 +520,8 @@ DCFTSolver::compute_scf_error_vector_RHF()
 
     size_t nElements = 0;
     double sumOfSquares = 0.0;
-    SharedMatrix tmp1(new Matrix("tmp1", nirrep_, nsopi_, nsopi_));
-    SharedMatrix tmp2(new Matrix("tmp2", nirrep_, nsopi_, nsopi_));
+    auto tmp1 = std::make_shared<Matrix>("tmp1", nirrep_, nsopi_, nsopi_);
+    auto tmp2 = std::make_shared<Matrix>("tmp2", nirrep_, nsopi_, nsopi_);
     // form FDS
     tmp1->gemm(false, false, 1.0, kappa_so_a_, ao_s_, 0.0);
     scf_error_a_->gemm(false, false, 1.0, Fa_, tmp1, 0.0);

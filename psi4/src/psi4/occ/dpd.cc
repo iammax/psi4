@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -32,9 +33,9 @@
 #include "defines.h"
 #include "arrays.h"
 #include "dpd.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
-using namespace std;
+#include <cmath>
 
 namespace psi{ namespace occwave{
 
@@ -43,22 +44,22 @@ namespace psi{ namespace occwave{
 /********************************************************************************************/
 SymBlockMatrix::SymBlockMatrix()
 {
-    matrix_ = NULL;
-    rowspi_ = NULL;
-    colspi_ = NULL;
+    matrix_ = nullptr;
+    rowspi_ = nullptr;
+    colspi_ = nullptr;
 }
 
 SymBlockMatrix::SymBlockMatrix(std::string name)
 {
-    matrix_ = NULL;
-    rowspi_ = NULL;
-    colspi_ = NULL;
+    matrix_ = nullptr;
+    rowspi_ = nullptr;
+    colspi_ = nullptr;
 }
 
 
 SymBlockMatrix::SymBlockMatrix(int nirreps, int *ins_rowspi, int *ins_colspi)
 {
-    matrix_ = NULL;
+    matrix_ = nullptr;
     nirreps_ = nirreps;
     rowspi_ = new int[nirreps_];
     colspi_ = new int[nirreps_];
@@ -71,7 +72,7 @@ SymBlockMatrix::SymBlockMatrix(int nirreps, int *ins_rowspi, int *ins_colspi)
 
 SymBlockMatrix::SymBlockMatrix(std::string name, int nirreps, int *ins_rowspi, int *ins_colspi)
 {
-    matrix_ = NULL;
+    matrix_ = nullptr;
     name_ = name;
     nirreps_ = nirreps;
     rowspi_ = new int[nirreps_];
@@ -133,7 +134,7 @@ void SymBlockMatrix::memalloc()
       if (rowspi_[h] != 0 && colspi_[h] != 0) {
 	matrix_[h] = block_matrix(rowspi_[h], colspi_[h]);
       }
-      else matrix_[h] = NULL;
+      else matrix_[h] = nullptr;
     }
 }//
 
@@ -143,7 +144,7 @@ void SymBlockMatrix::release()
     for (int h=0; h<nirreps_; h++) {
       if (matrix_[h]) free_block(matrix_[h]);
     }
-    matrix_ = NULL;
+    matrix_ = nullptr;
 }//
 
 void SymBlockMatrix::zero()
@@ -316,7 +317,7 @@ double SymBlockMatrix::rms()
 	}
       }
     }
-    summ=sqrt(summ)/dim;
+    summ=std::sqrt(summ)/dim;
     return summ;
 }//
 
@@ -338,7 +339,7 @@ double SymBlockMatrix::rms(SymBlockMatrix* Atemp)
 	}
       }
     }
-    summ=sqrt(summ)/dim;
+    summ=std::sqrt(summ)/dim;
     return summ;
 }//
 
@@ -361,7 +362,7 @@ void SymBlockMatrix::set(int h, int i, int j, double value)
 void SymBlockMatrix::set(double **Asq)
 {
     int offset;
-    if (Asq == NULL) return;
+    if (Asq == nullptr) return;
 
     offset = 0;
     for (int h=0; h<nirreps_; h++) {
@@ -404,7 +405,7 @@ double *SymBlockMatrix::to_lower_triangle()
         sizecol += colspi_[h];
     }
     if (sizerow != sizecol)
-        return NULL;
+        return nullptr;
 
     double *tri = new double[ioff[sizerow]];
     double **temp = to_block_matrix();
@@ -436,15 +437,15 @@ double **SymBlockMatrix::to_block_matrix()
     return temp;
 }//
 
-void SymBlockMatrix::print(std::string OutFileRMR)
+void SymBlockMatrix::print(std::string out_fname)
 {
-   std::shared_ptr<psi::PsiOutStream> printer=(OutFileRMR=="outfile"?outfile:
-         std::shared_ptr<OutFile>(new OutFile(OutFileRMR,APPEND)));
+   std::shared_ptr<psi::PsiOutStream> printer=(out_fname=="outfile"?outfile:
+         std::make_shared<PsiOutStream>(out_fname,std::ostream::app));
    if (name_.length()) printer->Printf( "\n ## %s ##\n", name_.c_str());
     for (int h=0; h<nirreps_; h++) {
       if (rowspi_[h] != 0 && colspi_[h] != 0) {
 	printer->Printf( "\n Irrep: %d\n", h+1);
-	print_mat(matrix_[h], rowspi_[h], colspi_[h], OutFileRMR);
+	print_mat(matrix_[h], rowspi_[h], colspi_[h], out_fname);
 	printer->Printf( "\n");
       }
     }
@@ -588,7 +589,7 @@ void SymBlockMatrix::lineq_flin(SymBlockVector* Xvec, double *det)
     }
 }//
 
-//int pople(double **A, double *x, int dimen, int num_vecs, double tolerance, std::string OutFileRMR, int print_lvl)
+//int pople(double **A, double *x, int dimen, int num_vecs, double tolerance, std::string out_fname, int print_lvl)
 void SymBlockMatrix::lineq_pople(SymBlockVector* Xvec, int num_vecs, double cutoff)
 {
     for (int h=0; h<nirreps_; h++) {
@@ -611,7 +612,7 @@ void SymBlockMatrix::mgs()
 	  rmgs1+=matrix_[h][i][k]* matrix_[h][i][k];
 	}
 
-	rmgs1=sqrt(rmgs1);
+	rmgs1=std::sqrt(rmgs1);
 
 	for (int i=0; i<rowspi_[h];i++) {
 	  matrix_[h][i][k]/=rmgs1;
@@ -656,7 +657,7 @@ void SymBlockMatrix::write(PSIO* psio, int itap, bool saveSubBlocks)
     if (saveSubBlocks) {
         for (int h=0; h<nirreps_; h++) {
            std::string str(name_);
-            str += " Irrep " + to_string(h);
+            str += " Irrep " + std::to_string(h);
 
             // Write the sub-blocks
             if (colspi_[h] > 0 && rowspi_[h] > 0)
@@ -767,7 +768,7 @@ void SymBlockMatrix::read_oooo(std::shared_ptr<psi::PSIO> psio, int itap, int *m
    {
 
         int i = ERIIN.labels()[fi];
-            i = abs(i);
+            i = std::abs(i);
         int j = ERIIN.labels()[fi+1];
         int k = ERIIN.labels()[fi+2];
         int l = ERIIN.labels()[fi+3];
@@ -817,7 +818,7 @@ void SymBlockMatrix::read_oovv(std::shared_ptr<psi::PSIO> psio, int itap, int no
    {
 
         int i = ERIIN.labels()[fi];
-            i = abs(i);
+            i = std::abs(i);
         int j = ERIIN.labels()[fi+1];
         int a = ERIIN.labels()[fi+2];
         int b = ERIIN.labels()[fi+3];
@@ -861,20 +862,20 @@ void SymBlockMatrix::read_oovv(std::shared_ptr<psi::PSIO> psio, int itap, int no
 /********************************************************************************************/
 SymBlockVector::SymBlockVector()
 {
-    vector_ = NULL;
-    dimvec_ = NULL;
+    vector_ = nullptr;
+    dimvec_ = nullptr;
 }
 
-SymBlockVector::SymBlockVector(string name)
+SymBlockVector::SymBlockVector(std::string name)
 {
-    vector_ = NULL;
-    dimvec_ = NULL;
+    vector_ = nullptr;
+    dimvec_ = nullptr;
 }
 
 
 SymBlockVector::SymBlockVector(int nirreps, int *ins_dimvec)
 {
-    vector_ = NULL;
+    vector_ = nullptr;
     nirreps_ = nirreps;
     dimvec_ = new int[nirreps_];
     for (int h=0; h<nirreps_; h++) {
@@ -883,9 +884,9 @@ SymBlockVector::SymBlockVector(int nirreps, int *ins_dimvec)
     memalloc();
 }//
 
-SymBlockVector::SymBlockVector(string name, int nirreps, int *ins_dimvec)
+SymBlockVector::SymBlockVector(std::string name, int nirreps, int *ins_dimvec)
 {
-    vector_ = NULL;
+    vector_ = nullptr;
     nirreps_ = nirreps;
     name_ = name;
     dimvec_ = new int[nirreps_];
@@ -915,7 +916,7 @@ void SymBlockVector::memalloc()
       if (dimvec_[h] != 0) {
 	vector_[h] = new double [dimvec_[h]];
       }
-      else vector_[h] = NULL;
+      else vector_[h] = nullptr;
     }
 }//
 
@@ -925,7 +926,7 @@ void SymBlockVector::release()
     for (int h=0; h<nirreps_; h++) {
       if (vector_[h]) free(vector_[h]);
     }
-    vector_ = NULL;
+    vector_ = nullptr;
 }//
 
 void SymBlockVector::zero()
@@ -1044,7 +1045,7 @@ double SymBlockVector::rms()
 	  summ += vector_[h][j] * vector_[h][j];
 	}
     }
-    summ=sqrt(summ)/dim;
+    summ=std::sqrt(summ)/dim;
     return summ;
 }//
 
@@ -1064,7 +1065,7 @@ double SymBlockVector::rms(SymBlockVector* Atemp)
 	  summ += (vector_[h][j] * vector_[h][j]) - (Atemp->vector_[h][j] * Atemp->vector_[h][j]);
 	}
     }
-    summ=sqrt(summ)/dim;
+    summ=std::sqrt(summ)/dim;
     return summ;
 }//
 
@@ -1077,7 +1078,7 @@ double SymBlockVector::norm()
 	  summ += vector_[h][j] * vector_[h][j];
 	}
     }
-    summ=sqrt(summ);
+    summ=std::sqrt(summ);
     return summ;
 }//
 
@@ -1100,7 +1101,7 @@ void SymBlockVector::set(int h, int i, double value)
 void SymBlockVector::set(double *Avec)
 {
     int offset;
-    if (Avec == NULL) return;
+    if (Avec == nullptr) return;
 
     offset = 0;
     for (int h=0; h<nirreps_; h++) {
@@ -1148,10 +1149,10 @@ double SymBlockVector::trace()
     return value;
 }//
 
-void SymBlockVector::print(std::string OutFileRMR)
+void SymBlockVector::print(std::string out_fname)
 {
-   std::shared_ptr<psi::PsiOutStream> printer=(OutFileRMR=="outfile"?outfile:
-         std::shared_ptr<OutFile>(new OutFile(OutFileRMR,APPEND)));
+   std::shared_ptr<psi::PsiOutStream> printer=(out_fname=="outfile"?outfile:
+         std::make_shared<PsiOutStream>(out_fname,std::ostream::app));
    if (name_.length()) printer->Printf( "\n ## %s ##\n", name_.c_str());
     for (int h=0; h<nirreps_; h++) {
       if (dimvec_[h] != 0) {

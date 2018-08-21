@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,8 +32,7 @@
 #include "occwave.h"
 #include "defines.h"
 
-
-using namespace std;
+#include <cmath>
 
 
 namespace psi{ namespace occwave{
@@ -149,7 +149,7 @@ if (reference_ == "RESTRICTED") {
     else if (lineq == "FLIN") {
          double det = 0.0;
          Aorb->lineq_flin(kappaA, &det);
-         if (fabs(det) < DIIS_MIN_DET) {
+         if (std::fabs(det) < DIIS_MIN_DET) {
              outfile->Printf( "Warning!!! MO Hessian matrix is near-singular\n");
              outfile->Printf( "Determinant is %6.3E\n", det);
 
@@ -177,7 +177,7 @@ if (reference_ == "RESTRICTED") {
         // find biggest_kappa
 	biggest_kappaA=0;
 	for (int i=0; i<nidpA;i++) {
-	    if (fabs(kappaA->get(i)) > biggest_kappaA) biggest_kappaA=fabs(kappaA->get(i));
+	    if (std::fabs(kappaA->get(i)) > biggest_kappaA) biggest_kappaA=std::fabs(kappaA->get(i));
 	}
 
         // Scale
@@ -191,9 +191,9 @@ if (reference_ == "RESTRICTED") {
 	  biggest_kappaA=0;
 	  for (int i=0; i<nidpA;i++)
 	  {
-	      if (fabs(kappaA->get(i)) > biggest_kappaA)
+	      if (std::fabs(kappaA->get(i)) > biggest_kappaA)
 	      {
-		  biggest_kappaA = fabs(kappaA->get(i));
+		  biggest_kappaA = std::fabs(kappaA->get(i));
 	      }
 	  }
 	}
@@ -474,8 +474,8 @@ else if (reference_ == "UNRESTRICTED") {
     else if (lineq == "FLIN") {
          double det = 0.0;
          Aorb->lineq_flin(kappa, &det);
-         if (fabs(det) < DIIS_MIN_DET) {
-         //if (fabs(det) < 1e-2) {
+         if (std::fabs(det) < DIIS_MIN_DET) {
+         //if (std::fabs(det) < 1e-2) {
              outfile->Printf( "Warning!!! MO Hessian matrix is near-singular\n");
              outfile->Printf( "Determinant is %6.3E\n", det);
 
@@ -519,12 +519,12 @@ else if (reference_ == "UNRESTRICTED") {
         // find biggest_kappa
 	biggest_kappaA=0;
 	for (int i=0; i<nidpA;i++) {
-	    if (fabs(kappaA->get(i)) > biggest_kappaA) biggest_kappaA=fabs(kappaA->get(i));
+	    if (std::fabs(kappaA->get(i)) > biggest_kappaA) biggest_kappaA=std::fabs(kappaA->get(i));
 	}
 
 	biggest_kappaB=0;
 	for (int i=0; i<nidpB;i++){
-	    if (fabs(kappaB->get(i)) > biggest_kappaB) biggest_kappaB=fabs(kappaB->get(i));
+	    if (std::fabs(kappaB->get(i)) > biggest_kappaB) biggest_kappaB=std::fabs(kappaB->get(i));
 	}
 
         // Scale
@@ -542,9 +542,9 @@ else if (reference_ == "UNRESTRICTED") {
 	  biggest_kappaA=0;
 	  for (int i=0; i<nidpA;i++)
 	  {
-	      if (fabs(kappaA->get(i)) > biggest_kappaA)
+	      if (std::fabs(kappaA->get(i)) > biggest_kappaA)
 	      {
-		  biggest_kappaA = fabs(kappaA->get(i));
+		  biggest_kappaA = std::fabs(kappaA->get(i));
 	      }
 	  }
 	}
@@ -554,9 +554,9 @@ else if (reference_ == "UNRESTRICTED") {
 	  biggest_kappaB=0;
 	  for (int i=0; i<nidpB;i++)
 	  {
-	      if (fabs(kappaB->get(i)) > biggest_kappaB)
+	      if (std::fabs(kappaB->get(i)) > biggest_kappaB)
 	      {
-		  biggest_kappaB=fabs(kappaB->get(i));
+		  biggest_kappaB=std::fabs(kappaB->get(i));
 	      }
 	  }
 	}

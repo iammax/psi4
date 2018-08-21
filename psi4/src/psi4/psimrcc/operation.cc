@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -36,8 +37,8 @@ namespace psi{
 
     namespace psimrcc{
 
-double* CCOperation::local_work = NULL;
-double* CCOperation::out_of_core_buffer = NULL;
+double* CCOperation::local_work = nullptr;
+double* CCOperation::out_of_core_buffer = nullptr;
 double CCOperation::zero_timing=0.0;
 double CCOperation::numerical_timing=0.0;
 double CCOperation::contract_timing=0.0;
@@ -70,12 +71,12 @@ void CCOperation::print()
   if(reindexing.size())
     outfile->Printf("\n\tReindexing = %s",reindexing.c_str());
   outfile->Printf("\n\tNumericalFactor = %lf",factor);
-  outfile->Printf("\tAssigment = %s",assignment.c_str());
+  outfile->Printf("\tAssignment = %s",assignment.c_str());
   outfile->Printf("\tOperation = %s",operation.c_str());
   outfile->Printf("\n\tA = %s",A_Matrix->get_label().c_str());
-  if(B_Matrix!=NULL)
+  if(B_Matrix!=nullptr)
     outfile->Printf("\tB = %s",B_Matrix->get_label().c_str());
-  if(C_Matrix!=NULL)
+  if(C_Matrix!=nullptr)
     outfile->Printf("\tC = %s",C_Matrix->get_label().c_str());
 }
 
@@ -86,10 +87,10 @@ void CCOperation::print_operation()
   if(reindexing.size())
     outfile->Printf(" %s",reindexing.c_str());
   outfile->Printf(" %lf",factor);
-  if(B_Matrix!=NULL)
+  if(B_Matrix!=nullptr)
     outfile->Printf(" %s",B_Matrix->get_label().c_str());
   outfile->Printf(" %s",operation.c_str());
-  if(C_Matrix!=NULL)
+  if(C_Matrix!=nullptr)
     outfile->Printf(" %s",C_Matrix->get_label().c_str());
 }
 

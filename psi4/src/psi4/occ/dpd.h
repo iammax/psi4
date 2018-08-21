@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,7 +31,6 @@
 
 
 using namespace psi;
-using namespace std;
 
 namespace psi{ namespace occwave{
 
@@ -82,7 +82,7 @@ class SymBlockMatrix
   double get(int h, int m, int n);
   double *to_lower_triangle();
   double **to_block_matrix();
-  void print(std::string OutFileRMR);
+  void print(std::string out_fname);
   void print();
   void set_to_identity();
   void gemm(bool transa, bool transb, double alpha, const SymBlockMatrix* a, const SymBlockMatrix* b, double beta);
@@ -117,15 +117,15 @@ class SymBlockVector
   private:
   double **vector_; // Object
   int *dimvec_;      // dimensions per irrep
-  string name_;      // Name of the vector
+  std::string name_;      // Name of the vector
   int nirreps_;     // Number of irreps
 
 
   public:
   SymBlockVector();  //default constructer
-  SymBlockVector(string name);
+  SymBlockVector(std::string name);
   SymBlockVector(int nirreps, int *ins_dimvec);
-  SymBlockVector(string name, int nirreps, int *ins_dimvec);
+  SymBlockVector(std::string name, int nirreps, int *ins_dimvec);
   ~SymBlockVector(); //destructer
 
   int *dimvec();
@@ -148,7 +148,7 @@ class SymBlockVector
   void set(double *Avec);
   double get(int h, int m);
   double *to_vector();
-  void print(std::string OutFileRMR);
+  void print(std::string out_fname);
   void print();
   void set_to_unit();
   void gemv(bool transa, double alpha, SymBlockMatrix* A, SymBlockVector* X, double beta);

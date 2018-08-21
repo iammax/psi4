@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -36,7 +37,7 @@
 #include "psi4/libqt/qt.h"
 #include "MOInfo.h"
 #include "ccwave.h"
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #include "psi4/libciomr/libciomr.h"
 namespace psi { namespace ccenergy {
 
@@ -57,7 +58,7 @@ void CCEnergyWavefunction::analyze(void)
   max = 9;
   min = 0;
   width = (max-min) / (num_div);
-  std::shared_ptr<OutFile> printer(new OutFile("tamps.dat",APPEND));
+  auto printer = std::make_shared<PsiOutStream>("tamps.dat",std::ostream::app);
   amp_array = init_array(num_div);
 
   nvir = moinfo_.virtpi[0];
@@ -79,7 +80,7 @@ void CCEnergyWavefunction::analyze(void)
 	    tmp[0], nso, 0.0, T2trans[ij], nso);
 
     for(ab=0; ab<nso*nso; ab++) {
-      value = fabs(log10(fabs(T2trans[ij][ab])));
+      value = std::fabs(std::log10(std::fabs(T2trans[ij][ab])));
       tot2++;
       if ((value >= max) && (value <= (max+width))) {
 	amp_array[num_div-1]++;
@@ -116,7 +117,7 @@ void CCEnergyWavefunction::analyze(void)
   max = 2;
   min = -5;
   width = (max-min) / (num_div);
-  std::shared_ptr<OutFile> printer2(new OutFile("t1amps.dat",APPEND));
+  auto printer2 = std::make_shared<PsiOutStream>("t1amps.dat",std::ostream::app);
   amp_array = init_array(num_div);
 
   global_dpd_->file2_init(&T1, PSIF_CC_OEI, 0, 0, 1, "tIA");
@@ -133,8 +134,8 @@ void CCEnergyWavefunction::analyze(void)
   tot1 = tot2 = 0;
   for(i=0; i < nocc; i++) {
     for(a=0; a < nso; a++) {
-      /*      value = fabs(log10(fabs(T1trans[i][a]))); */
-      value = log10(fabs(T1.matrix[0][i][a]));
+      /*      value = std::fabs(log10(std::fabs(T1trans[i][a]))); */
+      value = std::log10(std::fabs(T1.matrix[0][i][a]));
       tot2++;
       if ((value >= max) && (value <= (max+width))) {
 	amp_array[num_div-1]++;

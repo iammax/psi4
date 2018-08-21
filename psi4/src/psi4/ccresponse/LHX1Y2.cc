@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -323,12 +324,6 @@ double LHX1Y2(const char *pert_x, int irrep_x, double omega_x,
   global_dpd_->buf4_close(&Z1);
   global_dpd_->file2_close(&z);
 
-/*** marker ***/
-/*** I suspect a bug in this term.  H2O2/STO-3G or DZ yields different results
- * with symmetry on and off here.  The discrepancy disappears for larger
- * basis sets, however. Note also that a similar bug may exist in the X1 or
- * X2 code, based on comparisons with a spin-adapted toy code.
- * -TDC 5 May 2009 */
   sprintf(lbl, "Z_%s_AE", pert_x);
   global_dpd_->file2_init(&z, PSIF_CC_TMP0, irrep_x, 1, 1, lbl);
 
@@ -362,7 +357,7 @@ double LHX1Y2(const char *pert_x, int irrep_x, double omega_x,
       }
       nrows = moinfo.virtpi[Gf];
       ncols = moinfo.virtpi[Ge];
-      if(nrows & ncols) {
+      if(nrows && ncols) {
 	C_DGEMV('n',nrows,ncols,1,&X[W.col_offset[Gfe][Gf]],ncols,
 		X1.matrix[Gm][M],1,1,z.matrix[Gb][B],1);
       }

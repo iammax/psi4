@@ -3,29 +3,32 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
 #include "dcft.h"
+#include "defines.h"
+
 #include "psi4/libdpd/dpd.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libiwl/iwl.hpp"
@@ -33,9 +36,11 @@
 #include "psi4/psifiles.h"
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/libdiis/diismanager.h"
-#include "defines.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/liboptions/liboptions.h"
 
-using namespace std;
+#include <algorithm>
+#include <functional>
 
 namespace psi{ namespace dcft{
 
@@ -722,8 +727,8 @@ DCFTSolver::print_opdm()
 
     // Obtain natural occupancies
     // Form one-particle density matrix
-    SharedMatrix a_opdm (new Matrix("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix b_opdm (new Matrix("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_));
+    auto a_opdm = std::make_shared<Matrix>("MO basis OPDM (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto b_opdm = std::make_shared<Matrix>("MO basis OPDM (Beta)", nirrep_, nmopi_, nmopi_);
 
     // Alpha spin
     for(int h = 0; h < nirrep_; ++h){
@@ -762,10 +767,10 @@ DCFTSolver::print_opdm()
     }
 
     // Diagonalize OPDM to obtain NOs
-    SharedMatrix aevecs(new Matrix("Eigenvectors (Alpha)", nirrep_, nmopi_, nmopi_));
-    SharedMatrix bevecs(new Matrix("Eigenvectors (Beta)", nirrep_, nmopi_, nmopi_));
-    SharedVector aevals(new Vector("Eigenvalues (Alpha)", nirrep_, nmopi_));
-    SharedVector bevals(new Vector("Eigenvalues (Beta)", nirrep_, nmopi_));
+    auto aevecs = std::make_shared<Matrix>("Eigenvectors (Alpha)", nirrep_, nmopi_, nmopi_);
+    auto bevecs = std::make_shared<Matrix>("Eigenvectors (Beta)", nirrep_, nmopi_, nmopi_);
+    auto aevals = std::make_shared<Vector>("Eigenvalues (Alpha)", nirrep_, nmopi_);
+    auto bevals = std::make_shared<Vector>("Eigenvalues (Beta)", nirrep_, nmopi_);
 
     a_opdm->diagonalize(aevecs, aevals, descending);
     b_opdm->diagonalize(bevecs, bevals, descending);
@@ -780,45 +785,42 @@ DCFTSolver::print_opdm()
         }
     }
 
-    sort(aPairs.begin(), aPairs.end(), greater<std::pair<double, int> >());
-    sort(bPairs.begin(), bPairs.end(), greater<std::pair<double, int> >());
+    sort(aPairs.begin(), aPairs.end(), std::greater<std::pair<double, int> >());
+    sort(bPairs.begin(), bPairs.end(), std::greater<std::pair<double, int> >());
 
     int *aIrrepCount = init_int_array(nirrep_);
     int *bIrrepCount = init_int_array(nirrep_);
-    char **irrepLabels = molecule_->irrep_labels();
+    std::vector<std::string> irrepLabels = molecule_->irrep_labels();
 
     outfile->Printf( "\n\tOrbital occupations:\n\t\tAlpha occupied orbitals\n\t\t");
     for (int i = 0, count = 0; i < nalpha_; ++i, ++count) {
         int irrep = aPairs[i].second;
-        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep], aPairs[i].first);
+        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep].c_str(), aPairs[i].first);
         if (count % 4 == 3 && i != nalpha_)
             outfile->Printf( "\n\t\t");
     }
     outfile->Printf( "\n\n\t\tBeta occupied orbitals\n\t\t");
     for (int i = 0, count = 0; i < nbeta_; ++i, ++count) {
         int irrep = bPairs[i].second;
-        outfile->Printf( "%4d%-4s%11.4f  ", ++bIrrepCount[irrep], irrepLabels[irrep], bPairs[i].first);
+        outfile->Printf( "%4d%-4s%11.4f  ", ++bIrrepCount[irrep], irrepLabels[irrep].c_str(), bPairs[i].first);
         if (count % 4 == 3 && i != nbeta_)
             outfile->Printf( "\n\t\t");
     }
     outfile->Printf( "\n\n\t\tAlpha virtual orbitals\n\t\t");
     for (int i = nalpha_, count = 0; i < nmo_; ++i, ++count) {
         int irrep = aPairs[i].second;
-        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep], aPairs[i].first);
+        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep].c_str(), aPairs[i].first);
         if (count % 4 == 3 && i != nmo_)
             outfile->Printf( "\n\t\t");
     }
     outfile->Printf( "\n\n\t\tBeta virtual orbitals\n\t\t");
     for (int i = nbeta_, count = 0; i < nmo_; ++i, ++count) {
         int irrep = bPairs[i].second;
-        outfile->Printf( "%4d%-4s%11.4f  ", ++bIrrepCount[irrep], irrepLabels[irrep], bPairs[i].first);
+        outfile->Printf( "%4d%-4s%11.4f  ", ++bIrrepCount[irrep], irrepLabels[irrep].c_str(), bPairs[i].first);
         if (count % 4 == 3 && i != nmo_)
             outfile->Printf( "\n\t\t");
     }
     outfile->Printf( "\n\n");
-    for (int h = 0; h < nirrep_; ++h)
-        free(irrepLabels[h]);
-    free(irrepLabels);
     free(aIrrepCount);
     free(bIrrepCount);
 }
@@ -831,14 +833,14 @@ DCFTSolver::refine_tau() {
 
     // Iteratively compute the exact Tau
 
-    SharedMatrix aocc_tau_old(new Matrix("MO basis Tau (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_));
-    SharedMatrix bocc_tau_old(new Matrix("MO basis Tau (Beta Occupied, old)", nirrep_, nboccpi_, nboccpi_));
-    SharedMatrix avir_tau_old(new Matrix("MO basis Tau (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_));
-    SharedMatrix bvir_tau_old(new Matrix("MO basis Tau (Beta Virtual, old)", nirrep_, nbvirpi_, nbvirpi_));
-    SharedMatrix aocc_d(new Matrix("Non-idempotency of OPDM (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_));
-    SharedMatrix bocc_d(new Matrix("Non-idempotency of OPDM (Beta Occupied, old)", nirrep_, nboccpi_, nboccpi_));
-    SharedMatrix avir_d(new Matrix("Non-idempotency of OPDM (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_));
-    SharedMatrix bvir_d(new Matrix("Non-idempotency of OPDM (Beta Virtual, old)", nirrep_, nbvirpi_, nbvirpi_));
+    auto aocc_tau_old = std::make_shared<Matrix>("MO basis Tau (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_);
+    auto bocc_tau_old = std::make_shared<Matrix>("MO basis Tau (Beta Occupied, old)", nirrep_, nboccpi_, nboccpi_);
+    auto avir_tau_old = std::make_shared<Matrix>("MO basis Tau (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_);
+    auto bvir_tau_old = std::make_shared<Matrix>("MO basis Tau (Beta Virtual, old)", nirrep_, nbvirpi_, nbvirpi_);
+    auto aocc_d = std::make_shared<Matrix>("Non-idempotency of OPDM (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_);
+    auto bocc_d = std::make_shared<Matrix>("Non-idempotency of OPDM (Beta Occupied, old)", nirrep_, nboccpi_, nboccpi_);
+    auto avir_d = std::make_shared<Matrix>("Non-idempotency of OPDM (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_);
+    auto bvir_d = std::make_shared<Matrix>("Non-idempotency of OPDM (Beta Virtual, old)", nirrep_, nbvirpi_, nbvirpi_);
 
     bool converged = false;
     bool failed = false;
@@ -862,10 +864,10 @@ DCFTSolver::refine_tau() {
                                        DIISEntry::Matrix, bvir_tau_.get());
     }
 
-    SharedMatrix aocc_r(new Matrix("Residual (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_));
-    SharedMatrix bocc_r(new Matrix("Residual (Beta Occupied)", nirrep_, nboccpi_, nboccpi_));
-    SharedMatrix avir_r(new Matrix("Residual (Alpha Virtual)", nirrep_, navirpi_, navirpi_));
-    SharedMatrix bvir_r(new Matrix("Residual (Beta Virtual)", nirrep_, nbvirpi_, nbvirpi_));
+    auto aocc_r = std::make_shared<Matrix>("Residual (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_);
+    auto bocc_r = std::make_shared<Matrix>("Residual (Beta Occupied)", nirrep_, nboccpi_, nboccpi_);
+    auto avir_r = std::make_shared<Matrix>("Residual (Alpha Virtual)", nirrep_, navirpi_, navirpi_);
+    auto bvir_r = std::make_shared<Matrix>("Residual (Beta Virtual)", nirrep_, nbvirpi_, nbvirpi_);
 
     while(!converged && !failed){
         std::string diisString;
@@ -996,14 +998,14 @@ DCFTSolver::refine_tau() {
         bocc_tau_->zero();
         bvir_tau_->zero();
         // Diagonalize and take a square root
-        SharedMatrix aocc_evecs(new Matrix("Eigenvectors (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_));
-        SharedMatrix bocc_evecs(new Matrix("Eigenvectors (Beta Occupied)", nirrep_, nboccpi_, nboccpi_));
-        SharedMatrix avir_evecs(new Matrix("Eigenvectors (Alpha Virtual)", nirrep_, navirpi_, navirpi_));
-        SharedMatrix bvir_evecs(new Matrix("Eigenvectors (Beta Virtual)", nirrep_, nbvirpi_, nbvirpi_));
-        SharedVector aocc_evals(new Vector("Eigenvalues (Alpha Occupied)", nirrep_, naoccpi_));
-        SharedVector bocc_evals(new Vector("Eigenvalues (Beta Occupied)", nirrep_, nboccpi_));
-        SharedVector avir_evals(new Vector("Eigenvalues (Alpha Virtual)", nirrep_, navirpi_));
-        SharedVector bvir_evals(new Vector("Eigenvalues (Beta Virtual)", nirrep_, nbvirpi_));
+        auto aocc_evecs = std::make_shared<Matrix>("Eigenvectors (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_);
+        auto bocc_evecs = std::make_shared<Matrix>("Eigenvectors (Beta Occupied)", nirrep_, nboccpi_, nboccpi_);
+        auto avir_evecs = std::make_shared<Matrix>("Eigenvectors (Alpha Virtual)", nirrep_, navirpi_, navirpi_);
+        auto bvir_evecs = std::make_shared<Matrix>("Eigenvectors (Beta Virtual)", nirrep_, nbvirpi_, nbvirpi_);
+        auto aocc_evals = std::make_shared<Vector>("Eigenvalues (Alpha Occupied)", nirrep_, naoccpi_);
+        auto bocc_evals = std::make_shared<Vector>("Eigenvalues (Beta Occupied)", nirrep_, nboccpi_);
+        auto avir_evals = std::make_shared<Vector>("Eigenvalues (Alpha Virtual)", nirrep_, navirpi_);
+        auto bvir_evals = std::make_shared<Vector>("Eigenvalues (Beta Virtual)", nirrep_, nbvirpi_);
         aocc_tau_old->diagonalize(aocc_evecs, aocc_evals);
         bocc_tau_old->diagonalize(bocc_evecs, bocc_evals);
         avir_tau_old->diagonalize(avir_evecs, avir_evals);

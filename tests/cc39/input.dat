@@ -1,7 +1,5 @@
 #! RHF-CC2-LR/cc-pVDZ dynamic polarizabilities of HOF molecule.
 
-memory 250 mb
-
 molecule hof {
   0 1
   O
@@ -14,4 +12,10 @@ set {
   omega [0.05, 0.1, au]
 }
 
-property('cc2',properties=['polarizability'])
+properties('cc2',properties=['polarizability'])
+
+refpol_911   =    5.289283300369  #TEST
+refpol_456   =    5.456588276958  #TEST
+
+compare_values(refpol_911,   get_variable("CC2 DIPOLE POLARIZABILITY @ 911NM"),  3, "CC2 polarizability @ 911nm") #TEST
+compare_values(refpol_456,   get_variable("CC2 DIPOLE POLARIZABILITY @ 456NM"),  3, "CC2 polarizability @ 456nm") #TEST

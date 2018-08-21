@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -335,7 +336,7 @@ void OverlapInt::compute_pair_deriv2(const GaussianShell& s1, const GaussianShel
                             buffer_[(0*size)+ao12] += (4.0*a1*a1*x[l1+2][l2]*y[m1][m2]*z[n1][n2] -
                                                       2.0*a1*(2*l1+1)*x[l1][l2]*y[m1][m2]*z[n1][n2]) * over_pf;
                             if (l1 > 1)
-                                buffer_[(0*size)+ao12] += over_pf*l1*(l1-1)*x[l1-2][l2]*y[m1][m1]*z[n1][n2];
+                                buffer_[(0*size)+ao12] += over_pf*l1*(l1-1)*x[l1-2][l2]*y[m1][m2]*z[n1][n2];
 
                             // S_{\mu\nu}^{a_x a_y}
                             buffer_[(1*size)+ao12] += over_pf*4.0*a1*a1*x[l1+1][l2]*y[m1+1][m2]*z[n1][n2];
@@ -359,7 +360,7 @@ void OverlapInt::compute_pair_deriv2(const GaussianShell& s1, const GaussianShel
                             buffer_[(3*size)+ao12] += (4.0*a1*a1*x[l1][l2]*y[m1+2][m2]*z[n1][n2] -
                                                       2.0*a1*(2*m1+1)*x[l1][l2]*y[m1][m2]*z[n1][n2]) * over_pf;
                             if (m1 > 1)
-                                buffer_[(3*size)+ao12] += over_pf*m1*(m1-1)*x[l1][l2]*y[m1-2][m1]*z[n1][n2];
+                                buffer_[(3*size)+ao12] += over_pf*m1*(m1-1)*x[l1][l2]*y[m1-2][m2]*z[n1][n2];
 
                             // S_{\mu\nu}^{a_y a_z}
                             buffer_[(4*size)+ao12] += over_pf*4.0*a1*a1*x[l1][l2]*y[m1+1][m2]*z[n1+1][n2];
@@ -374,7 +375,7 @@ void OverlapInt::compute_pair_deriv2(const GaussianShell& s1, const GaussianShel
                             buffer_[(5*size)+ao12] += (4.0*a1*a1*x[l1][l2]*y[m1][m2]*z[n1+2][n2] -
                                                       2.0*a1*(2*n1+1)*x[l1][l2]*y[m1][m2]*z[n1][n2]) * over_pf;
                             if (n1 > 1)
-                                buffer_[(5*size)+ao12] += over_pf*n1*(n1-1)*x[l1][l2]*y[m1][m1]*z[n1-2][n2];
+                                buffer_[(5*size)+ao12] += over_pf*n1*(n1-1)*x[l1][l2]*y[m1][m2]*z[n1-2][n2];
 
                             ao12++;
                         }

@@ -3,28 +3,29 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
-#include "psi4/lib3index/3index.h"
+
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libpsio/psio.h"
 #include "psi4/libpsio/aiohandler.h"
@@ -33,32 +34,27 @@
 #include "psi4/psifiles.h"
 #include "psi4/libmints/sieve.h"
 #include "psi4/libiwl/iwl.hpp"
-#include "jk.h"
-#include "jk_independent.h"
-#include "link.h"
-#include "direct_screening.h"
-#include "cubature.h"
-#include "points.h"
-
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/integral.h"
 #include "psi4/lib3index/cholesky.h"
+#include "psi4/libpsi4util/process.h"
+
+#include "jk.h"
 
 #include <sstream>
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-using namespace std;
 using namespace psi;
 
 namespace psi {
 
 
 CDJK::CDJK(std::shared_ptr<BasisSet> primary, double cholesky_tolerance):
-    DFJK(primary,primary), cholesky_tolerance_(cholesky_tolerance)
+    DiskDFJK(primary,primary), cholesky_tolerance_(cholesky_tolerance)
 {
 }
 CDJK::~CDJK()
@@ -72,7 +68,7 @@ void CDJK::initialize_JK_disk()
 void CDJK::initialize_JK_core()
 {
     timer_on("CD: cholesky decomposition");
-    std::shared_ptr<IntegralFactory> integral (new IntegralFactory(primary_,primary_,primary_,primary_));
+    auto integral = std::make_shared<IntegralFactory>(primary_,primary_,primary_,primary_);
     int ntri = sieve_->function_pairs().size();
     /// If user asks to read integrals from disk, just read them from disk.
     /// Qmn is only storing upper triangle.
@@ -81,7 +77,7 @@ void CDJK::initialize_JK_core()
     {
         psio_->open(unit_,PSIO_OPEN_OLD);
         psio_->read_entry(unit_, "length", (char*)&ncholesky_, sizeof(long int));
-        Qmn_ = SharedMatrix(new Matrix("Qmn (CD Integrals)", ncholesky_ , ntri));
+        Qmn_ = std::make_shared<Matrix>("Qmn (CD Integrals)", ncholesky_ , ntri);
         double** Qmnp = Qmn_->pointer();
         psio_->read_entry(unit_, "(Q|mn) Integrals", (char*) Qmnp[0], sizeof(double) * ntri * ncholesky_);
         psio_->close(unit_,1);
@@ -91,22 +87,22 @@ void CDJK::initialize_JK_core()
     }
 
     ///If user does not want to read from disk, recompute the cholesky integrals
-    std::shared_ptr<CholeskyERI> Ch (new CholeskyERI(std::shared_ptr<TwoBodyAOInt>(integral->eri()),0.0,cholesky_tolerance_,memory_));
+    auto Ch = std::make_shared<CholeskyERI>(std::shared_ptr<TwoBodyAOInt>(integral->eri()),0.0,cholesky_tolerance_,memory_);
     Ch->choleskify();
     ncholesky_  = Ch->Q();
-    ULI three_memory = ncholesky_ * ntri;
-    ULI nbf = primary_->nbf();
+    size_t three_memory = ncholesky_ * ntri;
+    size_t nbf = primary_->nbf();
 
     ///Kinda silly to check for memory after you perform CD.
     ///Most likely redundant as cholesky also checks for memory.
-    if ( memory_  < ((ULI)sizeof(double) * three_memory + (ULI)sizeof(double)* ncholesky_ * nbf * nbf))
+    if ( memory_  < ((size_t)sizeof(double) * three_memory + (size_t)sizeof(double)* ncholesky_ * nbf * nbf))
         throw PsiException("Not enough memory for CD.",__FILE__,__LINE__);
 
     std::shared_ptr<Matrix> L = Ch->L();
     double ** Lp = L->pointer();
     timer_off("CD: cholesky decomposition");
 
-    Qmn_ = SharedMatrix(new Matrix("Qmn (CD Integrals)", ncholesky_ , ntri));
+    Qmn_ = std::make_shared<Matrix>("Qmn (CD Integrals)", ncholesky_ , ntri);
 
     double** Qmnp = Qmn_->pointer();
 

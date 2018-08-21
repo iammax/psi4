@@ -1,11 +1,15 @@
-if(${ENABLE_PCMSolver})
-    find_package(PCMSolver 1.1.9 CONFIG QUIET)
+    if(${ENABLE_PCMSolver})
+    find_package(PCMSolver 1.2.1 CONFIG QUIET)
 
     if(${PCMSolver_FOUND})
         get_property(_loc TARGET PCMSolver::pcm PROPERTY LOCATION)
         message(STATUS "${Cyan}Found PCMSolver${ColourReset}: ${_loc} (found version ${PCMSolver_VERSION})")
         add_library(pcmsolver_external INTERFACE)  # dummy
     else()
+        if(${CMAKE_INSIST_FIND_PACKAGE_PCMSolver})
+            message(FATAL_ERROR "Suitable PCMSolver could not be externally located as user insists")
+        endif()
+
         include(ExternalProject)
         message(STATUS "Suitable PCMSolver could not be located, ${Magenta}Building PCMSolver${ColourReset} instead.")
 
@@ -19,7 +23,7 @@ if(${ENABLE_PCMSolver})
 
         ExternalProject_Add(pcmsolver_external
             GIT_REPOSITORY https://github.com/PCMSolver/pcmsolver
-            GIT_TAG v1.1.9
+            GIT_TAG v1.2.1
             UPDATE_COMMAND ""
             CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -34,23 +38,21 @@ if(${ENABLE_PCMSolver})
                        -DPYTHON_INTERPRETER=${PYTHON_EXECUTABLE}
                        -DSTATIC_LIBRARY_ONLY=${_a_only}
                        -DSHARED_LIBRARY_ONLY=${_so_only}
-                       -DENABLE_OPENMP=${ENABLE_OPENMP}  # relevant for thread safety
+                       -DENABLE_OPENMP=OFF
                        #-DENABLE_XHOST=${ENABLE_XHOST}  # option missing
                        # always fpic'd
                        -DENABLE_GENERIC=${ENABLE_GENERIC}
-                       -DENABLE_DOCS=OFF
                        -DENABLE_TESTS=OFF
                        -DENABLE_TIMER=OFF
                        -DENABLE_LOGGER=OFF
                        -DBUILD_STANDALONE=OFF
-                       -DENABLE_FORTRAN_API=OFF
+                       -DTEST_Fortran_API=OFF
                        -DENABLE_CXX11_SUPPORT=ON
                        -DENABLE_64BIT_INTEGERS=OFF
             CMAKE_CACHE_ARGS -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
                              -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
                              -DCMAKE_Fortran_FLAGS:STRING=${CMAKE_Fortran_FLAGS}
-            INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
-            DESTDIR=${CMAKE_BINARY_DIR}/stage)
+            INSTALL_COMMAND DESTDIR=${CMAKE_BINARY_DIR}/stage ${CMAKE_MAKE_PROGRAM} install)
 
         set(PCMSolver_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/PCMSolver CACHE PATH "path to internally built PCMSolverConfig.cmake" FORCE)
     endif()

@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -27,18 +28,13 @@
 
 from __future__ import absolute_import
 
-# Gn theory.
-
-import re
-import os
-import math
-import warnings
 from psi4 import core
 from psi4.driver import driver
 from psi4.driver import p4util
-from psi4.driver import p4const
-#from driver import *
+from psi4.driver import constants
 # never import aliases into this file
+
+# Gn theory.
 
 def run_gaussian_2(name, **kwargs):
 
@@ -52,10 +48,10 @@ def run_gaussian_2(name, **kwargs):
         ['FNOCC','COMPUTE_MP4_TRIPLES'],
         ['FREEZE_CORE'],
         ['MP2_TYPE'],
-        ['SCF','SCF_TYPE'])
+        ['SCF_TYPE'])
 
     # override default scf_type
-    core.set_local_option('SCF','SCF_TYPE','PK')
+    core.set_global_option('SCF_TYPE','PK')
 
     # optimize geometry at scf level
     core.clean()
@@ -77,7 +73,7 @@ def run_gaussian_2(name, **kwargs):
     freqsum = 0.0
     for i in range(0, nfreq):
         freqsum += freqs.get(i)
-    zpe = freqsum / p4const.psi_hartree2wavenumbers * 0.8929 * 0.5
+    zpe = freqsum / constants.hartree2wavenumbers * 0.8929 * 0.5
     core.clean()
 
     # optimize geometry at mp2 (no frozen core) level

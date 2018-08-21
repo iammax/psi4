@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -28,11 +29,15 @@
 #ifndef SOLVER_H
 #define SOLVER_H
 
+#include <psi4/libmints/typedefs.h>
+#include <psi4/liboptions/liboptions.h>
+
+#include <vector>
+#include <string>
+
 namespace psi {
 
-class Matrix;
 class Vector;
-class Hamiltonian;
 class RHamiltonian;
 class UHamiltonian;
 
@@ -51,7 +56,7 @@ protected:
     /// Name of solver (set by subclasses)
     std::string name_;
     /// Memory available, in doubles, defaults to 0 => Unlimited storage
-    unsigned long int memory_;
+    size_t memory_;
 
     /// Convergence criteria, defaults to 1.0E-6
     double criteria_;
@@ -82,7 +87,7 @@ public:
     /// Set precondition type (specific to solver type)
     void set_precondition(const std::string& precondition) { precondition_ = precondition; }
     /// Set maximum vector storage space (defaults to 0 MB => Unlimited storage)
-    void set_memory(unsigned long int memory) { memory_ = memory; }
+    void set_memory(size_t memory) { memory_ = memory; }
     /// Set maximum number of iterations (defaults to 100)
     void set_maxiter(int maxiter) { maxiter_ = maxiter; }
     /// Set convergence criteria (defaults to 1.0E-6)
@@ -106,7 +111,7 @@ public:
     */
     virtual void print_header() const = 0;
     /// Estimate of maximum memory usage (in doubles)
-    virtual unsigned long int memory_estimate() = 0;
+    virtual size_t memory_estimate() = 0;
 
     // => Computers <= //
 
@@ -254,7 +259,7 @@ public:
     std::vector<std::shared_ptr<Vector> >& b() { return b_; }
 
     void print_header() const;
-    unsigned long int memory_estimate();
+    size_t memory_estimate();
     void initialize();
     void solve();
     void finalize();
@@ -356,7 +361,7 @@ public:
     // => Required Methods <= //
 
     virtual void print_header() const;
-    virtual unsigned long int memory_estimate();
+    virtual size_t memory_estimate();
     virtual void initialize();
     void solve();
     void finalize();
@@ -508,7 +513,7 @@ public:
     // => Required Methods <= //
 
     void print_header() const;
-    unsigned long int memory_estimate();
+    size_t memory_estimate();
     void initialize();
     void solve();
     void finalize();
@@ -629,7 +634,7 @@ public:
     // => Required Methods <= //
 
     virtual void print_header() const;
-    virtual unsigned long int memory_estimate(){ return 0;};
+    virtual size_t memory_estimate(){ return 0;};
     virtual void initialize();
     void solve();
     void finalize();

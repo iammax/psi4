@@ -6,6 +6,10 @@ if(${ENABLE_dkh})
         message(STATUS "${Cyan}Found dkh${ColourReset}: ${_loc} (found version ${dkh_VERSION})")
         add_library(dkh_external INTERFACE)  # dummy
     else()
+        if(${CMAKE_INSIST_FIND_PACKAGE_dkh})
+            message(FATAL_ERROR "Suitable dkh could not be externally located as user insists")
+        endif()
+
         include(ExternalProject)
         message(STATUS "Suitable dkh could not be located, ${Magenta}Building dkh${ColourReset} instead.")
         ExternalProject_Add(dkh_external
@@ -25,8 +29,8 @@ if(${ENABLE_dkh})
                        -DENABLE_GENERIC=${ENABLE_GENERIC}
                        -DLIBC_INTERJECT=${LIBC_INTERJECT}
             CMAKE_CACHE_ARGS -DCMAKE_Fortran_FLAGS:STRING=${CMAKE_Fortran_FLAGS}
-            INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install
-            DESTDIR=${CMAKE_BINARY_DIR}/stage)
+                             -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
+            INSTALL_COMMAND DESTDIR=${CMAKE_BINARY_DIR}/stage ${CMAKE_MAKE_PROGRAM} install)
 
         set(dkh_DIR ${STAGED_INSTALL_PREFIX}/share/cmake/dkh CACHE PATH "path to internally built dkhConfig.cmake" FORCE)
     endif()

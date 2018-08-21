@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -44,6 +45,7 @@
 #include "psi4/physconst.h"
 #include "psi4/psifiles.h"
 #include "psi4/libmints/wavefunction.h"
+#include "psi4/psi4-dec.h"
 #include "Params.h"
 #include "MOInfo.h"
 #include "Local.h"
@@ -80,7 +82,7 @@ void roa(void);
 
 void preppert(std::shared_ptr<BasisSet> primary);
 
-int ccresponse(std::shared_ptr<Wavefunction> ref_wfn, Options &options)
+PsiReturnType ccresponse(std::shared_ptr<Wavefunction> ref_wfn, Options &options)
 {
   int **cachelist, *cachefiles;
 
@@ -106,7 +108,7 @@ int ccresponse(std::shared_ptr<Wavefunction> ref_wfn, Options &options)
     spaces.push_back(moinfo.bocc_sym);
     spaces.push_back(moinfo.bvirtpi);
     spaces.push_back(moinfo.bvir_sym);
-    dpd_init(0, moinfo.nirreps, params.memory, 0, cachefiles, cachelist, NULL, 4, spaces);
+    dpd_init(0, moinfo.nirreps, params.memory, 0, cachefiles, cachelist, nullptr, 4, spaces);
   }
   else { /*** RHF/ROHF references ***/
     cachelist = cacheprep_rhf(params.cachelev, cachefiles);
@@ -116,7 +118,7 @@ int ccresponse(std::shared_ptr<Wavefunction> ref_wfn, Options &options)
     spaces.push_back(moinfo.occ_sym);
     spaces.push_back(moinfo.virtpi);
     spaces.push_back(moinfo.vir_sym);
-    dpd_init(0, moinfo.nirreps, params.memory, 0, cachefiles, cachelist, NULL, 2, spaces);
+    dpd_init(0, moinfo.nirreps, params.memory, 0, cachefiles, cachelist, nullptr, 2, spaces);
   }
 
   if(params.local) local_init();
@@ -150,7 +152,8 @@ int ccresponse(std::shared_ptr<Wavefunction> ref_wfn, Options &options)
   timer_off("ccresponse");
 
   exit_io();
-  return 0;
+
+  return PsiReturnType::Success;
 }
 
 void init_io(void)

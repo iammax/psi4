@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,7 +35,6 @@
 namespace psi {
 
 class PSIO;
-class Chkpt;
 
 namespace dfmp2 {
 
@@ -44,8 +44,6 @@ protected:
 
     // Auxiliary basis
     std::shared_ptr<BasisSet> ribasis_;
-    // Energy map
-    std::map<std::string, double> energies_;
     // Gradients map
     std::map<std::string, SharedMatrix> gradients_;
 
@@ -97,21 +95,21 @@ protected:
     // Compute singles correction [for ROHF-MBPT(2) or dual-basis]
     virtual void form_singles();
     // Apply the fitting and transposition to a given disk entry Aia tensor
-    virtual void apply_fitting(SharedMatrix Jm12, unsigned int file, unsigned long int naux, unsigned long int nia);
+    virtual void apply_fitting(SharedMatrix Jm12, size_t file, size_t naux, size_t nia);
     // Apply the fitting again to a given disk entry Qia tensor
-    virtual void apply_fitting_grad(SharedMatrix Jm12, unsigned int file, unsigned long int naux, unsigned long int nia);
+    virtual void apply_fitting_grad(SharedMatrix Jm12, size_t file, size_t naux, size_t nia);
     // Form the inverse square root of the fitting metric, or read it off disk
     virtual SharedMatrix form_inverse_metric();
     // Form an abstract gamma
-    virtual void apply_gamma(unsigned int file, unsigned long int naux, unsigned long int nia);
+    virtual void apply_gamma(size_t file, size_t naux, size_t nia);
     // Form a transposed copy of G_ia^P
-    virtual void apply_G_transpose(unsigned int file, unsigned long int naux, unsigned long int nia);
+    virtual void apply_G_transpose(size_t file, size_t naux, size_t nia);
     // Form a transposed copy of iaQ
-    virtual void apply_B_transpose(unsigned int file, unsigned long int naux, unsigned long int naocc, unsigned long int navir);
+    virtual void apply_B_transpose(size_t file, size_t naux, size_t naocc, size_t navir);
 
     // Debugging-routine: prints block sizing
     void block_status(std::vector<int> inds, const char* file, int line);
-    void block_status(std::vector<unsigned long int> inds, const char* file, int line);
+    void block_status(std::vector<size_t> inds, const char* file, int line);
 
     void compute_opdm_and_nos(const SharedMatrix Dnosym, SharedMatrix Dso, SharedMatrix Cno, SharedVector occ);
 

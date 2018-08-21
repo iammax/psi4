@@ -3,37 +3,40 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-
-#include "psi4/libqt/qt.h"
-#include "psi4/psi4-dec.h"
 #include "solver.h"
 #include "points.h"
 #include "hamiltonian.h"
 #include "jk.h"
+
+#include "psi4/libqt/qt.h"
+#include "psi4/psi4-dec.h"
 #include "psi4/libmints/vector.h"
 #include "psi4/libmints/matrix.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 
 #include <cmath>
 #include <sstream>
@@ -41,8 +44,6 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-using namespace std;
 
 namespace psi {
 
@@ -99,7 +100,7 @@ CGRSolver::~CGRSolver()
 std::shared_ptr<CGRSolver> CGRSolver::build_solver(Options& options,
     std::shared_ptr<RHamiltonian> H)
 {
-    std::shared_ptr<CGRSolver> solver(new CGRSolver(H));
+    auto solver = std::make_shared<CGRSolver>(H);
 
     if (options["PRINT"].has_changed()) {
         solver->set_print(options.get_int("PRINT") + 1);
@@ -134,9 +135,9 @@ void CGRSolver::print_header() const
         outfile->Printf( "   Maximum iterations = %9d\n\n", maxiter_);
     }
 }
-unsigned long int CGRSolver::memory_estimate()
+size_t CGRSolver::memory_estimate()
 {
-    unsigned long int dimension = 0L;
+    size_t dimension = 0L;
     if (!diag_) diag_ = H_->diagonal();
     for (int h = 0; h < diag_->nirrep(); h++) {
         dimension += diag_->dimpi()[h];
@@ -151,19 +152,19 @@ void CGRSolver::initialize()
     for (int N = 0; N < nvec; ++N) {
         std::stringstream xs;
         xs << "Solution Vector " << N+1;
-        x_.push_back(std::shared_ptr<Vector>(new Vector(xs.str(),b_[0]->dimpi())));
+        x_.push_back(std::make_shared<Vector>(xs.str(),b_[0]->dimpi()));
         std::stringstream Aps;
         Aps << "Product Vector " << N+1;
-        Ap_.push_back(std::shared_ptr<Vector>(new Vector(Aps.str(),b_[0]->dimpi())));
+        Ap_.push_back(std::make_shared<Vector>(Aps.str(),b_[0]->dimpi()));
         std::stringstream zs;
         zs << "Z Vector " << N+1;
-        z_.push_back(std::shared_ptr<Vector>(new Vector(zs.str(),b_[0]->dimpi())));
+        z_.push_back(std::make_shared<Vector>(zs.str(),b_[0]->dimpi()));
         std::stringstream rs;
         rs << "Residual Vector " << N+1;
-        r_.push_back(std::shared_ptr<Vector>(new Vector(rs.str(),b_[0]->dimpi())));
+        r_.push_back(std::make_shared<Vector>(rs.str(),b_[0]->dimpi()));
         std::stringstream ps;
         ps << "Conjugate Vector " << N+1;
-        p_.push_back(std::shared_ptr<Vector>(new Vector(ps.str(),b_[0]->dimpi())));
+        p_.push_back(std::make_shared<Vector>(ps.str(),b_[0]->dimpi()));
         alpha_.push_back(0.0);
         beta_.push_back(0.0);
         r_nrm2_.push_back(0.0);
@@ -259,7 +260,7 @@ void CGRSolver::setup()
 
             std::vector<std::pair<double, int> > d;
             for (int i = 0; i < n; ++i) {
-                d.push_back(make_pair(diag_->get(h,i),i));
+                d.push_back(std::make_pair(diag_->get(h,i),i));
             }
             std::sort(d.begin(), d.end());
 
@@ -272,15 +273,15 @@ void CGRSolver::setup()
         }
 
         // Preconditioner submatrix and Guess Hamiltonian
-        A_ = SharedMatrix(new Matrix("A_IJ (Preconditioner)", rank, rank));
+        A_ = std::make_shared<Matrix>("A_IJ (Preconditioner)", rank, rank);
         for (size_t i = 0; i < (size_t)nguess_; i += b_.size()) {
             x_.clear();
             Ap_.clear();
             size_t n = (b_.size() > (nguess_ - i) ? (nguess_ - i) : b_.size());
             for (size_t j = 0; j < n; j++) {
                 size_t k = i + j;
-                x_.push_back(std::shared_ptr<Vector>(new Vector("Delta Guess", diag_->dimpi())));
-                b_.push_back(std::shared_ptr<Vector>(new Vector("Delta Sigma", diag_->dimpi())));
+                x_.push_back(std::make_shared<Vector>("Delta Guess", diag_->dimpi()));
+                b_.push_back(std::make_shared<Vector>("Delta Sigma", diag_->dimpi()));
                 for (int h = 0; h < diag_->nirrep(); h++) {
                     if (k >= A_inds_[h].size()) continue;
                     b_[j]->set(h,A_inds_[h][k],1.0);
@@ -324,7 +325,7 @@ void CGRSolver::guess()
                 }
 
                 int rank = A_inds_[h].size();
-                SharedMatrix A2(new Matrix("A2", rank, rank));
+                auto A2 = std::make_shared<Matrix>("A2", rank, rank);
                 double** A2p = A2->pointer();
                 double** Ap = A_->pointer(h);
                 ::memcpy((void*) A2p[0], (void*) Ap[0], sizeof(double) * rank * rank);
@@ -544,7 +545,7 @@ void CGRSolver::update_z()
                 }
 
                 int rank = A_inds_[h].size();
-                SharedMatrix A2(new Matrix("A2", rank, rank));
+                auto A2 = std::make_shared<Matrix>("A2", rank, rank);
                 double** A2p = A2->pointer();
                 double** Ap = A_->pointer(h);
                 ::memcpy((void*) A2p[0], (void*) Ap[0], sizeof(double) * rank * rank);
@@ -643,7 +644,7 @@ DLRSolver::~DLRSolver()
 std::shared_ptr<DLRSolver> DLRSolver::build_solver(Options& options,
     std::shared_ptr<RHamiltonian> H)
 {
-    std::shared_ptr<DLRSolver> solver(new DLRSolver(H));
+    auto solver = std::make_shared<DLRSolver>(H);
 
     if (options["PRINT"].has_changed()) {
         solver->set_print(options.get_int("PRINT") + 1);
@@ -695,9 +696,9 @@ void DLRSolver::print_header() const
         outfile->Printf( "   Preconditioning         = %11s\n\n", precondition_.c_str());
     }
 }
-unsigned long int DLRSolver::memory_estimate()
+size_t DLRSolver::memory_estimate()
 {
-    unsigned long int dimension = 0L;
+    size_t dimension = 0L;
     if (!diag_) diag_ = H_->diagonal();
     for (int h = 0; h < diag_->nirrep(); h++) {
         dimension += diag_->dimpi()[h];
@@ -798,7 +799,7 @@ void DLRSolver::guess()
 
         std::vector<std::pair<double, int> > d;
         for (int i = 0; i < n; ++i) {
-            d.push_back(make_pair(diag_->get(h,i),i));
+            d.push_back(std::make_pair(diag_->get(h,i),i));
         }
         std::sort(d.begin(), d.end());
 
@@ -811,14 +812,14 @@ void DLRSolver::guess()
     }
 
     // Preconditioner submatrix and Guess Hamiltonian
-    A_ = SharedMatrix(new Matrix("A_IJ (Preconditioner)", rank, rank));
+    A_ = std::make_shared<Matrix>("A_IJ (Preconditioner)", rank, rank);
     for (int i = 0; i < nguess_; i += max_subspace_) {
         b_.clear();
         s_.clear();
         int n = (max_subspace_ > (nguess_ - i) ? (nguess_ - i) : max_subspace_);
         for (int j = 0; j < n; j++) {
             size_t k = i + j;
-            b_.push_back(std::shared_ptr<Vector>(new Vector("Delta Guess", diag_->dimpi())));
+            b_.push_back(std::make_shared<Vector>("Delta Guess", diag_->dimpi()));
             for (int h = 0; h < diag_->nirrep(); h++) {
                 if (k >= A_inds_[h].size()) continue;
                 b_[j]->set(h,A_inds_[h][k],1.0);
@@ -845,15 +846,15 @@ void DLRSolver::guess()
     b_.clear();
 
     SharedMatrix A2(A_->clone());
-    SharedMatrix U(new Matrix("U",rank,rank));
-    SharedVector L(new Vector("L",rank));
+    auto U = std::make_shared<Matrix>("U",rank,rank);
+    auto L = std::make_shared<Vector>("L",rank);
 
     A2->diagonalize(U,L);
 
     for (int i = 0; i < nroot_; i++) {
         std::stringstream ss;
         ss << "Guess " << i;
-        b_.push_back(std::shared_ptr<Vector>(new Vector(ss.str(), diag_->dimpi())));
+        b_.push_back(std::make_shared<Vector>(ss.str(), diag_->dimpi()));
         for (int h = 0; h < diag_->nirrep(); h++) {
             double** Up = U->pointer(h);
             double*  bp = b_[i]->pointer(h);
@@ -882,7 +883,7 @@ void DLRSolver::sigma()
     for (int i = 0; i < n; i++) {
         std::stringstream s;
         s << "Sigma Vector " << (i + offset);
-        s_.push_back(std::shared_ptr<Vector>(new Vector(s.str(), diag_->dimpi())));
+        s_.push_back(std::make_shared<Vector>(s.str(), diag_->dimpi()));
     }
 
     std::vector<std::shared_ptr<Vector> > x;
@@ -912,7 +913,7 @@ void DLRSolver::subspaceHamiltonian()
         npi[h] = n;
     }
 
-    G_ = SharedMatrix (new Matrix("Subspace Hamiltonian",nirrep,npi,npi));
+    G_ = std::make_shared<Matrix>("Subspace Hamiltonian",nirrep,npi,npi);
     delete[] npi;
 
     for (int h = 0; h < nirrep; ++h) {
@@ -945,8 +946,8 @@ void DLRSolver::subspaceDiagonalization()
     }
 
     SharedMatrix G2(G_->clone());
-    a_ = SharedMatrix (new Matrix("Subspace Eigenvectors",npi,npi));
-    l_ = std::shared_ptr<Vector> (new Vector("Subspace Eigenvalues",npi));
+    a_ = std::make_shared<Matrix>("Subspace Eigenvectors",npi,npi);
+    l_ = std::make_shared<Vector>("Subspace Eigenvalues",npi);
 
     G2->diagonalize(a_,l_);
 
@@ -988,7 +989,7 @@ void DLRSolver::eigenvecs()
         for (int m = 0; m < nroot_; ++m) {
             std::stringstream s;
             s << "Eigenvector " << m;
-            std::shared_ptr<Vector> c(new Vector(s.str().c_str(), diag_->dimpi()));
+            auto c = std::make_shared<Vector>(s.str().c_str(), diag_->dimpi());
             c_.push_back(c);
         }
     }
@@ -1051,7 +1052,7 @@ void DLRSolver::residuals()
             // Residual k
             std::stringstream s;
             s << "Residual Vector " << k;
-            r_.push_back(std::shared_ptr<Vector> (new Vector(s.str().c_str(), diag_->dimpi())));
+            r_.push_back(std::make_shared<Vector>(s.str().c_str(), diag_->dimpi()));
         }
     }
 
@@ -1126,7 +1127,7 @@ void DLRSolver::correctors()
 
         std::stringstream s;
         s << "Corrector Vector " << k;
-        std::shared_ptr<Vector> d(new Vector(s.str().c_str(), diag_->dimpi()));
+        auto d = std::make_shared<Vector>(s.str().c_str(), diag_->dimpi());
 
         for (int h = 0; h < diag_->nirrep(); ++h) {
 
@@ -1146,7 +1147,7 @@ void DLRSolver::correctors()
                 // Cannot subspace precondition on the first iteration
                 if (iteration_ > 1) {
                     int rank = A_inds_[h].size();
-                    SharedMatrix A2(new Matrix("A2", rank, rank));
+                    auto A2 = std::make_shared<Matrix>("A2", rank, rank);
                     double** A2p = A2->pointer();
                     double** Ap = A_->pointer(h);
                     ::memcpy((void*) A2p[0], (void*) Ap[0], sizeof(double) * rank * rank);
@@ -1277,10 +1278,10 @@ void DLRSolver::subspaceCollapse()
     for (int k = 0; k < min_subspace_; ++k) {
         std::stringstream bs;
         bs << "Subspace Vector " << k;
-        b2.push_back(std::shared_ptr<Vector>(new Vector(bs.str(), diag_->dimpi())));
+        b2.push_back(std::make_shared<Vector>(bs.str(), diag_->dimpi()));
         std::stringstream ss;
         ss << "Sigma Vector " << k;
-        s2.push_back(std::shared_ptr<Vector>(new Vector(ss.str(), diag_->dimpi())));
+        s2.push_back(std::make_shared<Vector>(ss.str(), diag_->dimpi()));
     }
 
     int n = a_->rowspi()[0];
@@ -1331,7 +1332,7 @@ RayleighRSolver::~RayleighRSolver()
 std::shared_ptr<RayleighRSolver> RayleighRSolver::build_solver(Options& options,
     std::shared_ptr<RHamiltonian> H)
 {
-    std::shared_ptr<RayleighRSolver> solver(new RayleighRSolver(H));
+    auto solver = std::make_shared<RayleighRSolver>(H);
 
     if (options["PRINT"].has_changed()) {
         solver->set_print(options.get_int("PRINT") + 1);
@@ -1504,7 +1505,7 @@ DLRXSolver::~DLRXSolver()
 std::shared_ptr<DLRXSolver> DLRXSolver::build_solver(Options& options,
     std::shared_ptr<RHamiltonian> H)
 {
-    std::shared_ptr<DLRXSolver> solver(new DLRXSolver(H));
+    auto solver = std::make_shared<DLRXSolver>(H);
 
     if (options["PRINT"].has_changed()) {
         solver->set_print(options.get_int("PRINT") + 1);
@@ -1549,9 +1550,9 @@ void DLRXSolver::print_header() const
         outfile->Printf( "   Maximum iterations      = %11d\n\n", maxiter_);
     }
 }
-unsigned long int DLRXSolver::memory_estimate()
+size_t DLRXSolver::memory_estimate()
 {
-    unsigned long int dimension = 0L;
+    size_t dimension = 0L;
     if (!diag_) diag_ = H_->diagonal();
     for (int h = 0; h < diag_->nirrep(); h++) {
         dimension += diag_->dimpi()[h];
@@ -1645,7 +1646,7 @@ void DLRXSolver::guess()
     for (int i = 0; i < nguess_; ++i) {
         std::stringstream ss;
         ss << "Subspace Vector " << i;
-        b_.push_back(std::shared_ptr<Vector>(new Vector(ss.str(), diag_->dimpi())));
+        b_.push_back(std::make_shared<Vector>(ss.str(), diag_->dimpi()));
     }
 
     for (int h = 0; h < diag_->nirrep(); ++h) {
@@ -1654,7 +1655,7 @@ void DLRXSolver::guess()
 
         std::vector<std::pair<double, int> > d;
         for (int i = 0; i < n; ++i) {
-            d.push_back(make_pair(diag_->get(h,i),i));
+            d.push_back(std::make_pair(diag_->get(h,i),i));
         }
         std::sort(d.begin(), d.end());
 
@@ -1681,7 +1682,7 @@ void DLRXSolver::sigma()
     for (int i = 0; i < n; i++) {
         std::stringstream s;
         s << "Sigma Vector " << (i + offset);
-        s_.push_back(std::shared_ptr<Vector>(new Vector(s.str(), diag_->dimpi())));
+        s_.push_back(std::make_shared<Vector>(s.str(), diag_->dimpi()));
     }
 
     std::vector<std::shared_ptr<Vector> > x;
@@ -1711,7 +1712,7 @@ void DLRXSolver::subspaceHamiltonian()
         npi[h] = 2*n;
     }
 
-    G_ = SharedMatrix (new Matrix("Subspace Hamiltonian",nirrep,npi,npi));
+    G_ = std::make_shared<Matrix>("Subspace Hamiltonian",nirrep,npi,npi);
     delete[] npi;
 
     for (int h = 0; h < nirrep; ++h) {
@@ -1757,14 +1758,14 @@ void DLRXSolver::subspaceDiagonalization()
     }
 
     // Reals
-    a_ = SharedMatrix (new Matrix("Subspace Right Eigenvectors",npi,npi));
-    l_ = std::shared_ptr<Vector> (new Vector("Real Subspace Eigenvalues",npi));
+    a_ = std::make_shared<Matrix>("Subspace Right Eigenvectors",npi,npi);
+    l_ = std::make_shared<Vector>("Real Subspace Eigenvalues",npi);
 
     // Temps
     SharedMatrix G2(G_->clone());
-    SharedMatrix atemp(new Matrix("Right Eigenvectors Temp", 2*n, 2*n));
-    SharedVector lrtemp(new Vector("Real Eigenvalue Temp", 2*n));
-    SharedVector litemp(new Vector("Imaginary Eigenvalue Temp", 2*n));
+    auto atemp = std::make_shared<Matrix>("Right Eigenvectors Temp", 2*n, 2*n);
+    auto lrtemp = std::make_shared<Vector>("Real Eigenvalue Temp", 2*n);
+    auto litemp = std::make_shared<Vector>("Imaginary Eigenvalue Temp", 2*n);
 
     // Diagonalize
     for (int h = 0; h < nirrep; h++) {
@@ -1782,10 +1783,10 @@ void DLRXSolver::subspaceDiagonalization()
         // Workspace (never throws)
         int info;
         double dwork;
-        info = C_DGEEV('V','N', 2*n, gp[0], 2*n, lrp, lip, ap[0], 2*n, NULL, 1, &dwork, -1);
+        info = C_DGEEV('V','N', 2*n, gp[0], 2*n, lrp, lip, ap[0], 2*n, nullptr, 1, &dwork, -1);
         int lwork = (int) dwork;
         double* work = new double[lwork];
-        info = C_DGEEV('V','N', 2*n, gp[0], 2*n, lrp, lip, ap[0], 2*n, NULL, 1, work, lwork);
+        info = C_DGEEV('V','N', 2*n, gp[0], 2*n, lrp, lip, ap[0], 2*n, nullptr, 1, work, lwork);
         delete[] work;
 
         if (info != 0) {
@@ -1803,7 +1804,7 @@ void DLRXSolver::subspaceDiagonalization()
         // Sort to order as -/+, -/+, ....
         std::vector<std::pair<double, int> > pass1;
         for (int i = 0; i < 2*n; i++) {
-            pass1.push_back(make_pair(fabs(lrp[i]), i));
+            pass1.push_back(std::make_pair(std::fabs(lrp[i]), i));
         }
 
         std::sort(pass1.begin(), pass1.end());
@@ -1865,7 +1866,7 @@ void DLRXSolver::eigenvecs()
         for (int m = 0; m < nroot_; ++m) {
             std::stringstream s;
             s << "Eigenvector " << m;
-            std::shared_ptr<Vector> c(new Vector(s.str().c_str(), diag_->dimpi()));
+            auto c = std::make_shared<Vector>(s.str().c_str(), diag_->dimpi());
             c_.push_back(c);
         }
     }
@@ -1933,7 +1934,7 @@ void DLRXSolver::residuals()
             // Residual k
             std::stringstream s;
             s << "Residual Vector " << k;
-            r_.push_back(std::shared_ptr<Vector> (new Vector(s.str().c_str(), diag_->dimpi())));
+            r_.push_back(std::make_shared<Vector>(s.str().c_str(), diag_->dimpi()));
         }
     }
 
@@ -2009,7 +2010,7 @@ void DLRXSolver::correctors()
 
         std::stringstream s;
         s << "Corrector Vector " << k;
-        std::shared_ptr<Vector> d(new Vector(s.str().c_str(), diag_->dimpi()));
+        auto d = std::make_shared<Vector>(s.str().c_str(), diag_->dimpi());
 
         for (int h = 0; h < diag_->nirrep(); ++h) {
 
@@ -2107,7 +2108,7 @@ void DLRXSolver::subspaceExpansion()
         }
 
         int neff = sigfigs.size();
-        SharedMatrix S(new Matrix("Overlap", 2*neff,2*neff));
+        auto S = std::make_shared<Matrix>("Overlap", 2*neff,2*neff);
 
         // TODO build S
 
@@ -2115,7 +2116,7 @@ void DLRXSolver::subspaceExpansion()
 
         std::vector<SharedVector> dtemp;
         for (int i = 0; i < neff; i++) {
-            dtemp.push_back(SharedVector(new Vector("d temp", 2L*dimension)));
+            dtemp.push_back(std::make_shared<Vector>("d temp", 2L*dimension));
         }
 
         // TODO build contributions to d2
@@ -2156,10 +2157,10 @@ void DLRXSolver::subspaceCollapse()
     for (int k = 0; k < min_subspace_; ++k) {
         std::stringstream bs;
         bs << "Subspace Vector " << k;
-        b2.push_back(std::shared_ptr<Vector>(new Vector(bs.str(), diag_->dimpi())));
+        b2.push_back(std::make_shared<Vector>(bs.str(), diag_->dimpi()));
         std::stringstream ss;
         ss << "Sigma Vector " << k;
-        s2.push_back(std::shared_ptr<Vector>(new Vector(ss.str(), diag_->dimpi())));
+        s2.push_back(std::make_shared<Vector>(ss.str(), diag_->dimpi()));
     }
 
     int n = a_->rowspi()[0]/2;
@@ -2225,7 +2226,7 @@ DLUSolver::~DLUSolver()
 std::shared_ptr<DLUSolver> DLUSolver::build_solver(Options& options,
     std::shared_ptr<UHamiltonian> H)
 {
-    std::shared_ptr<DLUSolver> solver(new DLUSolver(H));
+    auto solver = std::make_shared<DLUSolver>(H);
 
     if (options["PRINT"].has_changed()) {
         solver->set_print(options.get_int("PRINT") + 1);
@@ -2286,9 +2287,9 @@ void DLUSolver::print_header() const
 
 /*// Commented implementation below is from DLR solver but this function
 // is never called in the DLU solver.
-unsigned long int DLUSolver::memory_estimate()
+size_t DLUSolver::memory_estimate()
 {
-    unsigned long int dimension = 0L;
+    size_t dimension = 0L;
     if (!diag_) diag_ = H_->diagonal();
     for (int h = 0; h < diag_->nirrep(); h++) {
         dimension += diag_->dimpi()[h];
@@ -2352,7 +2353,7 @@ std::shared_ptr<Vector> DLUSolver::contract_pair(
         dims[symm] = dima[symm] + dimb[symm];
     }
 
-    std::shared_ptr<Vector> vec(new Vector("UStab Alpha + Beta", dims));
+    auto vec = std::make_shared<Vector>("UStab Alpha + Beta", dims);
 
     double val = 0;
     for (int symm = 0; symm < nirrepa; ++symm) {
@@ -2428,8 +2429,8 @@ std::pair<std::shared_ptr<Vector>, std::shared_ptr<Vector> > DLUSolver::expand_p
         }
     }
 
-    std::shared_ptr<Vector> pairalpha(new Vector("UStab Alpha", dima));
-    std::shared_ptr<Vector> pairbeta(new Vector("UStab Beta", dimb));
+    auto pairalpha = std::make_shared<Vector>("UStab Alpha", dima);
+    auto pairbeta = std::make_shared<Vector>("UStab Beta", dimb);
 
     double val = 0;
     for (int symm = 0; symm < nirrep; ++symm) {
@@ -2443,7 +2444,7 @@ std::pair<std::shared_ptr<Vector>, std::shared_ptr<Vector> > DLUSolver::expand_p
         }
     }
 
-    return make_pair(pairalpha, pairbeta);
+    return std::make_pair(pairalpha, pairbeta);
 
 }
 
@@ -2573,7 +2574,7 @@ void DLUSolver::guess()
 
         std::vector<std::pair<double, int> > d;
         for (int i = 0; i < n; ++i) {
-            d.push_back(make_pair(diag_->get(h,i),i));
+            d.push_back(std::make_pair(diag_->get(h,i),i));
         }
         std::sort(d.begin(), d.end());
 
@@ -2586,14 +2587,14 @@ void DLUSolver::guess()
     }
 
     // Preconditioner submatrix and Guess Hamiltonian
-    A_ = SharedMatrix(new Matrix("A_IJ (Preconditioner)", rank, rank));
+    A_ = std::make_shared<Matrix>("A_IJ (Preconditioner)", rank, rank);
     for (int i = 0; i < nguess_; i += max_subspace_) {
         b_.clear();
         s_.clear();
         int n = (max_subspace_ > (nguess_ - i) ? (nguess_ - i) : max_subspace_);
         for (int j = 0; j < n; j++) {
             size_t k = i + j;
-            b_.push_back(std::shared_ptr<Vector>(new Vector("Delta Guess", diag_->dimpi())));
+            b_.push_back(std::make_shared<Vector>("Delta Guess", diag_->dimpi()));
             for (int h = 0; h < diag_->nirrep(); h++) {
                 if (k >= A_inds_[h].size()) continue;
                 b_[j]->set(h,A_inds_[h][k],1.0);
@@ -2620,15 +2621,15 @@ void DLUSolver::guess()
     b_.clear();
 
     SharedMatrix A2(A_->clone());
-    SharedMatrix U(new Matrix("U",rank,rank));
-    SharedVector L(new Vector("L",rank));
+    auto U = std::make_shared<Matrix>("U",rank,rank);
+    auto L = std::make_shared<Vector>("L",rank);
 
     A2->diagonalize(U,L);
 
     for (int i = 0; i < nroot_; i++) {
         std::stringstream ss;
         ss << "Guess " << i;
-        b_.push_back(std::shared_ptr<Vector>(new Vector(ss.str(), diag_->dimpi())));
+        b_.push_back(std::make_shared<Vector>(ss.str(), diag_->dimpi()));
         for (int h = 0; h < diag_->nirrep(); h++) {
             double** Up = U->pointer(h);
             double*  bp = b_[i]->pointer(h);
@@ -2657,7 +2658,7 @@ void DLUSolver::sigma()
     for (int i = 0; i < n; i++) {
         std::stringstream s;
         s << "Sigma Vector " << (i + offset);
-        s_.push_back(std::shared_ptr<Vector>(new Vector(s.str(), diag_->dimpi())));
+        s_.push_back(std::make_shared<Vector>(s.str(), diag_->dimpi()));
     }
 
     std::vector<std::shared_ptr<Vector> > x;
@@ -2705,7 +2706,7 @@ void DLUSolver::subspaceHamiltonian()
         npi[h] = n;
     }
 
-    G_ = SharedMatrix (new Matrix("Subspace Hamiltonian",nirrep,npi,npi));
+    G_ = std::make_shared<Matrix>("Subspace Hamiltonian",nirrep,npi,npi);
     delete[] npi;
 
     for (int h = 0; h < nirrep; ++h) {
@@ -2738,8 +2739,8 @@ void DLUSolver::subspaceDiagonalization()
     }
 
     SharedMatrix G2(G_->clone());
-    a_ = SharedMatrix (new Matrix("Subspace Eigenvectors",npi,npi));
-    l_ = std::shared_ptr<Vector> (new Vector("Subspace Eigenvalues",npi));
+    a_ = std::make_shared<Matrix>("Subspace Eigenvectors",npi,npi);
+    l_ = std::make_shared<Vector>("Subspace Eigenvalues",npi);
 
     G2->diagonalize(a_,l_);
 
@@ -2782,7 +2783,7 @@ void DLUSolver::eigenvecs()
         for (int m = 0; m < nroot_; ++m) {
             std::stringstream s;
             s << "Eigenvector " << m;
-            std::shared_ptr<Vector> c(new Vector(s.str().c_str(), diag_->dimpi()));
+            auto c = std::make_shared<Vector>(s.str().c_str(), diag_->dimpi());
             c_.push_back(c);
         }
     }
@@ -2847,7 +2848,7 @@ void DLUSolver::residuals()
             // Residual k
             std::stringstream s;
             s << "Residual Vector " << k;
-            r_.push_back(std::shared_ptr<Vector> (new Vector(s.str().c_str(), diag_->dimpi())));
+            r_.push_back(std::make_shared<Vector>(s.str().c_str(), diag_->dimpi()));
         }
     }
 
@@ -2923,7 +2924,7 @@ void DLUSolver::correctors()
 
         std::stringstream s;
         s << "Corrector Vector " << k;
-        std::shared_ptr<Vector> d(new Vector(s.str().c_str(), diag_->dimpi()));
+        auto d = std::make_shared<Vector>(s.str().c_str(), diag_->dimpi());
 
         for (int h = 0; h < diag_->nirrep(); ++h) {
 
@@ -2943,7 +2944,7 @@ void DLUSolver::correctors()
                 // Cannot subspace precondition on the first iteration
                 if (iteration_ > 1) {
                     int rank = A_inds_[h].size();
-                    SharedMatrix A2(new Matrix("A2", rank, rank));
+                    auto A2 = std::make_shared<Matrix>("A2", rank, rank);
                     double** A2p = A2->pointer();
                     double** Ap = A_->pointer(h);
                     ::memcpy((void*) A2p[0], (void*) Ap[0], sizeof(double) * rank * rank);
@@ -3076,10 +3077,10 @@ void DLUSolver::subspaceCollapse()
     for (int k = 0; k < min_subspace_; ++k) {
         std::stringstream bs;
         bs << "Subspace Vector " << k;
-        b2.push_back(std::shared_ptr<Vector>(new Vector(bs.str(), diag_->dimpi())));
+        b2.push_back(std::make_shared<Vector>(bs.str(), diag_->dimpi()));
         std::stringstream ss;
         ss << "Sigma Vector " << k;
-        s2.push_back(std::shared_ptr<Vector>(new Vector(ss.str(), diag_->dimpi())));
+        s2.push_back(std::make_shared<Vector>(ss.str(), diag_->dimpi()));
     }
 
     int n = a_->rowspi()[0];

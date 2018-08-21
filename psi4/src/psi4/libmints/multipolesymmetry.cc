@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -36,7 +37,6 @@
 #include "psi4/libmints/shellrotation.h"
 
 ;
-using namespace std;
 
 namespace psi{
 
@@ -126,41 +126,41 @@ OperatorSymmetry::~OperatorSymmetry()
 {
 }
 
-string OperatorSymmetry::form_suffix(int x, int y, int z)
+std::string OperatorSymmetry::form_suffix(int x, int y, int z)
 {
-    string suffix;
+    std::string suffix;
 
     if (x) {
         suffix += "x";
         if (x>1)
-            suffix += to_string(x);
+            suffix += std::to_string(x);
     }
 
     if (y) {
         suffix += "y";
         if (y > 1)
-            suffix += to_string(y);
+            suffix += std::to_string(y);
     }
 
     if (z) {
         suffix += "z";
         if (z > 1)
-            suffix += to_string(z);
+            suffix += std::to_string(z);
     }
 
     return suffix;
 }
 
-string OperatorSymmetry::name_of_component(int i)
+std::string OperatorSymmetry::name_of_component(int i)
 {
     Vector3 components = BasisSet::exp_ao[order_][i];
     return form_suffix(components[0], components[1], components[2]);
 }
 
-vector<SharedMatrix > OperatorSymmetry::create_matrices(const std::string &basename)
+std::vector<SharedMatrix > OperatorSymmetry::create_matrices(const std::string &basename)
 {
-    vector<SharedMatrix > matrices;
-    string name;
+    std::vector<SharedMatrix > matrices;
+    std::string name;
 
     for (int i=0; i<INT_NCART(order_); ++i) {
         name = basename + " " + name_of_component(i);
@@ -265,9 +265,9 @@ MultipoleSymmetry::~MultipoleSymmetry()
 
 
 
-vector<SharedMatrix > MultipoleSymmetry::create_matrices(const std::string &basename, bool ignore_symmetry)
+std::vector<SharedMatrix > MultipoleSymmetry::create_matrices(const std::string &basename, bool ignore_symmetry)
 {
-    vector<SharedMatrix > matrices;
+    std::vector<SharedMatrix > matrices;
 
     int component = 0;
     for(int l = 1; l <= order_; ++l){
@@ -298,7 +298,7 @@ vector<SharedMatrix > MultipoleSymmetry::create_matrices(const std::string &base
 
                 name = basename + name;
                 if(ignore_symmetry){
-                    SharedMatrix mat(new Matrix(name, matrix_->norb(), matrix_->norb()));
+                    auto mat = std::make_shared<Matrix>(name, matrix_->norb(), matrix_->norb());
                     matrices.push_back(mat);
                 }else{
                     int sym = component_symmetry_[component];

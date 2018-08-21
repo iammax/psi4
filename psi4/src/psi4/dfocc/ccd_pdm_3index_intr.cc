@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,14 +31,11 @@
 #include "dfocc.h"
 
 using namespace psi;
-using namespace std;
 
+namespace psi {
+namespace dfoccwave {
 
-namespace psi{ namespace dfoccwave{
-
-void DFOCC::ccd_pdm_3index_intr()
-{
-
+void DFOCC::ccd_pdm_3index_intr() {
     // defs
     SharedTensor2d K, L, T, U, Tau, V, V2, Vij, Vai, Vab, X, Y, Z;
     SharedTensor2d Vijka, Vijak;
@@ -45,7 +43,7 @@ void DFOCC::ccd_pdm_3index_intr()
 
     // L(Q,ia) = \sum_{jb} b_jb^Q Ut_ij^ab = \sum_{jb} b(Q,jb) Ut(jb,ia)
     U = SharedTensor2d(new Tensor2d("Ut2 (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsd_u2_amps(U,l2);
+    ccsd_u2_amps(U, l2);
     T = SharedTensor2d(new Tensor2d("L2 (Q|IA)", nQ, naoccA, navirA));
     T->gemm(false, false, bQiaA, U, 1.0, 0.0);
     T->write(psio_, PSIF_DFOCC_AMPS);
@@ -60,10 +58,10 @@ void DFOCC::ccd_pdm_3index_intr()
     U.reset();
     L = SharedTensor2d(new Tensor2d("L2 <IJ|AB>", naoccA, naoccA, navirA, navirA));
     L->sort(1324, l2, 1.0, 0.0);
-    GijA->contract(false, true, naoccA, naoccA, naoccA*navirA*navirA, T, L, 1.0, 0.0);
+    GijA->contract(false, true, naoccA, naoccA, naoccA * navirA * navirA, T, L, 1.0, 0.0);
 
     // G_ae = -\sum_{m,n,f} U_mn^ef L_mn^af = L(mn,fa) U(mn,fe)
-    GabA->contract(true, false, navirA, navirA, naoccA*naoccA*navirA, L, T, -1.0, 0.0);
+    GabA->contract(true, false, navirA, navirA, naoccA * naoccA * navirA, L, T, -1.0, 0.0);
     T.reset();
     L.reset();
 
@@ -76,7 +74,7 @@ void DFOCC::ccd_pdm_3index_intr()
     // G(Q,ij) = \sum_{m} G_im b_mj^Q
     T = SharedTensor2d(new Tensor2d("G (Q|IJ)", nQ, naoccA, naoccA));
     T->contract233(false, false, naoccA, naoccA, GijA, bQijA, 1.0, 0.0);
-    //T->cont233("IJ", "IM", "MJ", GijA, bQijA, 1.0, 0.0); // it works
+    // T->cont233("IJ", "IM", "MJ", GijA, bQijA, 1.0, 0.0); // it works
     T->write(psio_, PSIF_DFOCC_AMPS);
     T.reset();
 
@@ -98,7 +96,7 @@ void DFOCC::ccd_pdm_3index_intr()
     t2->read_symm(psio_, PSIF_DFOCC_AMPS);
     U = SharedTensor2d(new Tensor2d("T <IJ|AB>", naoccA, naoccA, navirA, navirA));
     U->sort(1324, t2, 1.0, 0.0);
-    //t2.reset();
+    // t2.reset();
     L = SharedTensor2d(new Tensor2d("L2 <IJ|AB>", naoccA, naoccA, navirA, navirA));
     L->sort(1324, l2, 1.0, 0.0);
     V = SharedTensor2d(new Tensor2d("V <IJ|KL>", naoccA, naoccA, naoccA, naoccA));
@@ -115,7 +113,7 @@ void DFOCC::ccd_pdm_3index_intr()
     // V_ij^Q = \sum_{mn} (2*V_imjn - V_imnj) b_mn^Q = B(Q,mn) Y(mn,ij)
     X = SharedTensor2d(new Tensor2d("X <IJ|KL>", naoccA, naoccA, naoccA, naoccA));
     // X_imjn = 2*V_imjn - V_imnj
-    X->tei_cs1_anti_symm(V,V);
+    X->tei_cs1_anti_symm(V, V);
     V.reset();
     // Y_mnij = X_imjn
     Y = SharedTensor2d(new Tensor2d("Y <IJ|KL>", naoccA, naoccA, naoccA, naoccA));
@@ -130,10 +128,10 @@ void DFOCC::ccd_pdm_3index_intr()
     // Build V_iajb
     // V_iajb = 1/2 \sum_{me} T'(ib,me) L'(me,ja)
     T = SharedTensor2d(new Tensor2d("T2p (IB|JA)", naoccA, navirA, naoccA, navirA));
-    ccsd_t2_prime_amps(T,t2);
+    ccsd_t2_prime_amps(T, t2);
     t2.reset();
     L = SharedTensor2d(new Tensor2d("L2p (IB|JA)", naoccA, navirA, naoccA, navirA));
-    ccsd_t2_prime_amps(L,l2);
+    ccsd_t2_prime_amps(L, l2);
     X = SharedTensor2d(new Tensor2d("X (IB|JA)", naoccA, navirA, naoccA, navirA));
     X->gemm(false, false, T, L, 0.5, 0.0);
     T.reset();
@@ -178,7 +176,7 @@ void DFOCC::ccd_pdm_3index_intr()
     t2 = SharedTensor2d(new Tensor2d("T2 (IA|JB)", naoccA, navirA, naoccA, navirA));
     t2->read_symm(psio_, PSIF_DFOCC_AMPS);
     L = SharedTensor2d(new Tensor2d("L2p (IB|JA)", naoccA, navirA, naoccA, navirA));
-    ccsd_t2_prime_amps(L,l2);
+    ccsd_t2_prime_amps(L, l2);
     X->gemm(false, false, t2, L, 0.5, 1.0);
     t2.reset();
     L.reset();
@@ -214,15 +212,14 @@ void DFOCC::ccd_pdm_3index_intr()
     Vab->write(psio_, PSIF_DFOCC_AMPS);
     Vab.reset();
 
-    //outfile->Printf("\t3indices done.\n");
+    // outfile->Printf("\t3indices done.\n");
 
-}// end ccd_pdm_3index_intr
+}  // end ccd_pdm_3index_intr
 
 //======================================================================
 //    Build y_ia^Q
 //======================================================================
-void DFOCC::ccd_pdm_yQia()
-{
+void DFOCC::ccd_pdm_yQia() {
     // defs
     SharedTensor2d K, L, T, U, Tau, V, V2, X, Y, Y2, Z;
     SharedTensor2d Yt, Yp;
@@ -245,7 +242,7 @@ void DFOCC::ccd_pdm_yQia()
 
     // Y_iabj = -\sum(me) T'(ia,me) X(me,bj)
     T = SharedTensor2d(new Tensor2d("T2p (IA|JB)", naoccA, navirA, naoccA, navirA));
-    ccsd_t2_prime_amps(T,t2);
+    ccsd_t2_prime_amps(T, t2);
     t2.reset();
     // X(me,bj) = V(je,mb)
     X = SharedTensor2d(new Tensor2d("X (ME|BJ)", naoccA, navirA, navirA, naoccA));
@@ -328,7 +325,7 @@ void DFOCC::ccd_pdm_yQia()
 
     // X_imae = 2*Yt_imae - Yp_imea
     X = SharedTensor2d(new Tensor2d("X <IM|AE>", naoccA, naoccA, navirA, navirA));
-    X->tei_cs1_anti_symm(Yt,Yp);
+    X->tei_cs1_anti_symm(Yt, Yp);
     Yt.reset();
     Yp.reset();
     // Y(me,ia) = X(im,ae)
@@ -342,6 +339,7 @@ void DFOCC::ccd_pdm_yQia()
     Z->write(psio_, PSIF_DFOCC_AMPS);
     Z.reset();
 
-}// end ccd_pdm_yQia
+}  // end ccd_pdm_yQia
 
-}} // End Namespaces
+}  // namespace dfoccwave
+}  // namespace psi

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -57,9 +58,9 @@ void zero_bool_array(bool *A, long int n) {
 }
 
 double *init_array(long int m) {
-  if (!m) return NULL;
+  if (!m) return nullptr;
   double *A = (double *) malloc(m * sizeof(double));
-  if(A == NULL)
+  if(A == nullptr)
     throw(opt::INTCO_EXCEPT("init_array : allocation error."));
 
   zero_array(A,m);
@@ -68,7 +69,7 @@ double *init_array(long int m) {
 
 int *init_int_array(int m) {
   int *A = (int *) malloc(m * sizeof(int));
-  if(A == NULL)
+  if(A == nullptr)
     throw(opt::INTCO_EXCEPT("init_int_array : allocation error."));
 
   zero_int_array(A,m);
@@ -77,7 +78,7 @@ int *init_int_array(int m) {
 
 bool *init_bool_array(int m) {
   bool *A = (bool *) malloc(m * sizeof(bool));
-  if(A == NULL)
+  if(A == nullptr)
     throw(opt::INTCO_EXCEPT("init_bool_array : allocation error."));
 
   for (int i=0; i<m; ++i)
@@ -86,7 +87,7 @@ bool *init_bool_array(int m) {
 }
 
 void free_array(double *f) {
-  if (f == NULL) return;
+  if (f == nullptr) return;
   free(f);
 }
 
@@ -100,16 +101,16 @@ void free_bool_array(bool *f) {
 
 // allocate memory block of doubles for 2D matrix
 double **init_matrix(long int m, long int n) {
-  double **A = NULL;
-  double *B = NULL;
+  double **A = nullptr;
+  double *B = nullptr;
   long int i;
 
-  if(m<=0 || n<=0) return((double **) NULL);
+  if(m<=0 || n<=0) return((double **) nullptr);
 
   A = (double **) malloc(m * (long int)sizeof(double *));
   B = (double *) malloc(m*n * (long int)sizeof(double));
 
-  if ((A == NULL) || (B == NULL))
+  if ((A == nullptr) || (B == nullptr))
     throw(opt::INTCO_EXCEPT("init_matrix : allocation error."));
 
   zero_array(B, m*n);
@@ -135,22 +136,22 @@ void unit_matrix(double **A, long int m) {
 
 // free memory block of doubles
 void free_matrix(double **A) {
-  if(A == NULL) return;
+  if(A == nullptr) return;
   free(A[0]);
   free(A);
 }
 
 int **init_int_matrix(long int m, long int n) {
-  int **A = NULL;
-  int *B = NULL;
+  int **A = nullptr;
+  int *B = nullptr;
   long int i;
 
-  if(m<=0 || n<=0) return((int **) NULL);
+  if(m<=0 || n<=0) return((int **) nullptr);
 
   A = (int **) malloc(m * (long int)sizeof(int *));
   B = (int *) malloc(m*n * (long int)sizeof(int));
 
-  if ((A == NULL) || (B == NULL)) throw(opt::INTCO_EXCEPT("init_int_matrix : allocation error."));
+  if ((A == nullptr) || (B == nullptr)) throw(opt::INTCO_EXCEPT("init_int_matrix : allocation error."));
 
   zero_int_array(B, m*n);
 
@@ -161,22 +162,22 @@ int **init_int_matrix(long int m, long int n) {
 }
 
 void free_int_matrix(int **A) {
-  if(A == NULL) return;
+  if(A == nullptr) return;
   free(A[0]);
   free(A);
 }
 
 bool **init_bool_matrix(long int m, long int n) {
-  bool **A = NULL;
-  bool *B = NULL;
+  bool **A = nullptr;
+  bool *B = nullptr;
   long int i;
 
-  if(m<=0 || n<=0) return((bool **) NULL);
+  if(m<=0 || n<=0) return((bool **) nullptr);
 
   A = (bool **) malloc(m * (long int)sizeof(bool *));
   B = (bool *) malloc(m*n * (long int)sizeof(bool));
 
-  if ((A == NULL) || (B == NULL)) throw(opt::INTCO_EXCEPT("init_bool_matrix : allocation error."));
+  if ((A == nullptr) || (B == nullptr)) throw(opt::INTCO_EXCEPT("init_bool_matrix : allocation error."));
 
   zero_bool_array(B, m*n);
 
@@ -187,7 +188,7 @@ bool **init_bool_matrix(long int m, long int n) {
 }
 
 void free_bool_matrix(bool **A) {
-  if(A == NULL) return;
+  if(A == nullptr) return;
   free(A[0]);
   free(A);
 }
@@ -198,7 +199,7 @@ extern "C" {
 
 double *opt_init_array(long int m) {
   double *A = (double *) malloc(m * sizeof(double));
-  if(A == NULL)
+  if(A == nullptr)
     throw(opt::INTCO_EXCEPT("opt_init_array : allocation error."));
 
   for (int i=0; i<m; ++i)
@@ -207,7 +208,7 @@ double *opt_init_array(long int m) {
 }
 
 void opt_free_array(double *f) {
-  if (f == NULL) return;
+  if (f == nullptr) return;
   free(f);
 }
 
@@ -219,16 +220,16 @@ void opt_matrix_copy(double **from, double **to, long int nr, long int nc) {
 }
 
 double **opt_init_matrix(long int m, long int n) {
-  double **A = NULL;
-  double *B = NULL;
+  double **A = nullptr;
+  double *B = nullptr;
   long int i;
 
-  if(m<=0 || n<=0) return((double **) NULL);
+  if(m<=0 || n<=0) return((double **) nullptr);
 
   A = (double **) malloc(m * (long int)sizeof(double *));
   B = (double *) malloc(m*n * (long int)sizeof(double));
 
-  if ((A == NULL) || (B == NULL))
+  if ((A == nullptr) || (B == nullptr))
     throw(opt::INTCO_EXCEPT("opt_init_matrix : allocation error."));
 
   for (i=0; i<m*n; ++i)
@@ -242,7 +243,7 @@ double **opt_init_matrix(long int m, long int n) {
 
 // free memory block of doubles
 void opt_free_matrix(double **A) {
-  if(A == NULL) return;
+  if(A == nullptr) return;
   free(A[0]);
   free(A);
 }

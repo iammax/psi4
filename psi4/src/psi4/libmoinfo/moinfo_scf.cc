@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -34,12 +35,11 @@
 #include "psi4/libmints/molecule.h"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/liboptions/liboptions.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 
 #include "moinfo_scf.h"
 
-
-
-using namespace std;
 
 namespace psi {
 
@@ -51,9 +51,9 @@ MOInfoSCF::MOInfoSCF(Wavefunction& ref_wfn_, Options& options_, bool silent_)
     // The first irrep is 0
     bool wfn_sym_found = false;
     wfn_sym = 0;
-    string wavefunction_sym_str = options.get_str("WFN_SYM");
+    std::string wavefunction_sym_str = options.get_str("WFN_SYM");
     for(int h = 0; h < nirreps; ++h){
-        string irr_label_str = irr_labs[h];
+        std::string irr_label_str = irr_labs[h];
         to_upper(irr_label_str);
         trim_spaces(irr_label_str);
         if(wavefunction_sym_str == irr_label_str){
@@ -138,7 +138,7 @@ void MOInfoSCF::print_mo()
     for(int i=nirreps;i<8;i++)
         outfile->Printf("     ");
     for(int i=0;i<nirreps;i++)
-        outfile->Printf("  %s",irr_labs[i]);
+        outfile->Printf("  %s",irr_labs[i].c_str());
     outfile->Printf(" Total");
     outfile->Printf("\n  ----------------------------------------------------------------------------");
     print_mo_space(nso,sopi,"Total                         ");

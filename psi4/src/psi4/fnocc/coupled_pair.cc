@@ -3,47 +3,50 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
+#include "blas.h"
+#include "ccsd.h"
+
 #include "psi4/psi4-dec.h"
+#include "psi4/times.h"
 #include "psi4/libmints/vector.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/wavefunction.h"
-#include"psi4/libqt/qt.h"
-#include<sys/times.h>
+#include "psi4/libqt/qt.h"
 #include "psi4/libciomr/libciomr.h"
+#include "psi4/libpsi4util/process.h"
+#include "psi4/libmints/basisset.h"
+#include "psi4/lib3index/3index.h"
+
+#include <ctime>
+
 #ifdef _OPENMP
     #include<omp.h>
 #else
     #define omp_get_wtime() 0.0
-    #define omp_get_max_threads() 1
 #endif
-
-#include"blas.h"
-#include"ccsd.h"
-#include "psi4/libmints/basisset.h"
-#include "psi4/libmints/basisset_parser.h"
-#include "psi4/lib3index/3index.h"
 
 using namespace psi;
 
@@ -258,7 +261,7 @@ PsiReturnType CoupledPair::CEPAIterations(){
     "   Iter  DIIS          Energy       d(Energy)          |d(T)|     time\n");
 
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio_address addr;
 
   // zero residual
@@ -282,13 +285,13 @@ PsiReturnType CoupledPair::CEPAIterations(){
   const long clk_tck = sysconf(_SC_CLK_TCK);
   times(&total_tmstime);
 
-  time_t time_start = time(NULL);
+  time_t time_start = time(nullptr);
   double user_start = ((double) total_tmstime.tms_utime)/clk_tck;
   double sys_start  = ((double) total_tmstime.tms_stime)/clk_tck;
 // TODO e_conv
 
   while(iter < maxiter){
-      time_t iter_start = time(NULL);
+      time_t iter_start = time(nullptr);
 
       // evaluate cepa diagrams
       if (iter>0){
@@ -336,8 +339,8 @@ PsiReturnType CoupledPair::CEPAIterations(){
       //}else {
       //    double min = 1.0e9;
       //    for (int j = 1; j <= (diis_iter < maxdiis ? diis_iter : maxdiis); j++) {
-      //        if ( fabs( diisvec[j-1] ) < min ) {
-      //            min = fabs( diisvec[j-1] );
+      //        if ( std::fabs( diisvec[j-1] ) < min ) {
+      //            min = std::fabs( diisvec[j-1] );
       //            replace_diis_iter = j;
       //        }
       //    }
@@ -347,7 +350,7 @@ PsiReturnType CoupledPair::CEPAIterations(){
       else if (replace_diis_iter<maxdiis) replace_diis_iter++;
       else replace_diis_iter = 1;
 
-      time_t iter_stop = time(NULL);
+      time_t iter_stop = time(nullptr);
       double dume = ( cepa_level < 1 ) ? evar : eccsd ;
       if ( iter==0 ) dume = eccsd; // use mp2 energy on first iteration
       outfile->Printf("  %5i   %i %i %15.10f %15.10f %15.10f %8d\n",
@@ -357,10 +360,10 @@ PsiReturnType CoupledPair::CEPAIterations(){
       if (iter==1) emp2 = eccsd;
       if (iter==1) SCS_MP2();
 
-      if (fabs(dume - Eold) < e_conv && nrm < r_conv) break;
+      if (std::fabs(dume - Eold) < e_conv && nrm < r_conv) break;
   }
   times(&total_tmstime);
-  time_t time_stop = time(NULL);
+  time_t time_stop = time(nullptr);
   double user_stop = ((double) total_tmstime.tms_utime)/clk_tck;
   double sys_stop  = ((double) total_tmstime.tms_stime)/clk_tck;
   psio.reset();
@@ -459,7 +462,7 @@ void CoupledPair::PairEnergy(){
   long int o = ndoccact;
   long int rs = nmo;
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio->open(PSIF_DCC_IAJB,PSIO_OPEN_OLD);
   psio->read_entry(PSIF_DCC_IAJB,"E2iajb",(char*)&integrals[0],o*o*v*v*sizeof(double));
   psio->close(PSIF_DCC_IAJB,1);
@@ -492,7 +495,7 @@ void CoupledPair::UpdateT2() {
   long int o = ndoccact;
   long int rs = nmo;
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio->open(PSIF_DCC_IAJB,PSIO_OPEN_OLD);
   psio->read_entry(PSIF_DCC_IAJB,"E2iajb",(char*)&integrals[0],o*o*v*v*sizeof(double));
   psio->close(PSIF_DCC_IAJB,1);
@@ -605,7 +608,7 @@ void CoupledPair::SCS_CEPA(){
   long int o = ndoccact;
   long int rs = nmo;
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio->open(PSIF_DCC_IAJB,PSIO_OPEN_OLD);
   psio->read_entry(PSIF_DCC_IAJB,"E2iajb",(char*)&integrals[0],o*o*v*v*sizeof(double));
   psio->close(PSIF_DCC_IAJB,1);
@@ -646,7 +649,7 @@ double CoupledPair::VariationalEnergy(){
     long int rs = nmo;
 
     // (ai|bj)
-    std::shared_ptr<PSIO> psio(new PSIO());
+    auto psio = std::make_shared<PSIO>();
     psio->open(PSIF_DCC_IAJB,PSIO_OPEN_OLD);
     psio->read_entry(PSIF_DCC_IAJB,"E2iajb",(char*)&integrals[0],o*o*v*v*sizeof(double));
     psio->close(PSIF_DCC_IAJB,1);
@@ -721,7 +724,7 @@ double CoupledPair::CheckEnergy(){
   long int o = ndoccact;
   long int rs = nmo;
 
-  std::shared_ptr<PSIO> psio(new PSIO());
+  auto psio = std::make_shared<PSIO>();
   psio->open(PSIF_DCC_IAJB,PSIO_OPEN_OLD);
   psio->read_entry(PSIF_DCC_IAJB,"E2iajb",(char*)&integrals[0],o*o*v*v*sizeof(double));
   psio->close(PSIF_DCC_IAJB,1);

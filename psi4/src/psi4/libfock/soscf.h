@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -46,6 +47,7 @@ abcd              - Virtual indices
 #ifndef SOSCF_H
 #define SOSCF_H
 
+#include "psi4/libmints/dimension.h"
 #include "psi4/libmints/typedefs.h"
 #include <map>
 
@@ -53,9 +55,9 @@ namespace psi {
 
 /// Forward declare
 class JK;
-class DFERI;
 class IntegralTransform;
 class PSIO;
+class DFHelper;
 
 class SOMCSCF {
 
@@ -67,11 +69,15 @@ public:
      * @param AOTOSO  AOTOSO object
      * @param H       Core hamiltonian in the SO basis.
      */
-    // SOMCSCF(std::shared_ptr<JK> jk, SharedMatrix H, bool casscf);
-    SOMCSCF(std::shared_ptr<JK> jk, SharedMatrix AOTOSO,
-            SharedMatrix H);
+     SOMCSCF(std::shared_ptr<JK> jk, SharedMatrix AOTOSO, SharedMatrix H);
 
     virtual ~SOMCSCF(void);
+
+    /**
+     * Sets the amount of memory (in doubles) available to the program
+     * @param memory Amount of memory available
+     */
+    void set_memory(size_t memory) { memory_ = memory; }
 
     /**
      * Sets the ras spaces, rotations will not happen inside of a space
@@ -212,6 +218,7 @@ protected:
     bool casscf_;
     bool has_fzc_;
     bool compute_IFock_;
+    size_t memory_;
 
     /// Doubles
     double energy_drc_;
@@ -271,17 +278,17 @@ public:
     /**
      * Initialize the DF SOMCSCF object
      * @param jk      JK object to use.
-     * @param df      DFERI object to use.
+     * @param df      DFHelper object to use.
      * @param H       Core hamiltonian in the SO basis.
      */
-    DFSOMCSCF(std::shared_ptr<JK> jk, std::shared_ptr<DFERI> df, SharedMatrix AOTOSO,
+    DFSOMCSCF(std::shared_ptr<JK> jk, std::shared_ptr<DFHelper> df, SharedMatrix AOTOSO,
             SharedMatrix H);
 
     virtual ~DFSOMCSCF();
 
 protected:
 
-    std::shared_ptr<DFERI> dferi_;
+    std::shared_ptr<DFHelper> dfh_;
     virtual void transform(bool approx_only);
     virtual void set_act_MO();
     virtual SharedMatrix compute_Q(SharedMatrix TPDM);

@@ -3,29 +3,29 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-#include "psi4/lib3index/3index.h"
 #include "psi4/libpsio/psio.hpp"
 #include "psi4/libpsio/psio.h"
 #include "psi4/libpsio/aiohandler.h"
@@ -35,24 +35,17 @@
 #include "psi4/libmints/sieve.h"
 #include "psi4/libiwl/iwl.hpp"
 #include "jk.h"
-#include "jk_independent.h"
-#include "link.h"
-#include "direct_screening.h"
-#include "cubature.h"
-#include "points.h"
 
-#include "psi4/lib3index/cholesky.h"
 #include "psi4/libmints/matrix.h"
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/sobasis.h"
 #include "psi4/libmints/mintshelper.h"
 #include <sstream>
-#include "psi4/libparallel/ParallelPrinter.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-using namespace std;
 using namespace psi;
 
 namespace psi {
@@ -85,7 +78,7 @@ void DiskJK::print_header() const
 }
 void DiskJK::preiterations()
 {
-    std::shared_ptr<MintsHelper> mints(new MintsHelper(primary_, options_, 0));
+    auto mints = std::make_shared<MintsHelper>(primary_, options_, 0);
     mints->integrals();
     if(do_wK_)
         mints->integrals_erf(omega_);
@@ -109,7 +102,7 @@ void DiskJK::preiterations()
 }
 void DiskJK::compute_JK()
 {
-    std::shared_ptr<PSIO> psio(new PSIO());
+    auto psio = std::make_shared<PSIO>();
     IWL *iwl = new IWL(psio.get(), PSIF_SO_TEI, cutoff_, 1, 1);
     Label *lblptr = iwl->labels();
     Value *valptr = iwl->values();
@@ -121,7 +114,7 @@ void DiskJK::compute_JK()
             lastBuffer = iwl->last_buffer();
             for(int index = 0; index < iwl->buffer_count(); ++index){
                 labelIndex = 4*index;
-                pabs  = abs((int) lblptr[labelIndex++]);
+                pabs  = std::abs((int) lblptr[labelIndex++]);
                 qabs  = (int) lblptr[labelIndex++];
                 rabs  = (int) lblptr[labelIndex++];
                 sabs  = (int) lblptr[labelIndex++];
@@ -295,7 +288,7 @@ void DiskJK::compute_JK()
             lastBuffer = iwl->last_buffer();
             for(int index = 0; index < iwl->buffer_count(); ++index){
                 labelIndex = 4*index;
-                pabs  = abs((int) lblptr[labelIndex++]);
+                pabs  = std::abs((int) lblptr[labelIndex++]);
                 qabs  = (int) lblptr[labelIndex++];
                 rabs  = (int) lblptr[labelIndex++];
                 sabs  = (int) lblptr[labelIndex++];
@@ -483,7 +476,7 @@ void DiskJK::compute_JK()
             lastBuffer = iwl->last_buffer();
             for(int index = 0; index < iwl->buffer_count(); ++index){
                 labelIndex = 4*index;
-                pabs  = abs((int) lblptr[labelIndex++]);
+                pabs  = std::abs((int) lblptr[labelIndex++]);
                 qabs  = (int) lblptr[labelIndex++];
                 rabs  = (int) lblptr[labelIndex++];
                 sabs  = (int) lblptr[labelIndex++];

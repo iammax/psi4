@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -82,7 +83,7 @@
 #include "psi4/libmints/vector3.h"
 #include "psi4/psi4-dec.h"
 
-#include <string>
+#include <string.h>
 #include <cstdio>
 #include <stdint.h>
 #include <vector>
@@ -376,7 +377,7 @@ SymRep::trace() const
 // //////////////////////////////////////////////////////////////////
 
 
-class CharacterTable;
+class PSI_API CharacterTable;
 
 /** The IrreducibleRepresentation class provides information associated
     with a particular irreducible representation of a point group.  This
@@ -523,10 +524,10 @@ public:
     const std::string& symbol() const
     { return symb; }
     /// Returns the i'th irrep.
-    IrreducibleRepresentation& gamma(int i)
+    IrreducibleRepresentation& gamma(int i) const
     { return gamma_[i]; }
     /// Returns the i'th symmetry operation.
-    SymmetryOperation& symm_operation(int i)
+    SymmetryOperation& symm_operation(int i) const
     { return symop[i]; }
 
     /** Cn, Cnh, Sn, T, and Th point groups have complex representations.
@@ -590,7 +591,7 @@ public:
  symmetry operations, so if you want to use a point group with a nonzero
  origin, first translate all your coordinates to the origin and then set
  the origin to zero.  */
-class PointGroup
+class PSI_API PointGroup
 {
 private:
     std::string symb;
@@ -682,7 +683,10 @@ public:
     static const char *bits_to_basic_name(unsigned char bits);
     static bool full_name_to_bits(const std::string& pg, unsigned char& bits);
 
-    void print(std::string OutFileRMR = "outfile") const;
+    void print(std::string out_fname = "outfile") const;
+
+    /// Convert an irrep bit string to a human readable irrep list
+    std::string irrep_bits_to_string(int irrep_bits) const;
 };
 
 }

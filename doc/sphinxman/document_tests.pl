@@ -5,23 +5,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -59,6 +60,15 @@ my %ExeFolder = (
    "gdma/"      => "gdma",
    "dkh/"       => "dkh",
    "erd/"       => "erd",
+   "v2rdm_casscf/" => "v2rdm_casscf",
+   "snsmp2/"    => "snsmp2",
+   "simint/"    => "simint",
+   "gpu_dfcc/"  => "gpu_dfcc",
+   "gcp/"       => "gcp",
+   "cookbook/"  => "cookbook",
+   "json/"      => "json",
+   "psi4numpy/" => "psi4numpy",
+   "python/"    => "python",
 );
 
 foreach my $exe (keys %ExeFolder) {
@@ -81,6 +91,15 @@ foreach my $File(readdir SAMPLES){
     next if $File =~ /^gdma$/;
     next if $File =~ /^dkh$/;
     next if $File =~ /^erd$/;
+    next if $File =~ /^v2rdm_casscf$/;
+    next if $File =~ /^snsmp2$/;
+    next if $File =~ /^simint$/;
+    next if $File =~ /^gpu_dfcc$/;
+    next if $File =~ /^gcp$/;
+    next if $File =~ /^cookbook$/;
+    next if $File =~ /^python$/;
+    next if $File =~ /^json$/;
+    next if $File =~ /^psi4numpy$/;
     next if (-d $File);  # Don't remove subdirectories
     remove_tree("$SamplesFolder/$File");
 }
@@ -105,8 +124,20 @@ if ($ExeFolder{$exe} ne "corepsi4") {
 print RSTSUMMARY "\n=============================================   ============\n";
 print RSTSUMMARY   "Input File                                      Description \n";
 print RSTSUMMARY   "=============================================   ============\n";
+
+my @pytestdirs = qw( python/ json/ psi4numpy/ );
+my $iext;
+my $text;
+if ( grep( /^$exe$/, @pytestdirs ) ) {
+   $iext = "py";
+   $text = "py";
+} else {
+   $iext = "dat";
+   $text = "in";
+}
+
 foreach my $Dir(readdir TESTS){
-    my $Input = $TestsFolder."/".$Dir."/input.dat";
+    my $Input = $TestsFolder."/".$Dir."/input.".$iext;
     # Look for an input file in each subdirectory, or move on
     open(INPUT, "<$Input") or next;
     #
@@ -117,15 +148,15 @@ foreach my $Dir(readdir TESTS){
         # This directory doesn't exist in psi4/samples, make it now
         mkdir $SamplesDirectory or die "\nI can't create $SamplesDirectory\n";
     }
-    my $SampleInput = $SamplesDirectory."/input.dat";
+    my $SampleInput = $SamplesDirectory."/input.".$iext;
     open(SAMPLE, ">$SampleInput") or die "\nI can't write to $SampleInput\n";
-    my $TestInput = $SamplesDirectory."/test.in";
+    my $TestInput = $SamplesDirectory."/test.".$text;
     open(TEST, ">$TestInput") or die "\nI can't write to $TestInput\n";
     my $Description;
     my $TestOnlyNoSample = 0;
     while(<INPUT>){
         # If this line isn't associated with testing, put it in the sample
-        print SAMPLE unless /\#TEST/;
+        print SAMPLE unless /\#\s*TEST/;
         print TEST;
         # Now we only want to grab the comments.  Move on if this is not a comment.
         next unless s/\#\!//;

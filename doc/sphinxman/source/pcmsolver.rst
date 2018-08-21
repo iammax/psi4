@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -53,7 +54,7 @@ Interface to PCMSolver by R. Di Remigio
 by R. Di Remigio and L. Frediani.
 The PCMSolver library requires no additional licence, downloads, or
 configuration. The library allows for calculations in solution with the
-polarizable continuum model (PCM), a continuum solvation model.
+polarizable continuum model (PCM), a continuum solvation model [Tomasi:2005:2999]_.
 
 Installation
 ~~~~~~~~~~~~
@@ -63,16 +64,19 @@ Installation
 * .. image:: https://anaconda.org/psi4/pcmsolver/badges/version.svg
      :target: https://anaconda.org/psi4/pcmsolver
 
-* PCMSolver is available as a conda package for Linux and macOS.
+* PCMSolver is available as a conda package for Linux and macOS (and Windows, through the Ubuntu shell).
 
 * If using the |PSIfour| binary, PCMSolver has already been installed alongside.
 
 * If using |PSIfour| built from source, and anaconda or miniconda has
   already been installed (instructions at :ref:`sec:quickconda`),
-  PCMSolver can be obtained through ``conda install pcmsolver``.
-  Then enable it as a feature with :makevar:`ENABLE_CheMPS2`,
+  PCMSolver can be obtained through ``conda install pcmsolver -c psi4``.
+  Then enable it as a feature with :makevar:`ENABLE_PCMSolver`,
   hint its location with :makevar:`CMAKE_PREFIX_PATH`,
   and rebuild |PSIfour| to detect PCMSolver and activate dependent code.
+
+* Previous bullet had details. To build |PSIfour| from source and use
+  pcmsolver from conda without thinking, consult :ref:`sec:condapsi4dev`.
 
 * To remove a conda installation, ``conda remove pcmsolver``.
 
@@ -83,7 +87,7 @@ Installation
 
 * If using |PSIfour| built from source and you want PCMSolver built from
   from source also,
-  enable it as a feature with :makevar:`ENABLE_CheMPS2`,
+  enable it as a feature with :makevar:`ENABLE_PCMSolver`,
   and let the build system fetch and build it and activate dependent code.
 
 .. index:: PCM; Using PCM
@@ -100,13 +104,23 @@ is achieved by setting |globals__pcm| ``true`` in your input file.
 The latter forces the separate handling of nuclear and electronic electrostatic potentials and
 polarization charges. It is mainly useful for debugging.
 
-.. note:: At present PCM can only be used for energy calculations with SCF wavefunctions.
-   Moreover, the PCMSolver library **cannot** exploit molecular point group symmetry.
+.. note:: At present PCM can only be used for energy calculations with SCF
+          wavefunctions and CC wavefunctions in the PTE approximation [Cammi:2009:164104]_.
+          All ERI algorithms (``PK``, ``OUT_OF_CORE``, ``DIRECT``, ``DF``, ``CD``) are supported.
+
+.. warning:: The PCMSolver library **cannot** exploit molecular point group symmetry.
+
+.. warning:: ROHF with PCM is known **not to work**. See `issue #999 on GitHub <https://github.com/psi4/psi4/issues/999>`_.
+             For the adventurous, a fix is available in `pull request #953 on GitHub <https://github.com/psi4/psi4/pull/953>`_
+
+.. warning:: Analytic gradients and Hessians **are not** available with PCM. Finite differences will be used
+             regardless of the ``dertype`` passed to the ``optimize`` function.
+             See :srcsample:`pcmsolver/opt-fd` for a sample input.
 
 The PCM model and molecular cavity are specified in a ``pcm`` section that has
 to be explicitly typed in by the user. This additional section follows a syntax
 that is slightly different from that of |Psifour| and is fully documented
-`here <http://pcmsolver.readthedocs.org/en/latest/users/input.html>`_
+`here <http://pcmsolver.readthedocs.io/en/latest/users/input.html>`_
 
 A typical input for a Hartree--Fock calculation with PCM would look like the following: ::
 
@@ -145,15 +159,18 @@ A typical input for a Hartree--Fock calculation with PCM would look like the fol
     }
 
 More examples can be found in the directories with PCM tests
-:srcsample:`pcmsolver/pcm-scf`,
-:srcsample:`pcmsolver/pcm-dft`, and
-:srcsample:`pcmsolver/pcm-dipole`.
+:srcsample:`pcmsolver/ccsd-pte`,
+:srcsample:`pcmsolver/scf`,
+:srcsample:`pcmsolver/opt-fd`,
+:srcsample:`pcmsolver/dft`, and
+:srcsample:`pcmsolver/dipole`.
 
 Keywords for PCMSolver
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. include:: autodir_options_c/globals__pcm.rst
 .. include:: autodir_options_c/globals__pcm_scf_type.rst
+.. include:: autodir_options_c/globals__pcm_cc_type.rst
 
 .. _`cmake:pcmsolver`:
 
@@ -167,5 +184,27 @@ How to configure PCMSolver for building Psi4
 
 * Downstream Dependencies |w---w| |PSIfour| (\ |dr| optional) PCMSolver
 
-* Upstream Dependencies |w---w| PCMSolver |dr| Fortran, ???
+* Upstream Dependencies |w---w| PCMSolver |dr| Fortran, zlib
+
+**CMake Variables**
+
+* :makevar:`ENABLE_PCMSolver` |w---w| CMake variable toggling whether Psi4 builds with PCMSolver
+* :makevar:`CMAKE_PREFIX_PATH` |w---w| CMake list variable to specify where pre-built dependencies can be found. For PCMSolver, set to an installation directory containing ``include/PCMSolver/pcmsolver.h``
+* :makevar:`PCMSolver_DIR` |w---w| CMake variable to specify where pre-built PCMSolver can be found. Set to installation directory containing ``share/cmake/PCMSolver/PCMSolverConfig.cmake``
+* :makevar:`CMAKE_DISABLE_FIND_PACKAGE_PCMSolver` |w---w| CMake variable to force internal build of PCMSolver instead of detecting pre-built
+* :makevar:`CMAKE_INSIST_FIND_PACKAGE_PCMSolver` |w---w| CMake variable to force detecting pre-built PCMSolver and not falling back on internal build
+
+**Examples**
+
+A. Build bundled
+
+  .. code-block:: bash
+
+    >>> cmake -DENABLE_PCMSolver=ON
+
+B. Build *without* PCMSolver
+
+  .. code-block:: bash
+
+    >>> cmake
 

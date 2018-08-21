@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -49,20 +50,12 @@
  PRAGMA_WARNING_POP
 #include "psi4/libmints/dimension.h"
 #include "psi4/libmints/typedefs.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+
 
 namespace psi { namespace detci {
 
-/*** INCLUDES ***/
-// do I really need these?  22 Jan 2008 CDS
-// #include <unistd.h>
-// #include <sys/<ctime>>
-
 /*** DEFINES ***/
-/*
-typedef unsigned long long int BIGINT;
-*/
-typedef unsigned long int BIGINT;
-//typedef std::shared_ptr<psi::detci::CIvect> SharedCIVector;
 
 #define CI_BLK_MAX 5000
 #define IOFF_MAX 50604
@@ -150,7 +143,7 @@ struct stringwr {
    unsigned char *occs;
    int **ij;
    int **oij;
-   unsigned int **ridx;
+   size_t **ridx;
    signed char **sgn;
    int *cnt;
    };
@@ -366,7 +359,7 @@ struct calcinfo {
    int num_bet;          /* number of beta electrons */
    int num_alp_expl;     /* number of alpha electrons explicitly treated */
    int num_bet_expl;     /* number of beta electrons explicitly treated */
-   char **labels;        /* labels for irreps */
+   std::vector<std::string> labels;   /* labels for irreps */
    int *orbsym;          /* irrep for each orbital */
    std::vector<int> reorder;         /* map Pitzer-ordered orbitals to our ordering */
    std::vector<int> order;           /* map our ordering back to Pitzer ordering */
@@ -625,13 +618,13 @@ struct params {
 ** beta) and determines the CI vector block number.
 */
 struct ci_blks {
-    BIGINT vectlen;            /* total number of elements in the CI vector */
+    size_t vectlen;            /* total number of elements in the CI vector */
     int num_blocks;            /* number of blocks in the CI vector */
     int Ia_code[CI_BLK_MAX];   /* gives the block's alpha string code */
     int Ib_code[CI_BLK_MAX];   /* gives the block's beta string code */
     int Ia_size[CI_BLK_MAX];   /* num of alp strings in the block */
     int Ib_size[CI_BLK_MAX];   /* num of bet strings in the block */
-    BIGINT offset[CI_BLK_MAX];  /* offset for absolute numbering */
+    size_t offset[CI_BLK_MAX];  /* offset for absolute numbering */
     int **decode;              /* gives the block number for a given pair
                                    of alpha and beta codes */
     int num_alp_codes;         /* number of alpha codes in decode matrix */

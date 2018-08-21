@@ -3,23 +3,24 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
@@ -35,18 +36,18 @@ from __future__ import absolute_import
 from __future__ import print_function
 import math
 import copy
+import collections
+
 from .vecutil import *
 from .exceptions import *
-try:
-    from collections import OrderedDict
-except ImportError:
-    from .oldpymodules import OrderedDict
 
 
 class CoordValue(object):
     """An abstract class to handle storage of Cartesian coordinate values, which
     may be defined in terms of other variables through this mechanism, greatly
     simplifying Z-matrix specification, for example.
+
+    This class and its subclasses are used by `qcdb.Molecule` but not by users directly.
 
     """
 
@@ -170,9 +171,11 @@ class CoordEntry(object):
     """Class to store all the attributes associated with an atom, not the
     larger Molecule. Specialized into CartesianEntry and ZMatrixEntry.
 
+    This class and its subclasses are used by `qcdb.Molecule` but not by users directly.
+
     """
 
-    def __init__(self, entry_number, Z, charge, mass, symbol, label="", basis=None, shells=None):
+    def __init__(self, entry_number, Z, charge, mass, symbol, label="", A=-1, basis=None, shells=None):
         """Constructor"""
         # Order in full atomic list
         self.PYentry_number = entry_number
@@ -187,15 +190,17 @@ class CoordEntry(object):
         # Mass of the atom
         self.PYmass = mass
         # Label of the atom minus any extra info (H1 => H)
-        self.PYsymbol = symbol
+        self.PYsymbol = symbol.upper()
         # Original label from the molecule from the input file (H1)
-        self.PYlabel = label
+        self.PYlabel = label.upper()
+        # Mass number of the atom if known, else -1
+        self.PYA = A
         # Is this a ghost atom?
         self.ghosted = False
         # Different types of basis sets that can be assigned to this atom.
-        self.PYbasissets = basis if basis is not None else OrderedDict()
+        self.PYbasissets = basis if basis is not None else collections.OrderedDict()
         # Hash of one-atom BasisSet attached to this atom
-        self.PYshells = shells if shells is not None else OrderedDict()
+        self.PYshells = shells if shells is not None else collections.OrderedDict()
 
     @staticmethod
     def r(a1, a2):
@@ -294,6 +299,14 @@ class CoordEntry(object):
         """The atomic mass of the current atom."""
         return self.PYmass
 
+    def set_mass(self, mass):
+        """Assign the mass of the atom (useful for isotopic substitutions)."""
+        self.PYmass = mass
+
+    def set_A(self, A):
+        """Assign the mass number of the atom."""
+        self.PYA = A
+
     def symbol(self):
         """The atomic symbol."""
         return self.PYsymbol
@@ -301,6 +314,10 @@ class CoordEntry(object):
     def label(self):
         """The atom label."""
         return self.PYlabel
+
+    def A(self):
+        """The mass number of the current atom (0 if ghosted)."""
+        return self.PYA
 
     def entry_number(self):
         """The order in which this appears in the full atom list."""
@@ -355,9 +372,9 @@ class CoordEntry(object):
         return self.PYshells
 
     def everything(self):
-        print('\nCoordEntry\n  Entry Number = %d\n  Computed = %s\n  Z = %d\n  Charge = %f\n  Mass = %f\n  Symbol = %s\n  Label = %s\n  Ghosted = %s\n  Coordinates = %s\n  Basissets = %s\n\n  Shells = %s\n\n' %
+        print('\nCoordEntry\n  Entry Number = %d\n  Computed = %s\n  Z = %d\n  Charge = %f\n  Mass = %f\n  Symbol = %s\n  Label = %s\n  A = %d\n  Ghosted = %s\n  Coordinates = %s\n  Basissets = %s\n\n  Shells = %s\n\n' %
             (self.entry_number(), self.is_computed(), self.Z(), self.charge(),
-            self.mass(), self.symbol(), self.label(), self.is_ghosted(),
+            self.mass(), self.symbol(), self.label(), self.A(), self.is_ghosted(),
             self.coordinates, self.PYbasissets, self.PYshells))
 
 
@@ -367,8 +384,8 @@ class CartesianEntry(CoordEntry):
 
     """
 
-    def __init__(self, entry_number, Z, charge, mass, symbol, label, x, y, z, basis=None, shells=None):
-        CoordEntry.__init__(self, entry_number, Z, charge, mass, symbol, label, basis, shells)
+    def __init__(self, entry_number, Z, charge, mass, symbol, label, A, x, y, z, basis=None, shells=None):
+        CoordEntry.__init__(self, entry_number, Z, charge, mass, symbol, label, A, basis, shells)
         self.x = x
         self.y = y
         self.z = z
@@ -446,10 +463,10 @@ class ZMatrixEntry(CoordEntry):
 
     """
 
-    def __init__(self, entry_number, Z, charge, mass, symbol, label, \
+    def __init__(self, entry_number, Z, charge, mass, symbol, label, A,
         rto=None, rval=0, ato=None, aval=0, dto=None, dval=0, basis=None, shells=None):
         """Constructor"""  # note that pos'n of basis arg changed from libmints
-        CoordEntry.__init__(self, entry_number, Z, charge, mass, symbol, label, basis, shells)
+        CoordEntry.__init__(self, entry_number, Z, charge, mass, symbol, label, A, basis, shells)
         self.rto = rto
         self.rval = rval
         self.ato = ato

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -30,13 +31,13 @@
 
 #include "typedefs.h"
 #include "psi4/libpsi4util/exception.h"
-#include "psi4/libparallel/parallel.h"
 #include "psi4/libmints/dimension.h"
 
-#include "psi4/pybind11.h"
 #include <stddef.h>
 #include <vector>
+#include <array>
 #include <memory>
+#include <map>
 
 #define MAX_IOFF 30000
 extern size_t ioff[MAX_IOFF];
@@ -73,16 +74,16 @@ class Vector;
 class MatrixFactory;
 class Options;
 class SOBasisSet;
+class PCM;
 class PSIO;
-class Chkpt;
 class OrbitalSpace;
-class OEProp;
+class ExternalPotential;
 
 /*! \ingroup MINTS
  *  \class Wavefunction
  *  \brief Simple wavefunction base class.
  */
-class Wavefunction : public std::enable_shared_from_this<Wavefunction>
+class PSI_API Wavefunction : public std::enable_shared_from_this<Wavefunction>
 {
 protected:
     /// Name of the wavefunction
@@ -117,15 +118,22 @@ protected:
 
     std::shared_ptr<Wavefunction> reference_wavefunction_;
 
-    std::shared_ptr<OEProp> oeprop_;
-
     /// How much memory you have access to.
     long int memory_;
 
+    /// Perturb the Hamiltonian?
+    int perturb_h_;
+    /// With what...
+    enum FieldType { nothing, dipole_x, dipole_y, dipole_z, dipole, embpot, dx, sphere };
+    FieldType dipole_field_type_;
+    /// How big of a field perturbation to apply
+    std::array<double,3> dipole_field_strength_;
+
+
     /// Debug flag
-    unsigned int debug_;
+    size_t debug_;
     /// Print flag
-    unsigned int print_;
+    size_t print_;
 
     /// Total alpha and beta electrons
     int nalpha_, nbeta_;
@@ -151,6 +159,7 @@ protected:
     /// Number of mo per irrep
     Dimension nmopi_;
 
+
     /// Whether this wavefunction was obtained using density fitting
     bool density_fitted_;
 
@@ -172,7 +181,6 @@ protected:
 
     /// Core Hamiltonian matrix
     SharedMatrix H_;
-    SharedMatrix Horig_;
 
     /// Alpha MO coefficients
     SharedMatrix Ca_;
@@ -193,45 +201,53 @@ protected:
     SharedMatrix Fb_;
 
     /// Alpha orbital eneriges
-    std::shared_ptr<Vector> epsilon_a_;
+    SharedVector epsilon_a_;
     /// Beta orbital energies
-    std::shared_ptr<Vector> epsilon_b_;
+    SharedVector epsilon_b_;
 
-    // Callback routines to Python
-    std::vector<void*> precallbacks_;
-    std::vector<void*> postcallbacks_;
-
-    /// If a gradient is available it will be here:
+    /// gradient, if available, as natom_ x 3 SharedMatrix
     SharedMatrix gradient_;
 
-    /// If a Hessian is available it will be here:
+    /// Hessian, if available, as natom_*3 x natom_*3 SharedMatrix (NOT mass-weighted!)
     SharedMatrix hessian_;
 
-    /// The TPDM contribution to the gradient
-    std::shared_ptr<Matrix> tpdm_gradient_contribution_;
-
     /// Helpers for C/D/epsilon transformers
-    SharedMatrix C_subset_helper(SharedMatrix C, const Dimension& noccpi, SharedVector epsilon, const std::string& basis, const std::string& subset);
-    SharedMatrix F_subset_helper(SharedMatrix F, SharedMatrix C, const std::string& basis);
-    SharedVector epsilon_subset_helper(SharedVector epsilon, const Dimension& noccpi, const std::string& basis, const std::string& subset);
-    std::vector<std::vector<int> > subset_occupation(const Dimension& noccpi, const std::string& subset);
+    SharedMatrix C_subset_helper(SharedMatrix C, const Dimension& noccpi, SharedVector epsilon,
+                                 const std::string& basis, const std::string& subset) const;
+    SharedVector epsilon_subset_helper(SharedVector epsilon, const Dimension& noccpi,
+                                       const std::string& basis, const std::string& subset) const;
+    std::vector<std::vector<int>> subset_occupation(const Dimension& noccpi,
+                                                    const std::string& subset) const;
 
+    /// Should nuclear electrostatic potentials be available, they will be here
+    std::shared_ptr<std::vector<double>> esp_at_nuclei_;
+    
+    /// Should molecular orbital extents be available, they will be here
+    std::vector<SharedVector> mo_extents_;
+    
     /// If atomic point charges are available they will be here
     std::shared_ptr<std::vector<double>> atomic_point_charges_;
-
+    
+    /// Should natural orbital occupations be available, they will be here
+    std::vector<std::vector< std::tuple<double, int, int> >> no_occupations_;
+    
     /// If frequencies are available, they will be here:
-    std::shared_ptr<Vector> frequencies_;
-
-    /// If normal modes are available, they will be here:
-    std::shared_ptr<Vector> normalmodes_;
+    SharedVector frequencies_;
 
     /// Same orbs or dens
     bool same_a_b_dens_;
     bool same_a_b_orbs_;
 
+    // The external potential
+    std::shared_ptr<ExternalPotential> external_pot_;
+
     // Collection of variables
     std::map<std::string, double> variables_;
     std::map<std::string, SharedMatrix> arrays_;
+
+    // Polarizable continuum model
+    bool PCM_enabled_;
+    std::shared_ptr<PCM> PCM_;
 
 private:
     // Wavefunction() {}
@@ -271,6 +287,15 @@ public:
     **/
     void deep_copy(SharedWavefunction other);
     void deep_copy(const Wavefunction* other);
+
+    /**
+    * Creates a new wavefunction in C1-symmetry format from the current
+    * Wavefunction that may be in a higher point group symmetry format.
+    *
+    * @param basis A C1-symmetry basis set object (we don't yet have
+    *        the ability to copy this straight from the symmetric Wavefunction)
+    **/
+    std::shared_ptr <Wavefunction> c1_deep_copy(std::shared_ptr<BasisSet> basis);
 
     virtual ~Wavefunction();
 
@@ -319,6 +344,8 @@ public:
     /// Returns whether this wavefunction was obtained using density fitting or not
     bool density_fitted() const { return density_fitted_; }
 
+    /// Returns the print level
+    int get_print() const { return print_; }
     static void initialize_singletons();
 
     /// Returns the DOCC per irrep array.
@@ -338,11 +365,23 @@ public:
     /// Returns the frozen virtual orbitals per irrep array.
     const Dimension& frzvpi() const { return frzvpi_; }
 
-    void set_doccpi(const Dimension& doccpi);
-    void set_soccpi(const Dimension& soccpi);
+    /* Return the magnitude of the dipole perturbation strength in the x,y,z direction */
+    std::array<double,3> get_dipole_field_strength() const;
+    FieldType get_dipole_perturbation_type() const;
+
+    /**
+     * @brief Expert specialized use only. Sets the number of doubly occupied orbitals per irrep. Results in an inconsistent Wavefunction object for SCF purposes, so caution is advised.
+     * @param doccpi the new list of doubly occupied orbitals per irrep
+     */
+    void force_doccpi(const Dimension& doccpi);
+    /**
+     * @brief Expert specialized use only. Sets the number of singly occupied orbitals per irrep. Results in an inconsistent Wavefunction object for SCF purposes, so caution is advised.
+     * @param soccpi the new list of singly occupied orbitals per irrep
+     */
+    void force_soccpi(const Dimension& soccpi);
 
     /// Sets the frozen virtual orbitals per irrep array.
-    void set_frzvpi(const Dimension& frzvpi) { for(int h=0; h < nirrep_; h++) frzvpi_[h] = frzvpi[h]; }
+    void set_frzvpi(const Dimension& frzvpi);
 
     /// Return the number of frozen core orbitals
     int nfrzc() const { return nfrzc_; }
@@ -378,18 +417,13 @@ public:
     /// Returns the (SO basis) beta Fock matrix
     SharedMatrix Fb() const;
     /// Returns the alpha orbital energies
-    std::shared_ptr<Vector> epsilon_a() const;
+    SharedVector epsilon_a() const;
     /// Returns the beta orbital energies
-    std::shared_ptr<Vector> epsilon_b() const;
+    SharedVector epsilon_b() const;
     /// Returns the SO basis Lagrangian
-    std::shared_ptr<Matrix> Lagrangian() const;
-    /// The two particle density matrix contribution to the gradient
-    virtual std::shared_ptr<Matrix> tpdm_gradient_contribution() const;
+    SharedMatrix Lagrangian() const;
 
     SharedMatrix aotoso() const { return AO2SO_; }
-
-    std::shared_ptr<OEProp> get_oeprop() const { return oeprop_; }
-    void set_oeprop( std::shared_ptr<OEProp> oeprop ) { oeprop_ = oeprop; }
 
     /// Returns the alpha OPDM for the wavefunction
     const SharedMatrix Da() const;
@@ -404,7 +438,7 @@ public:
     *  ALL, ACTIVE, FROZEN, OCC, VIR, FROZEN_OCC, ACTIVE_OCC, ACTIVE_VIR, FROZEN_VIR
     * @return the matrix in Pitzer order in the desired basis
     **/
-    SharedMatrix Ca_subset(const std::string& basis = "SO", const std::string& subset = "ALL");
+    SharedMatrix Ca_subset(const std::string& basis = "SO", const std::string& subset = "ALL") const;
 
     /**
     * Return a subset of the Cb matrix in a desired basis
@@ -414,7 +448,7 @@ public:
     *  ALL, ACTIVE, FROZEN, OCC, VIR, FROZEN_OCC, ACTIVE_OCC, ACTIVE_VIR, FROZEN_VIR
     * @return the matrix in Pitzer order in the desired basis
     **/
-    SharedMatrix Cb_subset(const std::string& basis = "SO", const std::string& subset = "ALL");
+    SharedMatrix Cb_subset(const std::string& basis = "SO", const std::string& subset = "ALL") const;
 
     /**
      * @brief Creates an OrbitalSpace object containing information about the request alpha orbital space.
@@ -443,7 +477,7 @@ public:
     *  AO, SO, MO
     * @return the matrix in the desired basis
     **/
-    SharedMatrix Da_subset(const std::string& basis = "SO");
+    SharedMatrix Da_subset(const std::string& basis = "SO") const;
 
     /**
     * Return the Db matrix in the desired basis
@@ -451,17 +485,56 @@ public:
     *  AO, SO, MO
     * @return the matrix in the desired basis
     **/
-    SharedMatrix Db_subset(const std::string& basis = "SO");
+    SharedMatrix Db_subset(const std::string& basis = "SO") const;
 
     /**
     * Return the D matrix in the desired basis
     * @param D matrix in the SO basis to transform
-    * @param C matrix in the SO basis to use as a transformer
+    * @param C matrix in the SO basis to use for transforms to the MO basis
     * @param basis the symmetry basis to use
     *  AO, SO, MO, CartAO
     * @return the D matrix in the desired basis
     **/
-    SharedMatrix D_subset_helper(SharedMatrix D, SharedMatrix C, const std::string& basis);
+    SharedMatrix D_subset_helper(SharedMatrix D, SharedMatrix C, const std::string& basis) const;
+
+    /**
+    * Return the Fa matrix in the desired basis
+    * @param basis the symmetry basis to use
+    *  AO, SO, MO
+    * @return the matrix in the desired basis
+    **/
+    SharedMatrix Fa_subset(const std::string& basis = "SO") const;
+
+    /**
+    * Return the Fb matrix in the desired basis
+    * @param basis the symmetry basis to use
+    *  AO, SO, MO
+    * @return the matrix in the desired basis
+    **/
+    SharedMatrix Fb_subset(const std::string& basis = "SO") const;
+
+    /**
+    * Return the F matrix in the desired basis
+    * @param F matrix in the SO basis to transform
+    * @param C matrix in the SO basis to use for transforms to the MO basis
+    * @param basis the symmetry basis to use
+    *  AO, SO, MO, CartAO
+    * @return the F matrix in the desired basis
+    **/
+    SharedMatrix F_subset_helper(SharedMatrix F, SharedMatrix C, const std::string& basis) const;
+
+
+    /**
+    * Transform a matrix M into the desired basis
+    * @param M matrix in the SO basis to transform
+    * @param C matrix in the SO basis to use for transforms to MO basis
+    * @param basis the symmetry basis to use
+    *  AO, SO, MO, CartAO
+    * @return the matrix M in the desired basis
+    **/
+    SharedMatrix matrix_subset_helper(SharedMatrix M,
+        SharedMatrix C, const std::string &basis,
+        const std::string matrix_basename) const;
 
     /**
     * Return the alpha orbital eigenvalues in the desired basis
@@ -470,7 +543,7 @@ public:
     * @param subset the subset of orbitals to return
     *  ALL, ACTIVE, FROZEN, OCC, VIR, FROZEN_OCC, ACTIVE_OCC, ACTIVE_VIR, FROZEN_VIR
     */
-    SharedVector epsilon_a_subset(const std::string& basis = "SO", const std::string& subset = "ALL");
+    SharedVector epsilon_a_subset(const std::string& basis = "SO", const std::string& subset = "ALL") const;
 
     /**
     * Return the beta orbital eigenvalues in the desired basis
@@ -479,7 +552,7 @@ public:
     * @param subset the subset of orbitals to return
     *  ALL, ACTIVE, FROZEN, OCC, VIR, FROZEN_OCC, ACTIVE_OCC, ACTIVE_VIR, FROZEN_VIR
     */
-    SharedVector epsilon_b_subset(const std::string& basis = "SO", const std::string& subset = "ALL");
+    SharedVector epsilon_b_subset(const std::string& basis = "SO", const std::string& subset = "ALL") const;
 
     /**
      * Projects the given orbitals from the old to the new basis
@@ -506,28 +579,62 @@ public:
     /// Set the Hessian for the wavefunction
     void set_hessian(SharedMatrix& hess);
 
+    /// Returns electrostatic potentials at nuclei
+    std::shared_ptr<std::vector<double>> esp_at_nuclei()const{
+        return esp_at_nuclei_;
+    }
+    
+    /// Returns electrostatic potentials at nuclei in Vector form for python output
+    std::shared_ptr<Vector> get_esp_at_nuclei() const;
+    
+    /// Sets the electrostatic potentials at nuclei
+    void set_esp_at_nuclei(const std::shared_ptr<std::vector<double>>& nesps){
+        esp_at_nuclei_=nesps;
+    }
+    
+    /// Returns Molecular orbital extents
+    std::vector<SharedVector> mo_extents()const{
+        return mo_extents_;
+    }
+    
+    /// Returns Molecular orbital extents in Vector form for python output.
+    std::vector<SharedVector> get_mo_extents() const;
+    
+    /// Sets molecular orbital extents
+    void set_mo_extents(const std::vector<SharedVector> mo_es){
+        mo_extents_ = mo_es;
+    }
+    
     /// Returns the atomic point charges
     std::shared_ptr<std::vector<double>> atomic_point_charges()const{
        return atomic_point_charges_;
     }
     /// Returns the atomic point charges in Vector form for python output.
-    std::shared_ptr<Vector> get_atomic_point_charges() const;
+    SharedVector get_atomic_point_charges() const;
 
     /// Sets the atomic point charges
     void set_atomic_point_charges(const std::shared_ptr<std::vector<double>>& apcs){
        atomic_point_charges_=apcs;
     }
+    
+    /// Returns NO occupations
+    std::vector<std::vector< std::tuple<double, int, int> >> no_occupations()const{
+        return no_occupations_;
+    }
+    
+    /// Returns the NO occupations in vector form for python output
+    std::vector<std::vector< std::tuple<double, int, int> >> get_no_occupations() const;
+    
+    /// Sets the NO occupations
+    void set_no_occupations(const std::vector<std::vector< std::tuple<double, int, int> >> no_ocs){
+        no_occupations_=no_ocs;
+    }
 
     /// Returns the frequencies
-    std::shared_ptr<Vector> frequencies() const;
+    SharedVector frequencies() const;
     /// Set the frequencies for the wavefunction
     void set_frequencies(std::shared_ptr<Vector>& freqs);
-
-    /// Returns the normalmodes
-    std::shared_ptr<Vector> normalmodes() const;
-    /// Set the normalmodes for the wavefunction
-    void set_normalmodes(std::shared_ptr<Vector>& norms);
-
+    
     /// Set the wavefunction name (e.g. "RHF", "ROHF", "UHF", "CCEnergyWavefunction")
     void set_name(const std::string& name) { name_ = name; }
 
@@ -535,13 +642,16 @@ public:
     const std::string& name() const { return name_; }
 
     // Set the print flag level
-    void set_print(unsigned int print) { print_ = print; }
+    void set_print(size_t print) { print_ = print; }
 
     // Set the debug flag level
-    void set_debug(unsigned int debug) { debug_ = debug; }
+    void set_debug(size_t debug) { debug_ = debug; }
 
     /// Save the wavefunction to checkpoint
     virtual void save() const;
+
+    // Set the external potential
+    void set_external_potential(std::shared_ptr<ExternalPotential> external) { external_pot_ = external; }
 
     /// Get and set variables dictionary
     double get_variable(const std::string key);
@@ -552,6 +662,12 @@ public:
     SharedMatrix get_array(const std::string key);
     void set_array(const std::string key, SharedMatrix value) { arrays_[key] = value; }
     std::map<std::string, SharedMatrix> arrays(void) { return arrays_; }
+
+    /// Set PCM object
+    void set_PCM(const std::shared_ptr<PCM> & pcm);
+    /// Get PCM object
+    std::shared_ptr<PCM> get_PCM() const;
+    bool PCM_enabled() const { return PCM_enabled_; }
 };
 
 }

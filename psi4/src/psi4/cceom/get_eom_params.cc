@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,6 +34,8 @@
 #include <cstdlib>
 #include <string>
 #include <cmath>
+#include "psi4/libpsi4util/process.h"
+#include "psi4/liboptions/liboptions.h"
 #include "psi4/libciomr/libciomr.h"
 #include "psi4/psi4-dec.h"
 #include "psi4/libmints/wavefunction.h"
@@ -170,7 +173,7 @@ void get_eom_params(SharedWavefunction ref_wfn, Options &options)
   outfile->Printf( "\t-----------------\n");
   outfile->Printf( "\tStates sought per irrep     =");
   for(int i = 0; i < moinfo.nirreps; ++i)
-    outfile->Printf( " %s %d,", moinfo.irr_labs[i], eom_params.states_per_irrep[i]);
+    outfile->Printf( " %s %d,", moinfo.irr_labs[i].c_str(), eom_params.states_per_irrep[i]);
 
   outfile->Printf("\n");
   outfile->Printf( "\tMax. number of iterations   = %5d\n", eom_params.max_iter);
@@ -183,7 +186,7 @@ void get_eom_params(SharedWavefunction ref_wfn, Options &options)
   outfile->Printf( "\tResidual vector toleranceSS = %5.1e\n", eom_params.residual_tol_SS);
   outfile->Printf( "\tComplex tolerance           = %5.1e\n", eom_params.complex_tol);
   outfile->Printf( "\tRoot for properties         = %5d\n", eom_params.prop_root + 1);
-  outfile->Printf( "\tSym of state for properties = %6s\n", moinfo.irr_labs[eom_params.prop_sym]);
+  outfile->Printf( "\tSym of state for properties = %6s\n", moinfo.irr_labs[eom_params.prop_sym].c_str());
   outfile->Printf( "\tGuess vectors taken from    = %s\n", eom_params.guess.c_str());
   outfile->Printf( "\tRestart EOM CC3             = %s\n", eom_params.restart_eom_cc3?"YES":"NO");
   outfile->Printf( "\tCollapse with last vector   = %s\n", eom_params.collapse_with_last ? "YES":"NO");

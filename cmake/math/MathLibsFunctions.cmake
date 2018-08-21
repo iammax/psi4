@@ -58,8 +58,9 @@ macro(find_math_libs _service)
     set(NARGN ${ARGN})
     foreach(l ${NARGN})
         set(_stat "")
-        if(ENABLE_GENERIC)
-            IF((NOT ${l} MATCHES "iomp5") AND (NOT ${l} MATCHES "pthread") AND (NOT ${l} MATCHES "dl"))
+        if(ENABLE_GENERIC_MATH)
+            IF((NOT "${l}" STREQUAL "iomp5") AND (NOT "${l}" STREQUAL "pthread") AND
+               (NOT "${l}" STREQUAL "dl") AND (NOT "${l}" STREQUAL "m"))
                 set(_stat "lib${l}.a")
             endif()
         endif()
@@ -76,7 +77,9 @@ macro(find_math_libs _service)
             )
         if(_lib)
             set(_libs ${_libs} ${_lib})
-        elseif((${l} STREQUAL "-Wl,--start-group") OR (${l} STREQUAL "-Wl,--end-group"))
+        elseif((${l} STREQUAL "-Wl,--start-group") OR
+               (${l} STREQUAL "-Wl,--end-group") OR
+               (${l} STREQUAL "-Wl,--as-needed"))
             set(_libs ${_libs} ${l})
         else()
             set(${_SERVICE}_LIBRARIES ${_SERVICE}_LIBRARIES-NOTFOUND)
@@ -199,32 +202,6 @@ macro(config_math_service _SERVICE)
     endif()
 
     if(${_SERVICE}_FOUND)
-
-        # this codeblock is dead
-        # take care of omp flags
-        if(ENABLE_THREADED_MKL)
-            set(_omp_flag)
-            if(HAVE_MKL_BLAS OR HAVE_MKL_LAPACK)
-                if(MKL_COMPILER_BINDINGS MATCHES Intel)
-                    set(_omp_flag -qopenmp)
-                endif()
-                if(MKL_COMPILER_BINDINGS MATCHES GNU)
-                    set(_omp_flag -fopenmp)
-                endif()
-                if(MKL_COMPILER_BINDINGS MATCHES PGI)
-                    set(_omp_flag -mp)
-                endif()
-            endif()
-            if(HAVE_MKL_${_SERVICE})
-                if(APPLE)
-                    set(${_SERVICE}_LIBRARIES ${${_SERVICE}_LIBRARIES} ${_omp_flag})
-                else()
-                    set(${_SERVICE}_LIBRARIES -Wl,--start-group ${${_SERVICE}_LIBRARIES} ${_omp_flag} -Wl,--end-group)
-                endif()
-            endif()
-            unset(_omp_flag)
-        endif()
-
         find_package_message(${_SERVICE}
             "Found ${_SERVICE}: ${${_SERVICE}_TYPE} (${${_SERVICE}_LIBRARIES})"
             "[${${_SERVICE}_LIBRARIES}]"

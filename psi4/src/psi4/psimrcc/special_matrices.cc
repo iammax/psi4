@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -33,6 +34,7 @@
 #include "psi4/libqt/qt.h"
 #include "psi4/libpsi4util/libpsi4util.h"
 #include "psi4/libpsi4util/memory_manager.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
 #include "special_matrices.h"
 
@@ -103,9 +105,9 @@ void MatrixBase::add(MatrixBase* A, double alpha, double beta)
 void MatrixBase::contract(MatrixBase* A, MatrixBase* B, double const alpha, double const beta)
 {
   size_t max_r = A->get_ncols();
-  if((max_r != 0) and (nrows != 0) and (ncols != 0))
+  if((max_r != 0) && (nrows != 0) && (ncols != 0))
     C_DGEMM('n','t',nrows,ncols,max_r,alpha,&(A->get_matrix()[0][0]),max_r,&(B->get_matrix()[0][0]),max_r,beta,&(matrix[0][0]),ncols);
-  else if(fabs(beta) < 1.0e-9)
+  else if(std::fabs(beta) < 1.0e-9)
     zero();
   // BUG: There was a tricky bug here.  When alpha is 0.0 and you skip DGEMM the matrix doesn't get set to zero.
 }

@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -35,6 +36,7 @@
  PRAGMA_WARNING_POP
 #include "psi4/libpsio/aiohandler.h"
 
+#include <cmath>
 
 
 namespace psi { namespace sapt {
@@ -111,7 +113,7 @@ void SAPT0::ind20r()
 
 void SAPT0::ind20rA_B()
 {
-  time_t start = time(NULL);
+  time_t start = time(nullptr);
   time_t stop;
   int iter=0;
   double E_old, E;
@@ -128,7 +130,7 @@ void SAPT0::ind20rA_B()
 
   int nthreads = 1;
 #ifdef _OPENMP
-  nthreads = omp_get_max_threads();
+  nthreads = Process::environment.get_n_threads();
 #endif
   int rank = 0;
 
@@ -265,11 +267,11 @@ void SAPT0::ind20rA_B()
     E = 2.0*C_DDOT(noccA_*nvirA_,tAR_new,1,&(wBAR_[0][0]),1);
 
     conv = C_DDOT(noccA_*nvirA_,R_old,1,R_old,1);
-    conv = sqrt(conv);
+    conv = std::sqrt(conv);
     dE = E_old-E;
 
     iter++;
-    stop = time(NULL);
+    stop = time(nullptr);
     if (print_) {
       outfile->Printf("    %4d %16.8lf %17.9lf %17.9lf    %10ld\n",
         iter,E*1000.0,dE*1000.0,conv*1000.0,stop-start);
@@ -277,9 +279,9 @@ void SAPT0::ind20rA_B()
     }
     E_old = E;
   }
-  while((conv > d_conv_ || fabs(dE) > e_conv_) && iter < maxiter_);
+  while((conv > d_conv_ || std::fabs(dE) > e_conv_) && iter < maxiter_);
 
-  if ((conv <= d_conv_) && (fabs(dE) <= e_conv_)) {
+  if ((conv <= d_conv_) && (std::fabs(dE) <= e_conv_)) {
     if (print_)
       outfile->Printf("\n    CHF Iterations converged\n\n");
     }
@@ -306,7 +308,7 @@ void SAPT0::ind20rA_B()
 
 void SAPT0::ind20rB_A()
 {
-  time_t start = time(NULL);
+  time_t start = time(nullptr);
   time_t stop;
   int iter=0;
   double E_old, E;
@@ -323,7 +325,7 @@ void SAPT0::ind20rB_A()
 
   int nthreads = 1;
 #ifdef _OPENMP
-  nthreads = omp_get_max_threads();
+  nthreads = Process::environment.get_n_threads();
 #endif
   int rank = 0;
 
@@ -460,11 +462,11 @@ void SAPT0::ind20rB_A()
     E = 2.0*C_DDOT(noccB_*nvirB_,tBS_new,1,&(wABS_[0][0]),1);
 
     conv = C_DDOT(noccB_*nvirB_,R_old,1,R_old,1);
-    conv = sqrt(conv);
+    conv = std::sqrt(conv);
     dE = E_old-E;
 
     iter++;
-    stop = time(NULL);
+    stop = time(nullptr);
     if (print_) {
       outfile->Printf("    %4d %16.8lf %17.9lf %17.9lf    %10ld\n",
         iter,E*1000.0,dE*1000.0,conv*1000.0,stop-start);
@@ -472,9 +474,9 @@ void SAPT0::ind20rB_A()
     }
     E_old = E;
   }
-  while((conv > d_conv_ || fabs(dE) > e_conv_) && iter < maxiter_);
+  while((conv > d_conv_ || std::fabs(dE) > e_conv_) && iter < maxiter_);
 
-  if ((conv <= d_conv_) && (fabs(dE) <= e_conv_)) {
+  if ((conv <= d_conv_) && (std::fabs(dE) <= e_conv_)) {
     if (print_)
       outfile->Printf("\n    CHF Iterations converged\n\n");
     }
@@ -501,7 +503,7 @@ void SAPT0::ind20rB_A()
 
 void SAPT0::ind20rA_B_aio()
 {
-  time_t start = time(NULL);
+  time_t start = time(nullptr);
   time_t stop;
   int iter=0;
   double E_old, E;
@@ -518,7 +520,7 @@ void SAPT0::ind20rA_B_aio()
 
   int nthreads = 1;
 #ifdef _OPENMP
-  nthreads = omp_get_max_threads();
+  nthreads = Process::environment.get_n_threads();
 #endif
   int rank = 0;
 
@@ -553,7 +555,7 @@ void SAPT0::ind20rA_B_aio()
   int num_blocks = ndf_ / block_length;
   if (ndf_ % block_length) num_blocks++;
 
-  std::shared_ptr<AIOHandler> aio(new AIOHandler(psio_));
+  auto aio = std::make_shared<AIOHandler>(psio_);
 
   double **C_p_AA[2];
   double **C_p_RR[2];
@@ -699,11 +701,11 @@ void SAPT0::ind20rA_B_aio()
     E = 2.0*C_DDOT(noccA_*nvirA_,tAR_new,1,&(wBAR_[0][0]),1);
 
     conv = C_DDOT(noccA_*nvirA_,R_old,1,R_old,1);
-    conv = sqrt(conv);
+    conv = std::sqrt(conv);
     dE = E_old-E;
 
     iter++;
-    stop = time(NULL);
+    stop = time(nullptr);
     if (print_) {
       outfile->Printf("    %4d %16.8lf %17.9lf %17.9lf    %10ld\n",
         iter,E*1000.0,dE*1000.0,conv*1000.0,stop-start);
@@ -711,9 +713,9 @@ void SAPT0::ind20rA_B_aio()
     }
     E_old = E;
   }
-  while((conv > d_conv_ || fabs(dE) > e_conv_) && iter < maxiter_);
+  while((conv > d_conv_ || std::fabs(dE) > e_conv_) && iter < maxiter_);
 
-  if ((conv <= d_conv_) && (fabs(dE) <= e_conv_)) {
+  if ((conv <= d_conv_) && (std::fabs(dE) <= e_conv_)) {
     if (print_)
       outfile->Printf("\n    CHF Iterations converged\n\n");
     }
@@ -740,7 +742,7 @@ void SAPT0::ind20rA_B_aio()
 
 void SAPT0::ind20rB_A_aio()
 {
-  time_t start = time(NULL);
+  time_t start = time(nullptr);
   time_t stop;
   int iter=0;
   double E_old, E;
@@ -757,7 +759,7 @@ void SAPT0::ind20rB_A_aio()
 
   int nthreads = 1;
 #ifdef _OPENMP
-  nthreads = omp_get_max_threads();
+  nthreads = Process::environment.get_n_threads();
 #endif
   int rank = 0;
 
@@ -792,7 +794,7 @@ void SAPT0::ind20rB_A_aio()
   int num_blocks = ndf_ / block_length;
   if (ndf_ % block_length) num_blocks++;
 
-  std::shared_ptr<AIOHandler> aio(new AIOHandler(psio_));
+  auto aio = std::make_shared<AIOHandler>(psio_);
 
   double **C_p_BB[2];
   double **C_p_SS[2];
@@ -938,11 +940,11 @@ void SAPT0::ind20rB_A_aio()
     E = 2.0*C_DDOT(noccB_*nvirB_,tBS_new,1,&(wABS_[0][0]),1);
 
     conv = C_DDOT(noccB_*nvirB_,R_old,1,R_old,1);
-    conv = sqrt(conv);
+    conv = std::sqrt(conv);
     dE = E_old-E;
 
     iter++;
-    stop = time(NULL);
+    stop = time(nullptr);
     if (print_) {
       outfile->Printf("    %4d %16.8lf %17.9lf %17.9lf    %10ld\n",
         iter,E*1000.0,dE*1000.0,conv*1000.0,stop-start);
@@ -950,9 +952,9 @@ void SAPT0::ind20rB_A_aio()
     }
     E_old = E;
   }
-  while((conv > d_conv_ || fabs(dE) > e_conv_) && iter < maxiter_);
+  while((conv > d_conv_ || std::fabs(dE) > e_conv_) && iter < maxiter_);
 
-  if ((conv <= d_conv_) && (fabs(dE) <= e_conv_)) {
+  if ((conv <= d_conv_) && (std::fabs(dE) <= e_conv_)) {
     if (print_)
       outfile->Printf("\n    CHF Iterations converged\n\n");
     }

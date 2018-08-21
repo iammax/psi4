@@ -3,29 +3,31 @@
 #
 # Psi4: an open-source quantum chemistry software package
 #
-# Copyright (c) 2007-2017 The Psi4 Developers.
+# Copyright (c) 2007-2018 The Psi4 Developers.
 #
 # The copyrights for code used from other parties are included in
 # the corresponding files.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# This file is part of Psi4.
 #
-# This program is distributed in the hope that it will be useful,
+# Psi4 is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# Psi4 is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
+# You should have received a copy of the GNU Lesser General Public License along
+# with Psi4; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # @END LICENSE
 #
 
 import sys
+
 import numpy as np
 
 from psi4 import core
@@ -33,47 +35,16 @@ from .exceptions import *
 
 ### Matrix and Vector properties
 
-# The next three functions make me angry
-def translate_interface(interface):
-    """
-    This is extra stupid with unicode
-    """
-
-    if sys.version_info[0] > 2:
-        return interface
-
-    nouni_interface = {}
-    for k, v in interface.items():
-        if k == 'typestr':
-            nouni_interface[k.encode('ascii', 'ignore')] = v.encode('ascii', 'ignore')
-        else:
-            nouni_interface[k.encode('ascii', 'ignore')] = v
-
-    return nouni_interface
-
-class numpy_holder(object):
-    """
-    Blank object, stupid. Apparently you cannot create a view directly from a dictionary
-    """
-    def __init__(self, interface):
-        self.__array_interface__ = translate_interface(interface)
 
 def _get_raw_views(self, copy=False):
     """
     Gets simple raw view of the passed in object.
     """
-    ret = []
-    for data in self.array_interface():
+    if copy:
+        return tuple([np.array(x) for x in self.array_interface()])
+    else:
+        return tuple(self.array_interface())
 
-        # Yet another hack
-        if isinstance(data["shape"], list):
-            data["shape"] = tuple(data["shape"])
-
-        if 0 in data["shape"]:
-            ret.append(np.empty(shape=data["shape"]))
-        else:
-            ret.append(np.array(numpy_holder(data), copy=copy))
-    return ret
 
 def _find_dim(arr, ndim):
     """
@@ -85,15 +56,14 @@ def _find_dim(arr, ndim):
         return [0] * ndim
 
     # Make sure this is a numpy array like thing
-    try:
-        arr.shape
-    except:
-        raise ValidationError("Expected numpy array, found object of type '%s'", type(arr))
+    if not hasattr(arr, 'shape'):
+        raise ValidationError("Expected numpy array, found object of type '%s'" % type(arr))
 
     if len(arr.shape) == ndim:
         return [arr.shape[x] for x in range(ndim)]
     else:
         raise ValidationError("Input array does not have a valid shape.")
+
 
 def array_to_matrix(self, arr, name="New Matrix", dim1=None, dim2=None):
     """
@@ -111,7 +81,7 @@ def array_to_matrix(self, arr, name="New Matrix", dim1=None, dim2=None):
         given in the matrix besides the diagonal blocks determined by the passed
         dimension.
     dim2 :
-        Same as dim1 only if using a Psi4.Dimension object.
+        Same as dim1 only if using a psi4.core.Dimension object.
 
     Returns
     -------
@@ -178,7 +148,7 @@ def array_to_matrix(self, arr, name="New Matrix", dim1=None, dim2=None):
             # Build an irreped array back out
             if dim1 is not None:
                 if dim2 is None:
-                    raise ValidationError ("Array_to_Matrix: If dim1 is supplied must supply dim2 also")
+                    raise ValidationError("Array_to_Matrix: If dim1 is supplied must supply dim2 also")
 
                 dim1 = core.Dimension.from_list(dim1)
                 dim2 = core.Dimension.from_list(dim2)
@@ -206,15 +176,14 @@ def array_to_matrix(self, arr, name="New Matrix", dim1=None, dim2=None):
             # Simple case without irreps
             else:
                 ret = self(name, arr.shape[0], arr.shape[1])
-                view = _get_raw_views(ret)[0]
-                view[:] = arr
+                ret.np[:] = arr
                 return ret
 
         elif arr_type == core.Vector:
             # Build an irreped array back out
             if dim1 is not None:
                 if dim2 is not None:
-                    raise ValidationError ("Array_to_Matrix: If dim2 should not be supplied for 1D vectors.")
+                    raise ValidationError("Array_to_Matrix: If dim2 should not be supplied for 1D vectors.")
 
                 dim1 = core.Dimension.from_list(dim1)
                 ret = self(name, dim1)
@@ -244,20 +213,20 @@ def array_to_matrix(self, arr, name="New Matrix", dim1=None, dim2=None):
 def _to_array(matrix, copy=True, dense=False):
     """
     Converts a Psi4 Matrix or Vector to a numpy array. Either copies the data or simply
-    consturcts a view.
+    constructs a view.
 
     Parameters
     ----------
     matrix : :py:class:`~psi4.core.Matrix` or :py:class:`~psi4.core.Vector`
         Pointers to which Psi4 core class should be used in the construction.
-    copy : bool
-        Copy the data if True, return a view otherwise
-    dense : bool
-        Converts irreped Psi4 objects to diagonally blocked dense arrays. Returns a list of arrays otherwise.
+    copy : bool, optional
+        Copy the data if `True`, return a view otherwise
+    dense : bool, optional
+        Converts irreped Psi4 objects to diagonally blocked dense arrays if `True`. Returns a list of arrays otherwise.
 
     Returns
     -------
-    array : np.array or list of of np.array
+    array : ndarray or list of ndarray
        Returns either a list of np.array's or the base array depending on options.
 
     Notes
@@ -268,7 +237,7 @@ def _to_array(matrix, copy=True, dense=False):
     --------
 
     >>> data = psi4.Matrix(3, 3)
-    >>> data._to_array()
+    >>> data.to_array()
     [[ 0.  0.  0.]
      [ 0.  0.  0.]
      [ 0.  0.  0.]]
@@ -279,11 +248,11 @@ def _to_array(matrix, copy=True, dense=False):
         if dense:
             copy = False
 
-        ret = _get_raw_views(matrix, copy=copy)
+        matrix_views = _get_raw_views(matrix, copy=copy)
 
         # Return the list of arrays
         if dense is False:
-            return ret
+            return matrix_views
 
         # Build the dense matrix
         if isinstance(matrix, core.Vector):
@@ -295,7 +264,7 @@ def _to_array(matrix, copy=True, dense=False):
 
         dim1 = []
         dim2 = []
-        for h in ret:
+        for h in matrix_views:
             # Ignore zero dim irreps
             if 0 in h.shape:
                 dim1.append(0)
@@ -310,18 +279,18 @@ def _to_array(matrix, copy=True, dense=False):
         if ret_type == '1D':
             dense_ret = np.zeros(shape=(ndim1))
             start = 0
-            for d1, arr in zip(dim1, ret):
+            for d1, arr in zip(dim1, matrix_views):
                 if d1 == 0: continue
-                dense_ret[start: start + d1] = arr
+                dense_ret[start:start + d1] = arr
                 start += d1
         else:
             dense_ret = np.zeros(shape=(ndim1, ndim2))
             start1 = 0
             start2 = 0
-            for d1, d2, arr in zip(dim1, dim2, ret):
-                if d1 == 0: continue
+            for d1, d2, arr in zip(dim1, dim2, matrix_views):
+                if (d1 == 0) or (d2 == 0): continue
 
-                dense_ret[start1: start1 + d1, start2: start2 + d2] = arr
+                dense_ret[start1:start1 + d1, start2:start2 + d2] = arr
                 start1 += d1
                 start2 += d2
 
@@ -330,33 +299,17 @@ def _to_array(matrix, copy=True, dense=False):
     else:
         return _get_raw_views(matrix, copy=copy)[0]
 
-def _build_view(matrix):
-    """
-    Builds a view of the vector or matrix
-    """
-    views = _to_array(matrix, copy=False, dense=False)
-    if matrix.nirrep() > 1:
-        return tuple(views)
-    else:
-        return views
-
-def get_view(self):
-    if hasattr(self, '_np_view_data'):
-        return self._np_view_data
-    else:
-        self._np_view_data = _build_view(self)
-        return self._np_view_data
-
 @property
 def _np_shape(self):
     """
     Shape of the Psi4 data object
     """
-    view_data = get_view(self)
+    view_data = _get_raw_views(self)
     if self.nirrep() > 1:
         return tuple(view_data[x].shape for x in range(self.nirrep()))
     else:
-        return view_data.shape
+        return view_data[0].shape
+
 
 @property
 def _np_view(self):
@@ -364,32 +317,45 @@ def _np_view(self):
     View without only one irrep
     """
     if self.nirrep() > 1:
-        raise ValidationError("Attempted to call .np on a Psi4 data object with multiple irreps. Please use .nph for objects with irreps.")
-    return get_view(self)
+        raise ValidationError("Attempted to call .np on a Psi4 data object with multiple irreps."
+                              "Please use .nph for objects with irreps.")
+    return _get_raw_views(self)[0]
+
 
 @property
 def _nph_view(self):
     """
     View with irreps.
     """
-    if self.nirrep() > 1:
-        return get_view(self)
-    else:
-        return get_view(self),
+    return _get_raw_views(self)
+
 
 @property
 def _array_conversion(self):
+    """
+    Provides the array interface to simply classes so that np.array(core.Matrix(5, 5)) works flawlessly.
+    """
     if self.nirrep() > 1:
         raise ValidationError("__array__interface__ can only be called on Psi4 data object with only one irrep!")
     else:
         return self.np.__array_interface__
 
+
 def _np_write(self, filename=None, prefix=""):
+    """
+    Writes the irreped matrix to a NumPy zipped file.
+
+    Can return the packed data for saving many matrices into the same file.
+    """
 
     ret = {}
     ret[prefix + "Irreps"] = self.nirrep()
     ret[prefix + "Name"] = self.name
     for h, v in enumerate(self.nph):
+        # If returning arrays to user, we want to return copies (snapshot), not
+        # views of the core.Matrix's memory.
+        if filename is None and not v.flags['OWNDATA']:
+            v = np.copy(v)
         ret[prefix + "IrrepData" + str(h)] = v
 
     if isinstance(self, core.Matrix):
@@ -398,13 +364,16 @@ def _np_write(self, filename=None, prefix=""):
     if isinstance(self, core.Vector):
         ret[prefix + "Dim"] = [self.dim(x) for x in range(self.nirrep())]
 
-
     if filename is None:
         return ret
 
     np.savez(filename, **ret)
 
+
 def _np_read(self, filename, prefix=""):
+    """
+    Reads the data from a NumPy compress file.
+    """
 
     if isinstance(filename, np.lib.npyio.NpzFile):
         data = filename
@@ -442,6 +411,7 @@ def _np_read(self, filename, prefix=""):
 
     return ret
 
+
 def _to_serial(data):
     """
     Converts an object with a .nph accessor to a serialized dictionary
@@ -464,6 +434,7 @@ def _to_serial(data):
 
     return json_data
 
+
 def _from_serial(self, json_data):
     """
     Converts serialized data to the correct Psi4 data type
@@ -485,8 +456,36 @@ def _from_serial(self, json_data):
     return ret
 
 
-# Matirx attributes
+def _chain_dot(*args, **kwargs):
+    """
+    Chains dot products together from a series of Psi4 Matrix classes.
+
+    By default there is no transposes, an optional vector of booleans can be passed in.
+    """
+
+    trans = kwargs.pop("trans", None)
+    if trans is None:
+        trans = [False for x in range(len(args))]
+    else:
+        if len(trans) != len(args):
+            raise ValidationError(
+                "Chain dot: The length of the transpose arguements is not equal to the length of args.")
+
+    # Setup chain
+    ret = args[0]
+    if trans[0]:
+        ret = ret.transpose()
+
+    # Run through
+    for n, mat in enumerate(args[1:]):
+        ret = core.Matrix.doublet(ret, mat, False, trans[n + 1])
+
+    return ret
+
+
+# Matrix attributes
 core.Matrix.from_array = classmethod(array_to_matrix)
+core.Matrix.from_list = classmethod(lambda self, x: array_to_matrix(self, np.array(x)))
 core.Matrix.to_array = _to_array
 core.Matrix.shape = _np_shape
 core.Matrix.np = _np_view
@@ -496,9 +495,11 @@ core.Matrix.np_write = _np_write
 core.Matrix.np_read = classmethod(_np_read)
 core.Matrix.to_serial = _to_serial
 core.Matrix.from_serial = classmethod(_from_serial)
+core.Matrix.chain_dot = _chain_dot
 
 # Vector attributes
 core.Vector.from_array = classmethod(array_to_matrix)
+core.Vector.from_list = classmethod(lambda self, x: array_to_matrix(self, np.array(x)))
 core.Vector.to_array = _to_array
 core.Vector.shape = _np_shape
 core.Vector.np = _np_view
@@ -511,14 +512,19 @@ core.Vector.from_serial = classmethod(_from_serial)
 
 ### CIVector properties
 
+
 @property
 def _civec_view(self):
-    "Returns a view of the CIVector's buffer"
+    """
+    Returns a view of the CIVector's buffer
+    """
     return np.asarray(self)
+
 
 core.CIVector.np = _civec_view
 
 ### Dimension properties
+
 
 @classmethod
 def _dimension_from_list(self, dims, name="New Dimension"):
@@ -539,6 +545,7 @@ def _dimension_from_list(self, dims, name="New Dimension"):
         ret[i] = dims[i]
     return ret
 
+
 def _dimension_to_tuple(dim):
     """
     Converts a core.Dimension object to a tuple.
@@ -553,6 +560,7 @@ def _dimension_to_tuple(dim):
         ret.append(dim[i])
     return tuple(ret)
 
+
 def _dimension_iter(dim):
     """
     Provides an iterator class for the Dimension object.
@@ -564,6 +572,7 @@ def _dimension_iter(dim):
 
     for i in range(dim.n()):
         yield dim[i]
+
 
 # Dimension attributes
 core.Dimension.from_list = _dimension_from_list

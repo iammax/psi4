@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -32,17 +33,22 @@
 Conda Binary Distribution
 =========================
 
-|PSIfour| is available as a pre-compiled binary for Linux and Mac architectures
+.. warning:: As of v1.2rc1, new (conda build 3; updated compilers)
+   conda packages are available for Linux but not Mac).
+   Psi4conda installers are not ready for either platform.
+
+|PSIfour| is available as a pre-compiled binary for Mac and Linux (and
+Windows, through the Ubuntu shell) architectures
 through `Continuum Analytics
 <https://store.continuum.io/cshop/anaconda/>`_, the company that produces
 `Anaconda Python <http://docs.continuum.io/anaconda/index.html>`_ (a
 full-fledged scientific python environment with package manager `conda
 <http://conda.pydata.org/index.html>`_) and, more particularly, `Miniconda
 <http://conda.pydata.org/miniconda.html>`_ (a lightweight python
-distribution with same package manger `conda
+distribution with same package manager `conda
 <http://conda.pydata.org/index.html>`_). Some nice features for us:
 
-* cross-platform (Linux only at present)
+* cross-platform
 
 * no root, administrator, or sudo access required
 
@@ -61,44 +67,74 @@ distribution with same package manger `conda
 The |PSIfour| binary repository is at `Anaconda (formerly Binstar) <https://anaconda.org/psi4>`_.
 
 For commands to get a default installation, go to :ref:`sec:psi4conda`
-or the `psicode downloads page <http://psicode.org/downloads2.html>`_.
+or the `psicode downloads page <http://psicode.org/downloads.html>`_
+(`pre-release downloads page <http://psicode.org/develdownloads.html>`_).
 Users proficient with conda may prefer to consult :ref:`sec:condadetails`.
 For more flexibility and a detailed explanation, go to
 :ref:`sec:slowconda` and :ref:`sec:slowpsi4`.
 
+
+.. _`faq:psicodedownload`:
+
+How to install a Psi4 binary with the Psi4conda installer, download site
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+`Download one of the nine installers
+<http://psicode.org/downloads.html>`_ (Linux/Mac/Windows; Py27/35/36).
+``bash`` it. Follow the prompts and *do* make the adjustments to
+:envvar:`PATH` and :envvar:`PSI_SCRATCH` that it suggests at the end. Test
+with ``psi4 --test`` (green and yellow good; red bad). Done. Explicit commands at :ref:`sec:psi4conda`.
+
+
 .. _`sec:psi4conda`:
 
-Psi4conda Installer
-^^^^^^^^^^^^^^^^^^^
+How to install a Psi4 binary with the Psi4conda installer, command-line
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Sequence of commands to get you to a working |PSIfour| on Linux
-or Mac. Installs Miniconda+Psi4 into ``$HOME/psi4conda`` and
+Sequence of commands to get you to a working |PSIfour| on Linux,
+Mac, or Windows (Ubuntu shell for Windows accepts Linux installers).
+Installs Miniconda+Psi4+AddOns into ``$HOME/psi4conda`` and
 the |PSIfour| executable into the main conda environment at
 ``$HOME/psi4conda/bin/psi4``.
 
 .. code-block:: bash
 
     # Linux
-    >>> curl -O "http://www.psicode.org/downloads/Psi4conda2-latest-Linux.sh" --keepalive-time 2
+    # py27|py35|py36 for alternate python versions
+    >>> curl -O "http://vergil.chemistry.gatech.edu/download/Psi4conda-latest-py35-Linux-x86_64.sh" --keepalive-time 2
     >>> bash
-    >>> bash Psi4conda-latest-Linux.sh -b -p $HOME/psi4conda  # agrees to license terms
+    >>> bash Psi4conda-latest-py35-Linux-x86_64.sh -b -p $HOME/psi4conda  # agrees to license terms
     >>> echo "export PATH=$HOME/psi4conda/bin:\$PATH" >> ~/.bashrc
     # log out, log back in so conda and psi4 in path
-    >>> psi4 "$(dirname $(which psi4))"/../share/psi4/samples/sapt1/test.in  # test installation. works b/c PSI_SCRATCH defaults to /tmp
+    >>> psi4 --test
 
 .. code-block:: bash
 
     # Mac
-    >>> curl -O "http://www.psicode.org/downloads/Psi4conda2-latest-MacOSX.sh" --keepalive-time 2
+    # py27|py35|py36 for alternate python versions
+    >>> curl -O "http://vergil.chemistry.gatech.edu/download/Psi4conda-latest-py35-MacOSX-x86_64.sh" --keepalive-time 2
     >>> bash
-    >>> bash Psi4conda-latest-MacOSX.sh -b -p $HOME/psi4conda  # agrees to license terms
+    >>> bash Psi4conda-latest-py35-MacOSX-x86_64.sh -b -p $HOME/psi4conda  # agrees to license terms
     >>> echo "export PATH=$HOME/psi4conda/bin:\$PATH" >> ~/.bash_profile
     # log out, log back in so conda and psi4 in path
-    >>> psi4 "$(dirname $(which psi4))"/../share/psi4/samples/sapt1/test.in  # test installation. works b/c PSI_SCRATCH defaults to /tmp
+    >>> psi4 --test
+
+.. code-block:: bash
+
+    # Windows
+    # py27|py35|py36 for alternate python versions
+    >>> curl -O "http://vergil.chemistry.gatech.edu/download/Psi4conda-latest-py35-Windows-x86_64.sh" --keepalive-time 2
+    >>> bash
+    >>> bash Psi4conda-latest-py35-Windows-x86_64.sh -b -p $HOME/psi4conda  # agrees to license terms
+    >>> echo "export PATH=$HOME/psi4conda/bin:\$PATH" >> ~/.bashrc
+    # log out, log back in so conda and psi4 in path
+    >>> psi4 --test
 
 That last command tested that ``psi4`` is in your path, and it's finding
-all the libraries it needs. Now you need only specify a scratch directory
-(see :ref:`sec:Scratch`) by replacing the placeholder in the following:
+all the libraries it needs. It works because :envvar:`PSI_SCRATCH`
+defaults to ``/tmp``. Now you need only specify a permanent scratch
+directory (see :ref:`sec:Scratch`) by replacing the placeholder in the
+following:
 
 .. code-block:: bash
 
@@ -107,18 +143,174 @@ all the libraries it needs. Now you need only specify a scratch directory
 
 All done!
 
+Configuration for this set-up is summarized at :ref:`faq:runfrombinary`.
+
+.. note:: |PSIfour| installs a Python distribution alongside, so you should choose an installer based on the Python version you *want*, irrespective of any Python version you *have*.
+
 .. note:: Above commands use bash for installation and set up your environment for bash at runtime. To use csh at runtime, follow the on-screen directions at the end of the installation or consult step 7 below.
+
+
+.. _`faq:psi4pkg`:
+
+How to install a Psi4 binary into an Ana/Miniconda distribution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Conda command to install the latest nightly build of |PSIfour| + compiled
+add-ons + runtime add-ons into an existing Anaconda or Miniconda
+distribution.
+
+.. code-block:: bash
+
+    # Linux or Mac or Windows
+    # substitute x.x by 2.7|3.5|3.6 for alternate python versions
+    # remove `-c psi4/label/dev` to get stable releases instead of nightly builds
+    >>> conda create -n p4env python=x.x psi4 psi4-rt -c psi4/label/dev -c psi4
+
+Activate environment and make the adjustments to :envvar:`PATH` and
+:envvar:`PSI_SCRATCH` that it suggests at the end. Test with ``psi4
+--test``. Configuration for this set-up is summarized at
+:ref:`faq:runfrombinary`.
+
+**Details:**
+
+* It is advised to place |PSIfour| into a conda
+  environment where its libraries can't interfere with other programs
+  rather than the main
+  Anaconda or Miniconda environment. Hence the creation of the environment
+  above, but the environment name (:samp:`{p4env}` above) can be
+  substituted.
+
+* Only reason for ``psi4-rt`` package is to get the QC runtime
+  add-ons; could say any combination of ``dftd3 gcp v2rdm_casscf snsmp2`` instead of ``psi4-rt``;
+  or leave them out if you don't want them.
+
+* Grab a Miniconda through ``curl -o Miniconda-latest.sh
+  "https://repo.continuum.io/miniconda/Miniconda3-latest-[MacOSX|Linux]-x86_64.sh"``,
+  selecting between Mac and Linux.
+
+
+.. _`faq:updatepsi4`:
+
+How to update a Psi4 binary
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A. Conda command to update an existing |PSIfour| conda installation to the
+newest stable release (roughly annually).
+
+.. code-block:: bash
+
+    >>> conda update psi4 -c psi4
+
+    # if psi4 channel in defaults (true for Psi4conda installers)
+    >>> conda update psi4
+
+B. Conda command to update an existing |PSIfour| conda installation to the
+latest development head (roughly nightly).
+
+.. code-block:: bash
+
+    >>> conda update psi4 -c psi4/label/dev
+
+C. Conda command to install a very specific package, including version,
+build string, and subchannel. The final `-c psi4` represents any
+additional channels or subchannels needed to locate all dependencies.
+
+.. code-block:: bash
+
+    >>> conda install psi4=1.2a1.dev249+623ad64=py36_sse41_0 -c psi4/label/subchannel -c psi4
+
+
+.. _`faq:psi4deps`:
+
+How to use conda to compile Psi4 faster and easier
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+    # Linux # c. v1.2rc1  ###or Mac or Windows
+    # substitute x.x by 2.7|3.5|3.6 for alternate python versions
+    >>> conda create -n p4dev python=x.x psi4-dev -c psi4/label/dev -c psi4
+    >>> conda activate p4dev
+
+    >>> cd {top-level-psi4-dir}
+    >>> psi4-path-advisor --help
+    usage: psi4-path-advisor [-h] [--psi4-compile] [--disable-addons]
+                             [--disable-mkl] [--intel | --intel-multiarch | --gcc]
+    
+    Build and Run path advisor for Psi4
+    
+    optional arguments:
+      -h, --help         show this help message and exit
+      --psi4-compile     (Command Default) Generates a minimal CMake command for building Psi4 against
+                             this psi4-dev conda metapackage.
+                         >>> git clone https://github.com/psi4/psi4.git
+                         >>> cd {top-level-psi4-dir}
+                         >>> conda create -n p4dev python={3.6} psi4-dev [-c psi4/label/dev] -c psi4
+                         >>> conda activate p4dev
+                         >>> psi4-path-advisor
+                         # execute or adapt `cmake` commands above; DepsCache handles python & addons;
+                         #   DepsMKLCache handles math; further psi4-path-advisor options handle compilers.
+                         >>> cd objdir && make -j`getconf _NPROCESSORS_ONLN`
+                         >>> make install
+      --disable-addons   Disengage building against the psi4-dev-provided _optional_ link-time Add-Ons like CheMPS2.
+      --disable-mkl      Disengage building against the psi4-dev-provided MKL libraries (`libmkl_rt`).
+      --intel            Engage self-provided icc/icpc/ifort compilers backed by conda's psi4-dev-provided gcc/g++.
+      --intel-multiarch  Engage self-provided icc/icpc/ifort compilers backed by conda's psi4-dev-provided gcc/g++ PLUS compile for multiple architectures (useful for cluster deployments).
+      --gcc              Engage conda's psi4-dev-provided gcc/g++/gfortran compilers.
+
+    # execute or adapt `cmake` commands above; DepsCache handles python & addons;
+    #   DepsMKLCache handles math; further psi4-path-advisor options handle compilers.
+    >>> `psi4-path-advisor [your args]` -Dany_addl_cmake_vals=ON
+    >>> cd objdir && make -j`getconf _NPROCESSORS_ONLN`
+    >>> make install
+
+Same for Linux/Mac/Windows. Substitute desired python version: 2.7, 3.5, 3.6. Fine
+to choose your own env name. Include ``-c psi4/label/dev`` to get dependencies to
+build current master, as opposed to latest release. 
+Activate environment, ``conda activate
+p4dev``.  Go to where you've cloned psi4. Execute ``psi4-path-advisor``.
+It gives you a basic cmake command covering python, sphinx, link-time qc
+addons, and run-time qc addons. There's a help menu -h that gives more
+info. There's other options that will also pre-configure compilers. For
+example, at GaTech ``psi4-path-advisor --intel`` works. On Macs with
+XCode, ``psi4-path-advisor --clang`` works. Just read the help. For users
+who want a minimal build, there's a ``--disable-addons``, but it is generally not
+encouraged. It gives you a fully
+functional cmake command, but those are just setting up CMake cache
+|w---w| like the plugins you can always add your own CMake variables to
+the command.
+
+For run-time, you may also wish to install the executable add-ons (*e.g.*, dftd3)
+
+.. code-block:: bash
+
+    >>> conda install numpy psi4-rt
+
 
 .. _`sec:condadetails`:
 
-Conda Proficients
-^^^^^^^^^^^^^^^^^
+What do the conda packages psi4 & psi4-dev and the installer psi4conda contain
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``psi4`` - has full-featured psi4 itself and necessarily all the link-time qc
+addons (e.g., chemps2). It has python, pytest, numpy, and a few more python
+modules for specialized functions. Of gcc-ness, it has minimal, run-time
+libraries (*e.g.*, libgcc-ng) not compilers.
+It doesn't have the run-time qc addons ``psi4-rt`` (*e.g.*, dftd3) or build tools (*e.g.*, g++, sphinx, cmake).
+
+``psi4-dev`` - does not have psi4 itself or the run-time addons ``psi4-rt`` or numpy (though fine to install them
+alongside). Does have all the link-time addons. Does have
+cmake and sphinx (and python). Of gcc-ness, has full packages, that is,
+compilers as well as runtime packages.
+
+Psi4conda installer - has full-featured ``psi4`` itself, all link-time qc addons, all
+run-time qc addons, and minimal gcc runtime libraries. Developers should additionally install ``psi4-dev`` for build tools.
 
 The :ref:`sec:psi4conda` uses a `conda constructor
 <https://github.com/conda/constructor>`_ to package up Miniconda,
-the psi4 conda packages, the psi4 add-on conda packages, dependencies
+the |PSIfour| conda package, the |PSIfour| add-on conda packages, dependencies
 thereof (possibly from particular channels), and the psi4 channel
-as a default.  This is very convenient for novice users and robust
+as a default. This is very convenient for novice users and robust
 against differing channel settings in ``~/.condarc``. But proficient
 conda users may prefer to treat ``psi4`` as a normal conda package and
 not have another large Miniconda installation (including the hefty MKL)
@@ -126,48 +318,56 @@ lying around just for |PSIfour|. Installing just the ``psi4`` package
 itself will get you |PSIfour|, whatever add-ons require linking in to
 |PSIfour| (*e.g.*, CheMPS2 and PCMSolver), and the correct versions of
 packages. However, just the ``psi4`` package won't get you add-ons that
-don't need linking (*e.g.*, DFTD3 and v2rdm_casscf) or dependencies
-from the "right" channels, which can be important for issues of fPIC
-and libc++ vs. libstdc++. So ``conda create -c psi4 -n p4env psi4 dftd3
-v2rdm_casscf`` *should* be equivalent to running the psi4conda installer,
-but I wouldn't count on it. Instead, an `explicit environment spec
-<http://conda.pydata.org/docs/using/envs.html#build-identical-conda-environments-with-urls>`_
-will be available for download.
+don't need linking (*e.g.*, DFTD3 and v2rdm_casscf).
 
-.. code-block:: bash
-
-    # Linux
-    >>> curl -O explicit-latest.sh "https://repo.continuum.io/miniconda/explicit2-latest-Linux-x86_64.txt"
-    >>> conda create --name p4env --file explicitenv2-latest-Linux-x86_64.txt
-    >>> source activate p4env
-
-.. code-block:: bash
-
-    # Mac
-    >>> curl -O explicit-latest.sh "https://repo.continuum.io/miniconda/explicit2-latest-MacOSX-x86_64.txt"
-    >>> conda create --name p4env --file explicitenv2-latest-MacOSX-x86_64.txt
-    >>> source activate p4env
+.. Conda Proficients
+.. ^^^^^^^^^^^^^^^^^
+..
+.. or dependencies
+.. from the "right" channels, which can be important for issues of fPIC
+.. and libc++ vs. libstdc++. So ``conda create -c psi4 -n p4env psi4 dftd3
+.. v2rdm_casscf`` *should* be equivalent to running the psi4conda installer,
+.. but I wouldn't count on it. Instead, an `explicit environment spec
+.. <http://conda.pydata.org/docs/using/envs.html#build-identical-conda-environments-with-urls>`_
+.. will be available for download.
+..
+.. .. code-block:: bash
+..
+..     # Linux
+..     >>> curl -o explicit-latest.sh "https://repo.continuum.io/miniconda/explicit2-latest-Linux-x86_64.txt"
+..     >>> conda create --name p4env --file explicitenv2-latest-Linux-x86_64.txt
+..     >>> conda activate p4env
+..
+.. .. code-block:: bash
+..
+..     # Mac
+..     >>> curl -o explicit-latest.sh "https://repo.continuum.io/miniconda/explicit2-latest-MacOSX-x86_64.txt"
+..     >>> conda create --name p4env --file explicitenv2-latest-MacOSX-x86_64.txt
+..     >>> conda activate p4env
 
 .. _`sec:quickconda`:
 
 Quick Installation
 ^^^^^^^^^^^^^^^^^^
 
-Sequence of commands to get you to a working |PSIfour| on Linux. Installs
+Sequence of commands to get you to a working |PSIfour|. Installs
 Miniconda into ``$HOME/miniconda`` and the |PSIfour| executable into the
 main conda environment at ``$HOME/miniconda/bin/psi4``.
 
 .. code-block:: bash
 
-    # Linux or Mac: select between next two lines
-    >>> curl -O Miniconda-latest.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh"
-    >>> curl -O Miniconda-latest.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh"
+    # Linux or Mac, Py2 or Py3 for main environment (immaterial to Py for Psi4): select between four lines
+    # Windows: in Ubuntu shell, select either Linux line
+    >>> curl -o Miniconda-latest.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh"
+    >>> curl -o Miniconda-latest.sh "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+    >>> curl -o Miniconda-latest.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh"
+    >>> curl -o Miniconda-latest.sh "https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
 
 .. code-block:: bash
 
     >>> bash
     >>> bash Miniconda-latest.sh -b -p $HOME/miniconda  # agrees to conda's license terms
-    >>> echo "export PATH=$HOME/miniconda/bin:\$PATH" >> ~/.bashrc
+    >>> echo "export PATH=$HOME/miniconda/bin:\$PATH" >> ~/.bashrc  # Mac: use ~/.bash_profile
     # log out, log back in so conda in path
     >>> conda update --yes --all
     >>> conda config --add channels http://conda.anaconda.org/psi4
@@ -245,7 +445,7 @@ Detailed Installation of |PSIfour|
       - http://conda.anaconda.org/psi4
       - defaults
 
-6. Install |PSIfour|. You can install into the main conda environment so that whenever commands ``conda`` or (Ana/Miniconda's) ``python`` are available, then ``psi4`` is available, too. 
+6. Install |PSIfour|. You can install into the main conda environment so that whenever commands ``conda`` or (Ana/Miniconda's) ``python`` are available, then ``psi4`` is available, too.
 
 .. code-block:: bash
 
@@ -254,12 +454,12 @@ Detailed Installation of |PSIfour|
     >>> which psi4
     /path/to/miniconda/bin/psi4
 
-Or, you can install into a `conda environment <http://conda.pydata.org/docs/faq.html#environments>`_ that places |PSIfour| and its dependencies (including python) into a sandbox unaffected by any other software installed in Ana/Miniconda. This is recommended for developers to avoid interference between multiple versions (including github/conda versions) or to test python versions, *etc.*. If your main conda is not python=2.7, then |PSIfour| *must* be installed into a conda environment. In practical terms, installing into a conda environment means you can turn |PSIfours| availability on/off by switching conda environments without turning on/off the whole Ana/Miniconda installation. Below, |PSIfour| is installed into an environment called ``p4env``. Then the environment is activated, removing the main Ana/Miniconda ``bin`` and adding ``envs/p4env/bin`` to :envvar:`PATH`. The activate command only works in ``bash``, so ``csh``/``tcsh`` will need corresponding adjustments.
+Or, you can install into a `conda environment <http://conda.pydata.org/docs/faq.html#environments>`_ that places |PSIfour| and its dependencies (including python) into a sandbox unaffected by any other software installed in Ana/Miniconda. This is recommended for developers to avoid interference between multiple versions (including github/conda versions) or to test python versions, *etc.*. In practical terms, installing into a conda environment means you can turn |PSIfours| availability on/off by switching conda environments without turning on/off the whole Ana/Miniconda installation. Below, |PSIfour| is installed into an environment called ``p4env``. Then the environment is activated, removing the main Ana/Miniconda ``bin`` and adding ``envs/p4env/bin`` to :envvar:`PATH`. The ``conda activate`` command (conda >=4.4; December 2017) works in all shells, but if you're using old ``source activate`` that only works for ``bash``; adjust as needed for ``csh``/``tcsh``.
 
 .. code-block:: bash
 
     >>> conda create -n p4env psi4
-    >>> source activate p4env
+    >>> conda activate p4env
     # check
     >>> which psi4
     /path/to/miniconda/envs/p4env/bin/psi4
@@ -339,27 +539,60 @@ Suitable values for these variables have been printed to screen during installat
 Useful Commands
 ^^^^^^^^^^^^^^^
 
-* Update to latest |PSIfour| version ::
+* (A) Initially install |PSIfour| stable release ::
 
-    >>> conda update psi4
+   # equivalent
+   >>> conda install psi4 -c psi4
+   >>> conda install psi4 --channel psi4
 
-* Install into a conda environment "p4env" instead of "root". Second command only works on bash; for csh/tsch, ``setenv PATH /path/to/miniconda/envs/p4env/bin:$PATH`` instead. This creates a sandbox with just |PSIfour| and python (loaded as dependency). ::
+* (B) Initially install |PSIfour| stable release with non-current python ::
 
-    >>> conda create -y -n p4env psi4
-    >>> source activate p4env
+   >>> conda install psi4 python=3.6 -c psi4
 
-* Install a particular |PSIfour| version ::
+* (C) Update to latest |PSIfour| stable release ::
 
-    >>> conda install psi4=0.1.12
+    >>> conda update psi4 -c psi4
 
-* Uninstall |PSIfour| from current environment ::
+* (D) Initially install stable release into a conda environment "p4env" instead of "root". This creates a sandbox with |PSIfour| and python (loaded as dependency). ::
+
+    >>> conda create -y -n p4env psi4 -c psi4
+    >>> conda activate p4env
+
+* (E) Install a particular |PSIfour| version ::
+
+    >>> conda install psi4=0.1.12 -c psi4
+
+* (F) Uninstall |PSIfour| from current environment ::
 
     >>> conda remove psi4
+
+* (G) Initially install |PSIfour| nightly build ::
+
+   # equivalent
+   >>> conda install psi4 -c psi4/label/dev
+   >>> conda install psi4 --channel psi4/label/dev
+
+* (H) Initially install |PSIfour| nightly build with non-current python ::
+
+   >>> conda install psi4 python=3.6 -c psi4/label/dev
+
+* (I) Update to latest |PSIfour| nightly build ::
+
+    >>> conda update psi4 -c psi4/label/dev
+
+* (J) Initially install nightly build into a conda environment "p4env" instead of "root". This creates a sandbox with |PSIfour| and python (loaded as dependency). ::
+
+    >>> conda create -y -n p4env psi4 -c psi4/label/dev
+    >>> conda activate p4env
+
+* (K) Install a particular |PSIfour| version ::
+
+    >>> conda install psi4=0.1.12 -c psi4/label/dev
 
 Troubleshooting
 ^^^^^^^^^^^^^^^
 
-* If the target computer doesn't have libc >= 2.7 (released c.2007; for reference, 2.10 is newer than 2.7; unlike most libraries, libc generally not available in multiple versions on a computer), the |PSIfour| conda package won’t work. ::
+* If the target computer doesn't have libc >= 2.7 (released c.2007; for reference, 2.10 is newer than 2.7; unlike most libraries, libc generally not available in multiple versions on a computer), the |PSIfour| conda package won't work. ::
 
     # unsuitable computer
     >>> ldd --version
@@ -396,6 +629,6 @@ Troubleshooting
 .. comment find out about the current environment.
 .. comment pythonhome should be empty
 .. comment pythonpath should be empty or set to non-interfering packages (*e.g.*, qcdb)
-.. comment ld_library_path shouldn’t contain anything with a libpython
+.. comment ld_library_path shouldn't contain anything with a libpython
 .. comment >>> conda info -a
 

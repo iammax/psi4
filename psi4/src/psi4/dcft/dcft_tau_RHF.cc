@@ -3,38 +3,42 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
 #include "dcft.h"
+#include "defines.h"
+
 #include "psi4/libdpd/dpd.h"
 #include "psi4/libqt/qt.h"
 #include "psi4/libiwl/iwl.hpp"
 #include "psi4/libmints/molecule.h"
 #include "psi4/psifiles.h"
 #include "psi4/libtrans/integraltransform.h"
-#include "defines.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
 
-using namespace std;
+#include <algorithm>
+#include <functional>
 
 namespace psi{ namespace dcft{
 /**
@@ -134,10 +138,10 @@ DCFTSolver::refine_tau_RHF() {
 
     // Iteratively compute the exact Tau
 
-    SharedMatrix aocc_tau_old(new Matrix("MO basis Tau (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_));
-    SharedMatrix avir_tau_old(new Matrix("MO basis Tau (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_));
-    SharedMatrix aocc_d(new Matrix("Non-idempotency of OPDM (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_));
-    SharedMatrix avir_d(new Matrix("Non-idempotency of OPDM (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_));
+    auto aocc_tau_old = std::make_shared<Matrix>("MO basis Tau (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_);
+    auto avir_tau_old = std::make_shared<Matrix>("MO basis Tau (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_);
+    auto aocc_d = std::make_shared<Matrix>("Non-idempotency of OPDM (Alpha Occupied, old)", nirrep_, naoccpi_, naoccpi_);
+    auto avir_d = std::make_shared<Matrix>("Non-idempotency of OPDM (Alpha Virtual, old)", nirrep_, navirpi_, navirpi_);
 
     bool converged = false;
     bool failed = false;
@@ -199,10 +203,10 @@ DCFTSolver::refine_tau_RHF() {
         aocc_tau_->zero();
         avir_tau_->zero();
         // Diagonalize and take a square root
-        SharedMatrix aocc_evecs(new Matrix("Eigenvectors (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_));
-        SharedMatrix avir_evecs(new Matrix("Eigenvectors (Alpha Virtual)", nirrep_, navirpi_, navirpi_));
-        SharedVector aocc_evals(new Vector("Eigenvalues (Alpha Occupied)", nirrep_, naoccpi_));
-        SharedVector avir_evals(new Vector("Eigenvalues (Alpha Virtual)", nirrep_, navirpi_));
+        auto aocc_evecs = std::make_shared<Matrix>("Eigenvectors (Alpha Occupied)", nirrep_, naoccpi_, naoccpi_);
+        auto avir_evecs = std::make_shared<Matrix>("Eigenvectors (Alpha Virtual)", nirrep_, navirpi_, navirpi_);
+        auto aocc_evals = std::make_shared<Vector>("Eigenvalues (Alpha Occupied)", nirrep_, naoccpi_);
+        auto avir_evals = std::make_shared<Vector>("Eigenvalues (Alpha Virtual)", nirrep_, navirpi_);
         aocc_tau_old->diagonalize(aocc_evecs, aocc_evals);
         avir_tau_old->diagonalize(avir_evecs, avir_evals);
 
@@ -344,31 +348,28 @@ DCFTSolver::print_opdm_RHF()
     global_dpd_->file2_close(&T_OO);
     global_dpd_->file2_close(&T_VV);
 
-    sort(aPairs.begin(), aPairs.end(), greater<std::pair<double, int> >());
-    sort(bPairs.begin(), bPairs.end(), greater<std::pair<double, int> >());
+    sort(aPairs.begin(), aPairs.end(), std::greater<std::pair<double, int> >());
+    sort(bPairs.begin(), bPairs.end(), std::greater<std::pair<double, int> >());
 
     int *aIrrepCount = init_int_array(nirrep_);
     int *bIrrepCount = init_int_array(nirrep_);
-    char **irrepLabels = molecule_->irrep_labels();
+    std::vector<std::string> irrepLabels = molecule_->irrep_labels();
 
     outfile->Printf( "\n\tOrbital occupations:\n\t\tDoubly occupied orbitals\n\t\t");
     for (int i = 0, count = 0; i < nalpha_; ++i, ++count) {
         int irrep = aPairs[i].second;
-        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep], 2 * aPairs[i].first);
+        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep].c_str(), 2 * aPairs[i].first);
         if (count % 4 == 3 && i != nalpha_)
             outfile->Printf( "\n\t\t");
     }
     outfile->Printf( "\n\n\t\tVirtual orbitals\n\t\t");
     for (int i = nalpha_, count = 0; i < nmo_; ++i, ++count) {
         int irrep = aPairs[i].second;
-        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep], 2 * aPairs[i].first);
+        outfile->Printf( "%4d%-4s%11.4f  ", ++aIrrepCount[irrep], irrepLabels[irrep].c_str(), 2 * aPairs[i].first);
         if (count % 4 == 3 && i != nmo_)
             outfile->Printf( "\n\t\t");
     }
     outfile->Printf( "\n\n");
-    for (int h = 0; h < nirrep_; ++h)
-        free(irrepLabels[h]);
-    free(irrepLabels);
     free(aIrrepCount);
     free(bIrrepCount);
 

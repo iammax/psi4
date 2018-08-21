@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -29,8 +30,8 @@
 #include "defines.h"
 #include "psi4/libmints/matrix.h"
 
+#include <cmath>
 
-using namespace std;
 
 namespace psi{ namespace occwave{
 
@@ -63,14 +64,14 @@ if (reference_ == "RESTRICTED") {
     // find biggest_mograd
     biggest_mogradA=0;
     for (int i=0; i<nidpA;i++){
-      if (fabs(wogA->get(i)) > biggest_mogradA)  biggest_mogradA=fabs(wogA->get(i));
+      if (std::fabs(wogA->get(i)) > biggest_mogradA)  biggest_mogradA=std::fabs(wogA->get(i));
     }
 
     // rms
     rms_wogA=0;
     for (int i=0; i<nidpA;i++) rms_wogA += wogA->get(i) * wogA->get(i);
-    norm_wogA=sqrt(rms_wogA);
-    rms_wogA=sqrt(rms_wogA)/nidpA;
+    norm_wogA=std::sqrt(rms_wogA);
+    rms_wogA=std::sqrt(rms_wogA)/nidpA;
     rms_wog=rms_wogA;
 
     // print
@@ -121,24 +122,24 @@ else if (reference_ == "UNRESTRICTED") {
     // find biggest_mograd
     biggest_mogradA=0;
     for (int i=0; i<nidpA;i++){
-      if (fabs(wogA->get(i)) > biggest_mogradA)  biggest_mogradA=fabs(wogA->get(i));
+      if (std::fabs(wogA->get(i)) > biggest_mogradA)  biggest_mogradA=std::fabs(wogA->get(i));
     }
 
     biggest_mogradB=0;
     for (int i=0; i<nidpB;i++){
-      if (fabs(wogB->get(i)) > biggest_mogradB)  biggest_mogradB=fabs(wogB->get(i));
+      if (std::fabs(wogB->get(i)) > biggest_mogradB)  biggest_mogradB=std::fabs(wogB->get(i));
     }
 
     // rms
     rms_wogA=0;
     for (int i=0; i<nidpA;i++) rms_wogA += wogA->get(i) * wogA->get(i);
-    norm_wogA=sqrt(rms_wogA);
-    rms_wogA=sqrt(rms_wogA)/nidpA;
+    norm_wogA=std::sqrt(rms_wogA);
+    rms_wogA=std::sqrt(rms_wogA)/nidpA;
 
     rms_wogB=0;
     for (int i=0; i<nidpB;i++) rms_wogB += wogB->get(i) * wogB->get(i);
-    norm_wogB=sqrt(rms_wogB);
-    rms_wogB=sqrt(rms_wogB)/nidpB;
+    norm_wogB=std::sqrt(rms_wogB);
+    rms_wogB=std::sqrt(rms_wogB)/nidpB;
     rms_wog=MAX0(rms_wogA,rms_wogB);
 
     // print

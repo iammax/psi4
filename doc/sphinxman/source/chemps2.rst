@@ -3,23 +3,24 @@
 .. #
 .. # Psi4: an open-source quantum chemistry software package
 .. #
-.. # Copyright (c) 2007-2017 The Psi4 Developers.
+.. # Copyright (c) 2007-2018 The Psi4 Developers.
 .. #
 .. # The copyrights for code used from other parties are included in
 .. # the corresponding files.
 .. #
-.. # This program is free software; you can redistribute it and/or modify
-.. # it under the terms of the GNU General Public License as published by
-.. # the Free Software Foundation; either version 2 of the License, or
-.. # (at your option) any later version.
+.. # This file is part of Psi4.
 .. #
-.. # This program is distributed in the hope that it will be useful,
+.. # Psi4 is free software; you can redistribute it and/or modify
+.. # it under the terms of the GNU Lesser General Public License as published by
+.. # the Free Software Foundation, version 3.
+.. #
+.. # Psi4 is distributed in the hope that it will be useful,
 .. # but WITHOUT ANY WARRANTY; without even the implied warranty of
 .. # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.. # GNU General Public License for more details.
+.. # GNU Lesser General Public License for more details.
 .. #
-.. # You should have received a copy of the GNU General Public License along
-.. # with this program; if not, write to the Free Software Foundation, Inc.,
+.. # You should have received a copy of the GNU Lesser General Public License along
+.. # with Psi4; if not, write to the Free Software Foundation, Inc.,
 .. # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 .. #
 .. # @END LICENSE
@@ -72,7 +73,7 @@ Installation
 * .. image:: https://img.shields.io/badge/Anaconda%20Cloud-1.7.1-5077AB.svg
      :target: https://anaconda.org/psi4/chemps2
 
-* CheMPS2 is available as a conda package for Linux and macOS.
+* CheMPS2 is available as a conda package for Linux and macOS (and Windows, through the Ubuntu shell).
 
 * If using the |PSIfour| binary, CheMPS2 has already been installed alongside.
 
@@ -82,6 +83,9 @@ Installation
   Then enable it as a feature with :makevar:`ENABLE_CheMPS2`,
   hint its location with :makevar:`CMAKE_PREFIX_PATH`,
   and rebuild |PSIfour| to detect CheMPS2 and activate dependent code.
+
+* Previous bullet had details. To build |PSIfour| from source and use
+  Libint from conda without thinking, consult :ref:`sec:condapsi4dev`.
 
 * To remove a conda installation, ``conda remove chemps2``.
 
@@ -153,7 +157,7 @@ How to configure CheMPS2 for building Psi4
 
 * Downstream Dependencies |w---w| |PSIfour| (\ |dr| optional) CheMPS2
 
-* Upstream Dependencies |w---w| CheMPS2 |dr| HDF5 |dr| zlib
+* Upstream Dependencies |w---w| CheMPS2 |dr| BLAS/LAPACK, HDF5 |dr| zlib
 
 **CMake Variables**
 
@@ -161,6 +165,7 @@ How to configure CheMPS2 for building Psi4
 * :makevar:`CMAKE_PREFIX_PATH` |w---w| CMake list variable to specify where pre-built dependencies can be found. For CheMPS2, set to an installation directory containing ``include/chemps2/DMRG.h``
 * :makevar:`CheMPS2_DIR` |w---w| CMake variable to specify where pre-built CheMPS2 can be found. Set to installation directory containing ``share/cmake/CheMPS2/CheMPS2Config.cmake``
 * :makevar:`CMAKE_DISABLE_FIND_PACKAGE_CheMPS2` |w---w| CMake variable to force internal build of CheMPS2 instead of detecting pre-built
+* :makevar:`CMAKE_INSIST_FIND_PACKAGE_CheMPS2` |w---w| CMake variable to force detecting pre-built CheMPS2 and not falling back on internal build
 
 **Examples**
 

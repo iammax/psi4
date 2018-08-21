@@ -3,31 +3,32 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
 
-#include <map>
 #include "dcft.h"
-#include <cmath>
+#include "defines.h"
+
 #include "psi4/libiwl/iwl.hpp"
 #include "psi4/libdpd/dpd.h"
 #include "psi4/libqt/qt.h"
@@ -35,10 +36,12 @@
 #include "psi4/libmints/molecule.h"
 #include "psi4/libmints/wavefunction.h"
 #include "psi4/libtrans/integraltransform.h"
-#include "defines.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/liboptions/liboptions.h"
 
+#include <map>
+#include <cmath>
 
-using namespace std;
 
 namespace psi{ namespace dcft{
 
@@ -70,8 +73,8 @@ namespace psi{ namespace dcft{
               double prefactor = 0.0;
               for(int newMO = 0; newMO < nsopi_[h]; ++newMO){
                   double val = overlap.get(h, oldMO, newMO);
-                  if(fabs(val) > maximumProjection){
-                      maximumProjection = fabs(val);
+                  if(std::fabs(val) > maximumProjection){
+                      maximumProjection = std::fabs(val);
                       bestMO = newMO;
                       prefactor = val < 0.0 ? -1.0 : 1.0;
                   }
@@ -110,8 +113,8 @@ namespace psi{ namespace dcft{
               double prefactor = 0.0;
               for(int newMO = 0; newMO < nsopi_[h]; ++newMO){
                   double val = overlap.get(h, oldMO, newMO);
-                  if(fabs(val) > bestOverlap){
-                      bestOverlap = fabs(val);
+                  if(std::fabs(val) > bestOverlap){
+                      bestOverlap = std::fabs(val);
                       bestMO = newMO;
                       prefactor = val < 0.0 ? -1.0 : 1.0;
                   }
@@ -189,8 +192,8 @@ namespace psi{ namespace dcft{
               double prefactor = 0.0;
               for(int newMO = 0; newMO < nsopi_[h]; ++newMO){
                   double val = overlap.get(h, oldMO, newMO);
-                  if(fabs(val) > bestOverlap){
-                      bestOverlap = fabs(val);
+                  if(std::fabs(val) > bestOverlap){
+                      bestOverlap = std::fabs(val);
                       bestMO = newMO;
                       prefactor = val < 0.0 ? -1.0 : 1.0;
                   }
@@ -231,8 +234,8 @@ namespace psi{ namespace dcft{
       std::vector<std::pair<double, int> > bPairs;
       for (int h = 0; h < nirrep_; ++h) {
           for (int i=0; i < nsopi_[h]; ++i){
-              aPairs.push_back(make_pair(epsilon_a_->get(h, i), h));
-              bPairs.push_back(make_pair(epsilon_b_->get(h, i), h));
+              aPairs.push_back(std::make_pair(epsilon_a_->get(h, i), h));
+              bPairs.push_back(std::make_pair(epsilon_b_->get(h, i), h));
           }
       }
       sort(aPairs.begin(), aPairs.end());
@@ -240,40 +243,40 @@ namespace psi{ namespace dcft{
 
       int *aIrrepCount = init_int_array(nirrep_);
       int *bIrrepCount = init_int_array(nirrep_);
-      char **irrepLabels = molecule_->irrep_labels();
+      std::vector<std::string> irrepLabels = molecule_->irrep_labels();
 
       outfile->Printf( "\n\tOrbital energies (a.u.):\n\t\tAlpha occupied orbitals\n\t\t");
       for (int i = 0, count = 0; i < nalpha_; ++i, ++count) {
           int irrep = aPairs[i].second;
-          outfile->Printf( "%4d%-4s%11.6f  ", ++aIrrepCount[irrep], irrepLabels[irrep], aPairs[i].first);
+          outfile->Printf( "%4d%-4s%11.6f  ", ++aIrrepCount[irrep], irrepLabels[irrep].c_str(), aPairs[i].first);
           if (count % 4 == 3 && i != nalpha_)
               outfile->Printf( "\n\t\t");
       }
       outfile->Printf( "\n\n\t\tBeta occupied orbitals\n\t\t");
       for (int i = 0, count = 0; i < nbeta_; ++i, ++count) {
           int irrep = bPairs[i].second;
-          outfile->Printf( "%4d%-4s%11.6f  ", ++bIrrepCount[irrep], irrepLabels[irrep], bPairs[i].first);
+          outfile->Printf( "%4d%-4s%11.6f  ", ++bIrrepCount[irrep], irrepLabels[irrep].c_str(), bPairs[i].first);
           if (count % 4 == 3 && i != nbeta_)
               outfile->Printf( "\n\t\t");
       }
       outfile->Printf( "\n\n\t\tAlpha virtual orbitals\n\t\t");
       for (int i = nalpha_, count = 0; i < nmo_; ++i, ++count) {
           int irrep = aPairs[i].second;
-          outfile->Printf( "%4d%-4s%11.6f  ", ++aIrrepCount[irrep], irrepLabels[irrep], aPairs[i].first);
+          outfile->Printf( "%4d%-4s%11.6f  ", ++aIrrepCount[irrep], irrepLabels[irrep].c_str(), aPairs[i].first);
           if (count % 4 == 3 && i != nmo_)
               outfile->Printf( "\n\t\t");
       }
       outfile->Printf( "\n\n\t\tBeta virtual orbitals\n\t\t");
       for (int i = nbeta_, count = 0; i < nmo_; ++i, ++count) {
           int irrep = bPairs[i].second;
-          outfile->Printf( "%4d%-4s%11.6f  ", ++bIrrepCount[irrep], irrepLabels[irrep], bPairs[i].first);
+          outfile->Printf( "%4d%-4s%11.6f  ", ++bIrrepCount[irrep], irrepLabels[irrep].c_str(), bPairs[i].first);
           if (count % 4 == 3 && i != nmo_)
               outfile->Printf( "\n\t\t");
       }
       outfile->Printf( "\n\n");
 
       outfile->Printf( "\n\tIrrep              ");
-      for(int h = 0; h < nirrep_; ++h) outfile->Printf( "%4s ", irrepLabels[h]);
+      for(int h = 0; h < nirrep_; ++h) outfile->Printf( "%4s ", irrepLabels[h].c_str());
       outfile->Printf( "\n\t-------------------");
       for(int h = 0; h < nirrep_; ++h) outfile->Printf( "-----");
       outfile->Printf( "\n\t#Symmetry Orbitals ");
@@ -294,9 +297,6 @@ namespace psi{ namespace dcft{
           Ca_->print();
           Cb_->print();
       }
-      for (int h = 0; h < nirrep_; ++h)
-          delete [] irrepLabels[h];
-      delete[] irrepLabels;
       delete[] aIrrepCount;
       delete[] bIrrepCount;
   }
@@ -309,8 +309,8 @@ namespace psi{ namespace dcft{
   DCFTSolver::scf_guess()
   {
       dcft_timer_on("DCFTSolver::scf_guess");
-      SharedMatrix T = SharedMatrix(new Matrix("SO basis kinetic energy integrals", nirrep_, nsopi_, nsopi_));
-      SharedMatrix V = SharedMatrix(new Matrix("SO basis potential energy integrals", nirrep_, nsopi_, nsopi_));
+      auto T = std::make_shared<Matrix>("SO basis kinetic energy integrals", nirrep_, nsopi_, nsopi_);
+      auto V = std::make_shared<Matrix>("SO basis potential energy integrals", nirrep_, nsopi_, nsopi_);
       double *ints = init_array(ntriso_);
 
       IWL::read_one(psio_.get(), PSIF_OEI, PSIF_SO_T, ints, ntriso_, 0, 0, "outfile");
@@ -381,8 +381,8 @@ namespace psi{ namespace dcft{
 
       size_t nElements = 0;
       double sumOfSquares = 0.0;
-      SharedMatrix tmp1(new Matrix("tmp1", nirrep_, nsopi_, nsopi_));
-      SharedMatrix tmp2(new Matrix("tmp2", nirrep_, nsopi_, nsopi_));
+      auto tmp1 = std::make_shared<Matrix>("tmp1", nirrep_, nsopi_, nsopi_);
+      auto tmp2 = std::make_shared<Matrix>("tmp2", nirrep_, nsopi_, nsopi_);
       // form FDS
       tmp1->gemm(false, false, 1.0, kappa_so_a_, ao_s_, 0.0);
       scf_error_a_->gemm(false, false, 1.0, Fa_, tmp1, 0.0);
@@ -651,7 +651,7 @@ namespace psi{ namespace dcft{
         lastBuffer = iwl->last_buffer();
         for(int index = 0; index < iwl->buffer_count(); ++index){
             labelIndex = 4*index;
-            p = abs((int) lblptr[labelIndex++]);
+            p = std::abs((int) lblptr[labelIndex++]);
             q = (int) lblptr[labelIndex++];
             r = (int) lblptr[labelIndex++];
             s = (int) lblptr[labelIndex++];
@@ -1319,7 +1319,7 @@ namespace psi{ namespace dcft{
           lastBuffer = iwl->last_buffer();
           for(int index = 0; index < iwl->buffer_count(); ++index){
               labelIndex = 4*index;
-              p = abs((int) lblptr[labelIndex++]);
+              p = std::abs((int) lblptr[labelIndex++]);
               q = (int) lblptr[labelIndex++];
               r = (int) lblptr[labelIndex++];
               s = (int) lblptr[labelIndex++];
@@ -1500,7 +1500,7 @@ namespace psi{ namespace dcft{
           lastBuffer = iwl->last_buffer();
           for(int index = 0; index < iwl->buffer_count(); ++index){
               labelIndex = 4*index;
-              p = abs((int) lblptr[labelIndex++]);
+              p = std::abs((int) lblptr[labelIndex++]);
               q = (int) lblptr[labelIndex++];
               r = (int) lblptr[labelIndex++];
               s = (int) lblptr[labelIndex++];

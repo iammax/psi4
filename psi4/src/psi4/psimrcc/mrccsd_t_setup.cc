@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -342,7 +343,7 @@ void MRCCSD_T::startup()
   }
 
   // Allocate W
-  if((triples_algorithm == UnrestrictedTriples) or (triples_algorithm == RestrictedTriples)){
+  if((triples_algorithm == UnrestrictedTriples) || (triples_algorithm == RestrictedTriples)){
     allocate2(BlockMatrix**,W,nrefs,nirreps);
     for(int mu = 0; mu < nrefs; ++mu){
       for(int h = 0; h < nirreps; ++h){
@@ -415,9 +416,9 @@ void MRCCSD_T::check_intruders()
         size_t c_abs = v->get_tuple_abs_index(abc.ind_abs<2>());
 
         // AAA Case
-        if(is_aocc[mu][i_abs] and is_aocc[mu][j_abs] and is_aocc[mu][k_abs]){
-          if(is_avir[mu][a_abs] and is_avir[mu][b_abs] and is_avir[mu][c_abs]){
-            if((i_abs < j_abs) and (j_abs < k_abs) and (a_abs < b_abs) and (b_abs < c_abs)){
+        if(is_aocc[mu][i_abs] && is_aocc[mu][j_abs] && is_aocc[mu][k_abs]){
+          if(is_avir[mu][a_abs] && is_avir[mu][b_abs] && is_avir[mu][c_abs]){
+            if((i_abs < j_abs) && (j_abs < k_abs) && (a_abs < b_abs) && (b_abs < c_abs)){
               double D_ijk = e_oo[mu][i_abs] + e_oo[mu][j_abs] + e_oo[mu][k_abs];
               double D_abc = e_vv[mu][a_abs] + e_vv[mu][b_abs] + e_vv[mu][c_abs];
               double denominator = D_ijk - D_abc;
@@ -436,9 +437,9 @@ void MRCCSD_T::check_intruders()
         }
 
         // AAB Case
-        if(is_aocc[mu][i_abs] and is_aocc[mu][j_abs] and is_bocc[mu][k_abs]){
-          if(is_avir[mu][a_abs] and is_avir[mu][b_abs] and is_bvir[mu][c_abs]){
-            if((i_abs < j_abs) and (a_abs < b_abs)){
+        if(is_aocc[mu][i_abs] && is_aocc[mu][j_abs] && is_bocc[mu][k_abs]){
+          if(is_avir[mu][a_abs] && is_avir[mu][b_abs] && is_bvir[mu][c_abs]){
+            if((i_abs < j_abs) && (a_abs < b_abs)){
               double D_ijk = e_oo[mu][i_abs] + e_oo[mu][j_abs] + e_OO[mu][k_abs];
               double D_abc = e_vv[mu][a_abs] + e_vv[mu][b_abs] + e_VV[mu][c_abs];
               double denominator = D_ijk - D_abc;
@@ -663,7 +664,7 @@ void MRCCSD_T::cleanup()
   release2(Z);
 
   // Deallocate W
-  if((triples_algorithm == UnrestrictedTriples) or (triples_algorithm == RestrictedTriples)){
+  if((triples_algorithm == UnrestrictedTriples) || (triples_algorithm == RestrictedTriples)){
     for(int mu = 0; mu < nrefs; ++mu){
       for(int h = 0; h < nirreps; ++h){
         delete W[mu][h];

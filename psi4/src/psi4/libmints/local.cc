@@ -3,35 +3,42 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
  */
+
+#include "local.h"
+
 #include "psi4/libqt/qt.h"
-#include "psi4/libmints/local.h"
 #include "psi4/libmints/matrix.h"
+#include "psi4/libmints/molecule.h"
 #include "psi4/libmints/onebody.h"
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/integral.h"
+#include "psi4/liboptions/liboptions.h"
+#include "psi4/libpsi4util/PsiOutStream.h"
+#include "psi4/libpsi4util/process.h"
 
-;
+
 using namespace psi;
 
 namespace psi {
@@ -164,20 +171,20 @@ void BoysLocalizer::localize()
 
     // => Dipole Integrals <= //
 
-    std::shared_ptr<IntegralFactory> fact(new IntegralFactory(primary_));
+    auto fact = std::make_shared<IntegralFactory>(primary_);
     std::shared_ptr<OneBodyAOInt> Dint(fact->ao_dipole());
     std::vector<std::shared_ptr<Matrix> > D;
     for (int xyz = 0; xyz < 3; xyz++) {
-        D.push_back(std::shared_ptr<Matrix>(new Matrix("D", nso, nso)));
+        D.push_back(std::make_shared<Matrix>("D", nso, nso));
     }
     Dint->compute(D);
     Dint.reset();
     fact.reset();
 
     std::vector<std::shared_ptr<Matrix> > Dmo;
-    std::shared_ptr<Matrix> T(new Matrix("T",nso,nmo));
+    auto T = std::make_shared<Matrix>("T",nso,nmo);
     for (int xyz = 0; xyz < 3; xyz++) {
-        Dmo.push_back(std::shared_ptr<Matrix>(new Matrix("D", nmo, nmo)));
+        Dmo.push_back(std::make_shared<Matrix>("D", nmo, nmo));
         C_DGEMM('N','N',nso,nmo,nso,1.0,D[xyz]->pointer()[0],nso,C_->pointer()[0],nmo,0.0,T->pointer()[0],nmo);
         C_DGEMM('T','N',nmo,nmo,nso,1.0,C_->pointer()[0],nmo,T->pointer()[0],nmo,0.0,Dmo[xyz]->pointer()[0],nmo);
     }
@@ -186,8 +193,8 @@ void BoysLocalizer::localize()
 
     // => Targets <= //
 
-    L_ = std::shared_ptr<Matrix>(new Matrix("L",nso,nmo));
-    U_ = std::shared_ptr<Matrix>(new Matrix("U",nmo,nmo));
+    L_ = std::make_shared<Matrix>("L",nso,nmo);
+    U_ = std::make_shared<Matrix>("U",nmo,nmo);
     L_->copy(C_);
     U_->identity();
     converged_ = false;
@@ -269,7 +276,7 @@ void BoysLocalizer::localize()
                 theta = 0.5 * atan2(Ho, Hd + sqrt(Hd * Hd + Ho * Ho));
 
                 // Check for trivial (maximal) rotation, which might be better with theta = pi/4
-                if (fabs(theta) < 1.0E-8) {
+                if (std::fabs(theta) < 1.0E-8) {
                     double O0 = 0.0;
                     double O1 = 0.0;;
                     for (int xyz = 0; xyz < 3; xyz++) {
@@ -315,7 +322,7 @@ void BoysLocalizer::localize()
             metric += C_DDOT(nmo,Dp[xyz][0],nmo+1,Dp[xyz][0],nmo+1);
         }
 
-        double conv = fabs(metric - old_metric) / fabs(old_metric);
+        double conv = std::fabs(metric - old_metric) / std::fabs(old_metric);
         old_metric = metric;
 
         // => Iteration Print <= //
@@ -373,9 +380,9 @@ void PMLocalizer::localize()
 
     // => Overlap Integrals <= //
 
-    std::shared_ptr<IntegralFactory> fact(new IntegralFactory(primary_));
+    auto fact = std::make_shared<IntegralFactory>(primary_);
     std::shared_ptr<OneBodyAOInt> Sint(fact->ao_overlap());
-    std::shared_ptr<Matrix> S(new Matrix("S",nso,nso));
+    auto S = std::make_shared<Matrix>("S",nso,nso);
     Sint->compute(S);
     Sint.reset();
     fact.reset();
@@ -383,8 +390,8 @@ void PMLocalizer::localize()
 
     // => Targets <= //
 
-    L_ = std::shared_ptr<Matrix>(new Matrix("L",nso,nmo));
-    U_ = std::shared_ptr<Matrix>(new Matrix("U",nmo,nmo));
+    L_ = std::make_shared<Matrix>("L",nso,nmo);
+    U_ = std::make_shared<Matrix>("U",nmo,nmo);
     L_->copy(C_);
     U_->identity();
     converged_ = false;
@@ -398,7 +405,7 @@ void PMLocalizer::localize()
 
     // => LS product (avoids GEMV) <= //
 
-    std::shared_ptr<Matrix> LS(new Matrix("LS",nso,nmo));
+    auto LS = std::make_shared<Matrix>("LS",nso,nmo);
     double** LSp = LS->pointer();
     C_DGEMM('N','N',nso,nmo,nso,1.0,Sp[0],nso,Lp[0],nmo,0.0,LSp[0],nmo);
 
@@ -493,7 +500,7 @@ void PMLocalizer::localize()
                 theta = 0.5 * atan2(Ho, Hd + sqrt(Hd * Hd + Ho * Ho));
 
                 // Check for trivial (maximal) rotation, which might be better with theta = pi/4
-                if (fabs(theta) < 1.0E-8) {
+                if (std::fabs(theta) < 1.0E-8) {
                     double O0 = 0.0;
                     double O1 = 0.0;;
                     for (int A = 0; A < nA; A++) {
@@ -546,7 +553,7 @@ void PMLocalizer::localize()
             }
         }
 
-        double conv = fabs(metric - old_metric) / fabs(old_metric);
+        double conv = std::fabs(metric - old_metric) / std::fabs(old_metric);
         old_metric = metric;
 
         // => Iteration Print <= //

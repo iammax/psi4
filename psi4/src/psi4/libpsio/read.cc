@@ -3,23 +3,24 @@
  *
  * Psi4: an open-source quantum chemistry software package
  *
- * Copyright (c) 2007-2017 The Psi4 Developers.
+ * Copyright (c) 2007-2018 The Psi4 Developers.
  *
  * The copyrights for code used from other parties are included in
  * the corresponding files.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This file is part of Psi4.
  *
- * This program is distributed in the hope that it will be useful,
+ * Psi4 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Psi4 is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
+ * You should have received a copy of the GNU Lesser General Public License along
+ * with Psi4; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * @END LICENSE
@@ -31,7 +32,6 @@
  */
 
 #include <cstdlib>
-#include <unistd.h>
 #include <cstring>
  #include "psi4/pragma.h"
  PRAGMA_WARNING_PUSH
@@ -43,12 +43,12 @@
 
 namespace psi {
 
-void PSIO::read(unsigned int unit, const char *key, char *buffer, ULI size,
+void PSIO::read(size_t unit, const char *key, char *buffer, size_t size,
                 psio_address start, psio_address *end) {
   psio_ud *this_unit;
   psio_tocentry *this_entry;
   psio_address start_toc, start_data, end_data; /* global addresses */
-  ULI tocentry_size;
+  size_t tocentry_size;
 
   this_unit = &(psio_unit[unit]);
 
@@ -57,7 +57,7 @@ void PSIO::read(unsigned int unit, const char *key, char *buffer, ULI size,
 
   tocentry_size = sizeof(psio_tocentry) - 2*sizeof(psio_tocentry *);
 
-  if (this_entry == NULL) {
+  if (this_entry == nullptr) {
     fprintf(stderr, "PSIO_ERROR: Can't find TOC Entry %s\n", key);
     psio_error(unit, PSIO_ERROR_NOTOCENT);
   } else {
@@ -113,7 +113,7 @@ void PSIO::read(unsigned int unit, const char *key, char *buffer, ULI size,
    ** \ingroup PSIO
    */
 
-  int psio_read(unsigned int unit, const char *key, char *buffer, ULI size,
+  int psio_read(size_t unit, const char *key, char *buffer, size_t size,
                 psio_address start, psio_address *end) {
     _default_psio_lib_->read(unit, key, buffer, size, start, end);
     return 1;
